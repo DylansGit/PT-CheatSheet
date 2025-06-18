@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Information Disclosure</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header id="title-block-header">
+</header>
+<h1 id="information-disclosure">Information Disclosure</h1>
+<h2 id="summary">Summary</h2>
+<ul>
+<li><p><a href="#general-recon">General Recon</a></p></li>
+<li><p><a href="#cheat-sheet">Portswigger Labs Cheat Sheet /
+Payloads</a></p></li>
+</ul>
+<p><br></p>
+<h2 id="resources">Resources</h2>
+<ul>
+<li><p>https://portswigger.net/web-security/information-disclosure</p></li>
+<li><p>https://owasp.org/www-project-web-security-testing-guide/stable/4-Web_Application_Security_Testing/01-Information_Gathering/README</p></li>
+</ul>
+<p><br></p>
+<h2 id="general-recon">General Recon</h2>
+<ul>
+<li><p>Map out the application with the following steps for example:</p>
+<ul>
+<li><p>Walk through the entire functionality of the application as a
+regular user would. Make a note of every request, parameters/input
+fields, cookies and interesting headers that are being used. ( Burp
+Suite’s site map can be helpful here to keep track of all the
+endpoints/data that were found and/or a spreadsheet can help ).</p></li>
+<li><p>Check the source code of the application and identify any
+JavaScript files, comments or any other resources that were not already
+discovered to see if they leak any internal system/sensitive
+information.</p></li>
+<li><p>Use enumeration tools to discover more content such as hidden
+directories, parameters, or files. These resources may disclose some
+sensitive functionality. Some tools to use are Burp Pro’s (Discover
+Content), gobuster, ffuf , etc.</p></li>
+</ul></li>
+</ul>
+<p><br></p>
+<h2 id="what-is-information-disclosure">What is information
+disclosure?</h2>
+<ul>
+<li><p>Information disclosure, also known as information leakage, is
+when a website unintentionally reveals sensitive information to its
+users. Depending on the context, websites may leak all kinds of
+information to a potential attacker, including:</p>
+<ul>
+<li><p>Data about other users, such as usernames or financial
+information</p></li>
+<li><p>Sensitive commercial or business data</p></li>
+<li><p>Technical details about the website and its
+infrastructure</p></li>
+</ul></li>
+<li><p>The dangers of leaking sensitive user or business data are
+obvious but disclosing technical information can sometimes be just as
+serious. Although some of this information will be of limited use, it
+can potentially be a starting point for exposing an additional attack
+surface, which may contain other interesting vulnerabilities. The
+knowledge that you can gather could even provide the missing piece of
+the puzzle when trying to construct complex, high-severity
+attacks.</p></li>
+<li><p>Occasionally, sensitive information might be carelessly leaked to
+users who are simply browsing the website in a normal fashion. More
+commonly, however, an attacker needs to elicit the information
+disclosure by interacting with the website in unexpected or malicious
+ways. They will then carefully study the website’s responses to try and
+identify interesting behavior.</p></li>
+</ul>
+<p><br></p>
+<h2 id="cheat-sheet">Cheat Sheet</h2>
+<p><br></p>
+<p>More details can be found here -
+https://portswigger.net/web-security/information-disclosure/exploiting</p>
+<p><br></p>
+<ul>
+<li>Sensitive information can be found even without explicitly looking
+for it. Sometimes when probing for other vulnerabilities there is a
+specific error message, notable difference in the response or a subtly
+time delay in the application’s response. This information is important
+to note down and further engineer informative responses.</li>
+</ul>
+<p><br></p>
+<ul>
+<li>Check out the common files for web crawlers: /robots.txt or
+/sitemap.xml</li>
+</ul>
+<p><br></p>
+<ul>
+<li><p>Directly Listing - Web servers can be configured to automatically
+list the contents of directories that do not have an index page
+present.</p>
+<ul>
+<li><p>For example: If you see a path such as this -&gt;
+/resources/static/files/23.jpg</p></li>
+<li><p>Look under all the folders to see if there is a listing of other
+existing resources:</p>
+<ul>
+<li>/resources</li>
+<li>/resources/static</li>
+<li>/resources/static/files</li>
+</ul></li>
+</ul></li>
+</ul>
+<p><br></p>
+<ul>
+<li>Submit unexpected characters into parameters, cookies, or headers,
+and analyze the affect it has on the application. Maybe this discloses a
+stack trace or an overly verbose error message.</li>
+</ul>
+<figure>
+<img
+src="https://github.com/ChrisM-X/PortSwigger-Academy-CheatSheets/blob/master/Information%20Disclosure/Images/StackTrace1.png"
+alt="Stack Trace" />
+<figcaption aria-hidden="true">Stack Trace</figcaption>
+</figure>
+<p><br><br></p>
+<ul>
+<li>Burp Pro has a “Search” functionality under the “Engagement Tools”
+that can help to identify any sensitive information in the responses of
+a specific target domain. We can search for some keywords such as
+password, secret, key, etc.</li>
+</ul>
+<p><br></p>
+<ul>
+<li>Look for keywords that are often contained in error messages: error,
+invalid, stack, not found, SQL, access, etc. Sometimes the error
+messages will not be rendered to the screen, look at the raw
+responses.</li>
+</ul>
+<p><br></p>
+<ul>
+<li><p>When a server handles files with a particular extension, such as
+.php, it will typically execute the code, rather than simply sending it
+to the client as text. However, in some situations, you can trick a
+website into returning the contents of the file instead. Appending a
+tilde (~) to the filename or adding a different file extension.</p></li>
+<li><p>Example: test.php~</p></li>
+</ul>
+<p><br></p>
+<ul>
+<li>Use the HTTP method TRACE when submitting requests, as this can
+reveal sensitive debugging information that can be used to exploit the
+application.</li>
+</ul>
+<figure>
+<img
+src="https://github.com/ChrisM-X/PortSwigger-Academy-CheatSheets/blob/master/Information%20Disclosure/Images/ID-1.png"
+alt="Trace" />
+<figcaption aria-hidden="true">Trace</figcaption>
+</figure>
+<p><br><br><br></p>
+<ul>
+<li><p>Information disclosure in version control history:</p>
+<ul>
+<li><p>There is a /.git endpoint that can be found by using the Discover
+Content feature in the Engagement Tools</p></li>
+<li><p>At this point we can download the entire directory using { wget
+–r https://…/path/to/file } and follow the steps on the screenshot to
+obtain the admin password.</p></li>
+</ul></li>
+</ul>
+<figure>
+<img
+src="https://github.com/ChrisM-X/PortSwigger-Academy-CheatSheets/blob/master/Information%20Disclosure/Images/ID-2.png"
+alt="Version Control" />
+<figcaption aria-hidden="true">Version Control</figcaption>
+</figure>
+<p><br><br></p>
+<h3
+id="pending-to-complete-labs-that-are-missing-from-cheat-sheet">Pending
+to complete labs that are missing from cheat sheet:</h3>
+<ul>
+<li>All labs in this category are completed and referenced in cheat
+sheet.</li>
+</ul>
+</body>
+</html>

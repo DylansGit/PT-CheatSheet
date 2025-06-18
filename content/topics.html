@@ -1,0 +1,1559 @@
+<div id="topics" class="tab-content active">
+    <h1>Topics</h1>
+    
+    <div class="tool-row">
+        <div class="tool-name" onclick="toggleDetails('api-testing-details')">API Testing</div>
+        <div class="tool-details" id="api-testing-details">
+            <h3>API Testing</h3>
+            <p>API testing ensures that APIs (which enable communication between software systems) are secure and functioning correctly. Vulnerabilities in APIs can lead to major issues affecting a website’s security, including confidentiality, integrity, and availability.</p>
+    
+            <h4>API Recon</h4>
+            <p>To effectively test an API, begin by gathering as much information as possible to map the attack surface. Start by identifying <strong>API endpoints</strong>—the points where the API interacts with requests. For instance, a GET request like <code>/api/books</code> retrieves a list of books, while <code>/api/books/mystery</code> retrieves a specific genre.</p>
+            <p>After discovering endpoints, understand how to interact with them by researching:</p>
+            <ul>
+                <li>Compulsory and optional input parameters</li>
+                <li>Supported HTTP methods (GET, POST, etc.) and media formats</li>
+                <li>Rate limits and any authentication mechanisms</li>
+            </ul>
+    
+            <h4>API Documentation</h4>
+            <p>APIs are often well-documented, with instructions provided in both human-readable and machine-readable formats (e.g., JSON or XML). Start by reviewing any available documentation, as it provides key insights into how to use the API and integrate it properly.</p>
+    
+            <h4>Discovering Hidden API Documentation</h4>
+            <p>If documentation isn't readily accessible, try exploring the applications that rely on the API. Use tools like Burp Scanner or manually browse applications to uncover potential endpoints that may lead to documentation files, such as:</p>
+            <ul>
+                <li><code>/api</code></li>
+                <li><code>/swagger/index.html</code></li>
+                <li><code>/openapi.json</code></li>
+            </ul>
+            <p>Investigating these can give valuable insights into API operations and potential vulnerabilities.</p>
+        </div>
+    </div>
+    
+    <div class="tool-row">
+        <div class="tool-name" onclick="toggleDetails('access-control-details')">Access Control</div>
+        <div class="tool-details" id="access-control-details">
+            <h3>Access Control</h3>
+            <p>Access control is the application of constraints on who or what is authorized to perform actions or access resources. In the context of web applications, access control is dependent on:</p>
+            <ul>
+                <li><strong>Authentication</strong>: Confirms the identity of the user.</li>
+                <li><strong>Session management</strong>: Identifies which subsequent HTTP requests are made by the same user.</li>
+            </ul>
+            <p>Access control determines whether a user is allowed to carry out the action they are attempting to perform. It is a complex problem involving business, organizational, and legal constraints applied to a technical solution.</p>
+    
+            <h4>Vertical Access Controls</h4>
+            <p>Vertical access controls restrict access to sensitive functionality for specific types of users. Different types of users have access to different functions. For example, an administrator can modify or delete any user's account, while ordinary users cannot perform these actions.</p>
+    
+            <h4>Horizontal Access Controls</h4>
+            <p>Horizontal access controls restrict access to resources for specific users. For example, in a banking app, a user can view transactions from their own accounts but not from others.</p>
+    
+            <h4>Context-dependent Access Controls</h4>
+            <p>Context-dependent access controls restrict functionality based on the application's state or the user's interaction with it. For example, a retail website might prevent users from modifying the contents of their shopping cart after payment.</p>
+    
+            <h4>Examples of Broken Access Controls</h4>
+    
+            <h5>Vertical Privilege Escalation</h5>
+            <p>This occurs when a user gains access to functionality they should not have, such as a non-admin user accessing an admin page.</p>
+    
+            <h5>Unprotected Functionality</h5>
+            <p>Vertical privilege escalation can occur if an application does not protect sensitive functionality. For example, administrative functions might be linked only on the admin's page but accessible via direct URL manipulation, such as:</p>
+            <p><code>https://insecure-website.com/admin</code></p>
+    
+            <h5>URL-Matching Discrepancies</h5>
+            <p>Some applications may fail to strictly match URL paths, allowing requests to inconsistent paths to reach sensitive endpoints. For example, <code>/ADMIN/DELETEUSER</code> may still access <code>/admin/deleteUser</code>. If access control mechanisms do not account for these discrepancies, unauthorized access may occur.</p>
+    
+            <h5>Horizontal Privilege Escalation</h5>
+            <p>This occurs when a user gains access to another user's resources. For example, modifying an ID in the URL might grant access to another user's account page:</p>
+            <p><code>https://insecure-website.com/myaccount?id=123</code></p>
+    
+            <h5>Horizontal to Vertical Privilege Escalation</h5>
+            <p>Horizontal privilege escalation can lead to vertical escalation if an attacker compromises a more privileged user's account, such as resetting an admin's password through parameter tampering:</p>
+            <p><code>https://insecure-website.com/myaccount?id=456</code></p>
+    
+            <h5>Insecure Direct Object References (IDOR)</h5>
+            <p>IDORs occur when an application uses user-supplied input to access objects directly, without proper access control checks. An attacker can modify input to access unauthorized resources.</p>
+    
+            <h5>Access Control Vulnerabilities in Multi-Step Processes</h5>
+            <p>Websites that implement multi-step processes might apply proper access controls to some steps but not others. An attacker could skip earlier steps and directly access later stages to bypass access controls.</p>
+    
+            <h5>Referer-based Access Control</h5>
+            <p>Some websites base access control decisions on the HTTP Referer header. Since the Referer header can be controlled by an attacker, it can lead to unauthorized access if used for security purposes.</p>
+    
+            <h5>Location-based Access Control</h5>
+            <p>Some applications restrict access based on geographic location, which can be bypassed using VPNs or web proxies.</p>
+    
+            <h4>Preventing Access Control Vulnerabilities</h4>
+            <ul>
+                <li>Never rely on obfuscation alone for access control.</li>
+                <li>Deny access by default unless explicitly intended to be public.</li>
+                <li>Use a single, application-wide mechanism for enforcing access controls.</li>
+                <li>Make access control declaration mandatory for developers, and deny access by default.</li>
+                <li>Thoroughly audit and test access controls to ensure they work as intended.</li>
+            </ul>
+        </div>
+    </div>
+    
+
+    <div class="tool-row">
+        <div class="tool-name" onclick="toggleDetails('authentication-details')">Authentication Vulnerabilities</div>
+        <div class="tool-details" id="authentication-details">
+            <h3>Authentication Vulnerabilities</h3>
+            <p>Authentication vulnerabilities are critical because of the direct link between authentication and security. These flaws can allow attackers to gain access to sensitive data and expose more attack surfaces for further exploits.</p>
+    
+            <h4>What is Authentication?</h4>
+            <p>Authentication is the process of verifying the identity of a user or client. Robust authentication mechanisms are integral to effective web security. The three main types of authentication are:</p>
+            <ul>
+                <li><strong>Knowledge Factors:</strong> Something you know, like a password or security question.</li>
+                <li><strong>Possession Factors:</strong> Something you have, like a mobile phone or security token.</li>
+                <li><strong>Inherence Factors:</strong> Something you are or do, such as biometrics.</li>
+            </ul>
+    
+            <h4>Authentication vs Authorization</h4>
+            <p>Authentication verifies a user’s identity, while authorization determines what actions they can perform. For instance, after logging in, users may be authorized to access certain data or features based on their permissions.</p>
+    
+            <h4>How Authentication Vulnerabilities Arise</h4>
+            <p>Most vulnerabilities occur due to:</p>
+            <ul>
+                <li><strong>Weak Authentication Mechanisms:</strong> Failing to protect against brute-force attacks.</li>
+                <li><strong>Broken Authentication:</strong> Flaws in implementation that allow attackers to bypass authentication entirely.</li>
+            </ul>
+    
+            <h4>Impact of Vulnerable Authentication</h4>
+            <p>The impact can be severe. Bypassing authentication may grant attackers unauthorized access to sensitive data, functionality, or administrative control, posing significant risks to the application and infrastructure.</p>
+    
+            <h4>Vulnerabilities in Authentication Mechanisms</h4>
+            <p>Common vulnerabilities include poor password policies, weak two-factor authentication, and improper session handling. These weaknesses can expose your website to brute-force attacks and logic flaws.</p>
+    
+            <h4>How to Secure Your Authentication Mechanisms</h4>
+            <p>Follow these principles to secure authentication:</p>
+            <ul>
+                <li><strong>Take care with user credentials:</strong> Never send login data over unencrypted connections. Ensure HTTPS enforcement.</li>
+                <li><strong>Don't count on users for security:</strong> Enforce secure behavior, such as implementing strong password policies using tools like zxcvbn.</li>
+                <li><strong>Prevent username enumeration:</strong> Use generic error messages for invalid usernames or passwords.</li>
+                <li><strong>Implement robust brute-force protection:</strong> Use CAPTCHA and rate limiting to disrupt brute-force attacks.</li>
+                <li><strong>Triple-check your verification logic:</strong> Audit your code to eliminate any logic flaws in authentication processes.</li>
+                <li><strong>Secure supplementary functionality:</strong> Ensure password resets and similar features are as secure as the main login.</li>
+                <li><strong>Implement proper multi-factor authentication (MFA):</strong> Use apps or dedicated devices for MFA instead of SMS-based systems, which can be vulnerable to SIM swapping.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="tool-row">
+        <div class="tool-name" onclick="toggleDetails('business-logic-details')">Business Logic Vulnerabilities</div>
+        <div class="tool-details" id="business-logic-details">
+            <h3>What are Business Logic Vulnerabilities?</h3>
+            <p>Business logic vulnerabilities are flaws in the design and implementation of an application that allow an attacker to elicit unintended behavior. This potentially enables attackers to manipulate legitimate functionality to achieve a malicious goal. These flaws are generally the result of failing to anticipate unusual application states that may occur and, consequently, failing to handle them safely.</p>
+            <p>Logic flaws are often invisible to people who aren't explicitly looking for them as they typically won't be exposed by normal use of the application. However, an attacker may be able to exploit behavioral quirks by interacting with the application in ways that developers never intended.</p>
+            <p>One of the main purposes of business logic is to enforce the rules and constraints that were defined when designing the application or functionality. Broadly speaking, the business rules dictate how the application should react when a given scenario occurs. This includes preventing users from doing things that will have a negative impact on the business or that simply don't make sense.</p>
+            <p>Flaws in the logic can allow attackers to circumvent these rules. For example, they might be able to complete a transaction without going through the intended purchase workflow. In other cases, broken or non-existent validation of user-supplied data might allow users to make arbitrary changes to transaction-critical values or submit nonsensical input. By passing unexpected values into server-side logic, an attacker can potentially induce the application to do something that it isn't supposed to.</p>
+            <p>Logic-based vulnerabilities can be extremely diverse and are often unique to the application and its specific functionality. Identifying them often requires a certain amount of human knowledge, such as an understanding of the business domain or what goals an attacker might have in a given context. This makes them difficult to detect using automated vulnerability scanners. As a result, logic flaws are a great target for bug bounty hunters and manual testers in general.</p>
+    
+            <h3>How do Business Logic Vulnerabilities Arise?</h3>
+            <p>Business logic vulnerabilities often arise because the design and development teams make flawed assumptions about how users will interact with the application. These bad assumptions can lead to inadequate validation of user input. For example, if the developers assume that users will pass data exclusively via a web browser, the application may rely entirely on weak client-side controls to validate input. These are easily bypassed by an attacker using an intercepting proxy.</p>
+            <p>Ultimately, this means that when an attacker deviates from the expected user behavior, the application fails to take appropriate steps to prevent this and, subsequently, fails to handle the situation safely.</p>
+            <p>Logic flaws are particularly common in overly complicated systems that even the development team themselves do not fully understand. To avoid logic flaws, developers need to understand the application as a whole. This includes being aware of how different functions can be combined in unexpected ways. Developers working on large code bases may not have an intimate understanding of how all areas of the application work. Someone working on one component could make flawed assumptions about how another component works and, as a result, inadvertently introduce serious logic flaws. If the developers do not explicitly document any assumptions that are being made, it is easy for these kinds of vulnerabilities to creep into an application.</p>
+    
+            <h3>What is the Impact of Business Logic Vulnerabilities?</h3>
+            <p>The impact of business logic vulnerabilities can, at times, be fairly trivial. It is a broad category and the impact is highly variable. However, any unintended behavior can potentially lead to high-severity attacks if an attacker is able to manipulate the application in the right way. For this reason, quirky logic should ideally be fixed even if you can't work out how to exploit it yourself. There is always a risk that someone else will be able to.</p>
+            <p>Fundamentally, the impact of any logic flaw depends on what functionality it is related to. If the flaw is in the authentication mechanism, for example, this could have a serious impact on your overall security. Attackers could potentially exploit this for privilege escalation, or to bypass authentication entirely, gaining access to sensitive data and functionality. This also exposes an increased attack surface for other exploits.</p>
+            <p>Flawed logic in financial transactions can obviously lead to massive losses for the business through stolen funds, fraud, and so on.</p>
+            <p>You should also note that even though logic flaws may not allow an attacker to benefit directly, they could still allow a malicious party to damage the business in some way.</p>
+    
+            <h3>How to Prevent Business Logic Vulnerabilities</h3>
+            <p>In short, the keys to preventing business logic vulnerabilities are to:</p>
+            <ul>
+                <li>Make sure developers and testers understand the domain that the application serves.</li>
+                <li>Avoid making implicit assumptions about user behavior or the behavior of other parts of the application.</li>
+                <li>Identify what assumptions you have made about the server-side state and implement the necessary logic to verify that these assumptions are met. This includes making sure that the value of any input is sensible before proceeding.</li>
+                <li>Ensure that both developers and testers are able to fully understand these assumptions and how the application is supposed to react in different scenarios. This can help the team to spot logic flaws as early as possible.</li>
+            </ul>
+            <p>To facilitate this, the development team should adhere to the following best practices wherever possible:</p>
+            <ul>
+                <li>Maintain clear design documents and data flows for all transactions and workflows, noting any assumptions that are made at each stage.</li>
+                <li>Write code as clearly as possible. If it's difficult to understand what is supposed to happen, it will be difficult to spot any logic flaws. Ideally, well-written code shouldn't need documentation to understand it. In unavoidably complex cases, producing clear documentation is crucial to ensure that other developers and testers know what assumptions are being made and exactly what the expected behavior is.</li>
+                <li>Note any references to other code that uses each component. Think about any side-effects of these dependencies if a malicious party were to manipulate them in an unusual way.</li>
+            </ul>
+            <p>Due to the relatively unique nature of many logic flaws, it is easy to brush them off as a one-time mistake due to human error and move on. However, as we've demonstrated, these flaws are often the result of bad practices in the initial phases of building the application. Analyzing why a logic flaw existed in the first place, and how it was missed by the team, can help you to spot weaknesses in your processes. By making minor adjustments, you can increase the likelihood that similar flaws will be cut off at the source or caught earlier in the development process.</p>
+        </div>
+    </div>
+
+    <div class="tool-row">
+        <div class="tool-name" onclick="toggleDetails('clickjacking-details')">Clickjacking</div>
+        <div class="tool-details" id="clickjacking-details">
+            <h3>Clickjacking</h3>
+            <p>Clickjacking is an interface-based attack where users are tricked into clicking on actionable content on a hidden website by interacting with decoy content on another site. This attack uses an invisible, actionable web page, such as an iframe, overlaid on top of the user’s anticipated content. Unlike CSRF attacks, which forge requests without user interaction, clickjacking requires the user to perform an action, like a button click.</p>
+    
+            <h4>How to Construct a Basic Clickjacking Attack</h4>
+            <p>Clickjacking attacks utilize CSS to create and manipulate layers. The target website is embedded as an iframe, which is then overlaid on the decoy website. Here’s an example:</p>
+            <pre><code>
+    &lt;head&gt;
+        &lt;style&gt;
+            #target_website {
+                position: relative;
+                width: 128px;
+                height: 128px;
+                opacity: 0.00001;
+                z-index: 2;
+            }
+            #decoy_website {
+                position: absolute;
+                width: 300px;
+                height: 400px;
+                z-index: 1;
+            }
+        &lt;/style&gt;
+    &lt;/head&gt;
+    &lt;body&gt;
+        &lt;div id="decoy_website"&gt;
+            ...decoy web content here...
+        &lt;/div&gt;
+        &lt;iframe id="target_website" src="https://vulnerable-website.com"&gt;&lt;/iframe&gt;
+    &lt;/body&gt;
+            </code></pre>
+    
+            <h4>Clickbandit</h4>
+            <p>Clickbandit is a Burp Suite tool that simplifies creating clickjacking proof of concept by generating an HTML file containing a suitable clickjacking overlay. It allows you to perform the desired actions on the frameable page using your browser, creating an interactive proof of concept quickly.</p>
+    
+            <h4>Clickjacking with Prefilled Form Input</h4>
+            <p>Some websites allow form inputs to be prefilled using GET parameters. The attacker can modify the target URL to include values of their choosing, overlaying a transparent submit button on the decoy site. This can trick users into submitting forms with hidden input values.</p>
+    
+            <h4>Frame Busting Scripts</h4>
+            <p>Frame busting scripts are used to prevent clickjacking by ensuring that the page cannot be framed. These scripts check if the current window is the top window, make all frames visible, and prevent clicks on invisible frames. However, frame busting can be circumvented and may not work if JavaScript is disabled or unsupported.</p>
+    
+            <h4>Combining Clickjacking with DOM XSS</h4>
+            <p>Clickjacking can be combined with a DOM XSS attack for greater impact. The attacker first identifies a DOM XSS exploit and then uses clickjacking to trick users into interacting with the vulnerable iframe, triggering the XSS attack.</p>
+    
+            <h4>Preventing Clickjacking Attacks</h4>
+            <p>Server-side protections against clickjacking include:</p>
+            <ul>
+                <li><strong>X-Frame-Options</strong>: This header can be set to <code>deny</code> to prevent framing altogether or <code>sameorigin</code> to restrict framing to the same origin. Note that <code>allow-from</code> is not supported in some browsers.</li>
+                <li><strong>Content Security Policy (CSP)</strong>: Use the <code>frame-ancestors</code> directive to control who can frame your content. For example, <code>frame-ancestors 'self'</code> allows framing only by the same origin, while <code>frame-ancestors 'none'</code> prevents any framing.</li>
+            </ul>
+            <p>Using both X-Frame-Options and CSP provides robust protection against clickjacking attacks.</p>
+        </div>
+    </div>
+
+    <div class="tool-row">
+        <div class="tool-name" onclick="toggleDetails('command-injection-details')">Command Injection</div>
+        <div class="tool-details" id="command-injection-details">
+            <h3>Command Injection</h3>
+            <p>OS command injection, also known as shell injection, allows an attacker to execute operating system (OS) commands on the server that is running an application. This can lead to a complete compromise of the application and its data. Attackers can leverage OS command injection vulnerabilities to gain control over the hosting infrastructure and pivot the attack to other systems within the organization.</p>
+    
+            <h4>Injecting OS Commands</h4>
+            <p>Consider a shopping application where users can check the stock status of an item in a particular store. The application queries various legacy systems by calling a shell command with product and store IDs as arguments:</p>
+            <pre><code>
+    https://insecure-website.com/stockStatus?productID=381&storeID=29
+    stockreport.pl 381 29
+            </code></pre>
+            <p>An attacker can inject an arbitrary command if the application lacks defenses against OS command injection:</p>
+            <pre><code>
+    & echo aiwefwlguh &
+            </code></pre>
+            <p>Submitting this input in the productID parameter results in the following command being executed:</p>
+            <pre><code>
+    stockreport.pl & echo aiwefwlguh & 29
+            </code></pre>
+            <p>The output returned is:</p>
+            <pre><code>
+    Error - productID was not provided
+    aiwefwlguh
+    29: command not found
+            </code></pre>
+            <p>Here, the injected echo command is executed, and the supplied string is echoed in the output. The & character is a shell command separator that allows multiple commands to execute sequentially.</p>
+    
+            <h4>Useful Commands</h4>
+            <p>After identifying an OS command injection vulnerability, use the following commands to gather system information:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Purpose of Command</th>
+                        <th>Linux</th>
+                        <th>Windows</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Name of Current User</td>
+                        <td><code>whoami</code></td>
+                        <td><code>whoami</code></td>
+                    </tr>
+                    <tr>
+                        <td>Operating System</td>
+                        <td><code>uname -a</code></td>
+                        <td><code>ver</code></td>
+                    </tr>
+                    <tr>
+                        <td>Network Configuration</td>
+                        <td><code>ifconfig</code></td>
+                        <td><code>ipconfig /all</code></td>
+                    </tr>
+                    <tr>
+                        <td>Network Connections</td>
+                        <td><code>netstat -an</code></td>
+                        <td><code>netstat -an</code></td>
+                    </tr>
+                    <tr>
+                        <td>Running Processes</td>
+                        <td><code>ps -ef</code></td>
+                        <td><code>tasklist</code></td>
+                    </tr>
+                </tbody>
+            </table>
+    
+            <h4>Blind OS Command Injection Vulnerabilities</h4>
+            <p>Many OS command injection vulnerabilities are blind, meaning the application does not return the command output. You can exploit these vulnerabilities using different techniques, such as triggering time delays:</p>
+            <pre><code>
+    & ping -c 10 127.0.0.1 &
+            </code></pre>
+            <p>This command pings the loopback address for 10 seconds, allowing you to determine if the command was executed based on the application's response time.</p>
+    
+            <h4>Ways of Injecting OS Commands</h4>
+            <p>Various shell metacharacters can be used for OS command injection attacks. These include:</p>
+            <ul>
+                <li><code>&</code> - Command separator (works on both Windows and Unix-based systems)</li>
+                <li><code>&&</code> - Command separator (works on both Windows and Unix-based systems)</li>
+                <li><code>|</code> - Command separator (works on both Windows and Unix-based systems)</li>
+                <li><code>||</code> - Command separator (works on both Windows and Unix-based systems)</li>
+                <li><code>;</code> - Command separator (Unix-based systems only)</li>
+                <li><code>Newline (0x0a or \n)</code> - Command separator (Unix-based systems only)</li>
+                <li><code>`</code> - Inline execution (Unix-based systems only)</li>
+                <li><code>$()</code> - Inline execution (Unix-based systems only)</li>
+            </ul>
+            <p>In some cases, user-controlled input may appear within quotation marks. You need to terminate the quoted context using <code>"</code> or <code>'</code> before injecting new commands.</p>
+    
+            <h4>Preventing OS Command Injection Attacks</h4>
+            <p>To prevent OS command injection vulnerabilities:</p>
+            <ul>
+                <li><strong>Avoid calling OS commands from application-layer code:</strong> Use safer platform APIs whenever possible.</li>
+                <li><strong>Perform strong input validation:</strong> Examples include validating against a whitelist of permitted values, ensuring input is numeric, or containing only alphanumeric characters.</li>
+                <li><strong>Avoid attempting to sanitize input:</strong> Escaping shell metacharacters is error-prone and can be bypassed by skilled attackers.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="tool-row">
+        <div class="tool-name" onclick="toggleDetails('cors')">CORS</div>
+        <div class="tool-details" id="cors">
+            <h2>CORS (Cross-Origin Resource Sharing)</h2>
+        
+            <h3>What is CORS?</h3>
+            <p>Cross-Origin Resource Sharing (CORS) is a mechanism that allows restricted resources on a web page to be requested from another domain outside the domain from which the resource originated. CORS is designed to extend and relax the same-origin policy (SOP), which restricts how documents or scripts loaded from one origin can interact with resources from another origin. While CORS facilitates controlled access to resources across different domains, it also introduces potential vulnerabilities if misconfigured.</p>
+        
+            <h3>Same-Origin Policy (SOP)</h3>
+            <p>The Same-Origin Policy is a security measure implemented by web browsers to prevent web pages from making requests to a different domain than the one that served the web page. It aims to prevent malicious scripts on one site from accessing sensitive data on another site. Under SOP, a website can request resources from its own domain but cannot directly access resources from another domain.</p>
+        
+            <h3>Relaxation of the Same-Origin Policy</h3>
+            <p>To allow controlled access to resources on different domains, the same-origin policy can be relaxed using CORS. The CORS protocol uses HTTP headers to define which origins are allowed to access resources and whether credentials are permitted. This involves a header exchange between the browser and the server hosting the resources.</p>
+        
+            <h3>Common CORS Configuration Vulnerabilities</h3>
+        
+            <h4>Server-Generated ACAO Header from Client-Specified Origin Header</h4>
+            <p>Some applications generate the <code>Access-Control-Allow-Origin</code> (ACAO) header based on the <code>Origin</code> header from the client request. For example:</p>
+            <pre><code>GET /sensitive-victim-data HTTP/1.1
+        Host: vulnerable-website.com
+        Origin: https://malicious-website.com
+            </code></pre>
+            <p>The server might respond with:</p>
+            <pre><code>HTTP/1.1 200 OK
+        Access-Control-Allow-Origin: https://malicious-website.com
+        Access-Control-Allow-Credentials: true
+            </code></pre>
+            <p>This setup allows any domain to access resources and, if the response includes sensitive information, the attacker could exploit this to retrieve the data.</p>
+        
+            <h4>Errors Parsing Origin Headers</h4>
+            <p>Applications that use a whitelist to allow specific origins can make mistakes when implementing these lists. For example:</p>
+            <pre><code>GET /data HTTP/1.1
+        Host: normal-website.com
+        Origin: https://innocent-website.com
+            </code></pre>
+            <p>If the server is incorrectly configured to allow:</p>
+            <pre><code>Access-Control-Allow-Origin: https://innocent-website.com
+            </code></pre>
+            <p>This might inadvertently allow malicious domains, especially if wildcards or improper patterns are used.</p>
+        
+            <h4>Whitelisted Null Origin Value</h4>
+            <p>The <code>null</code> origin is a special case used in various scenarios such as sandboxed iframes or local files. If a server whitelists <code>null</code> as an allowed origin:</p>
+            <pre><code>GET /sensitive-victim-data
+        Host: vulnerable-website.com
+        Origin: null
+            </code></pre>
+            <p>An attacker might exploit this by crafting requests that appear to originate from <code>null</code>, thereby gaining unauthorized access.</p>
+        
+            <h4>Exploiting XSS via CORS Trust Relationships</h4>
+            <p>Even with correctly configured CORS, trust relationships can be exploited. If a trusted origin is vulnerable to XSS, an attacker could use this vulnerability to retrieve sensitive data via CORS. For instance:</p>
+            <pre><code>GET /api/requestApiKey HTTP/1.1
+        Host: vulnerable-website.com
+        Origin: https://subdomain.vulnerable-website.com
+            </code></pre>
+            <p>If XSS is present on <code>subdomain.vulnerable-website.com</code>, the attacker could leverage it to extract data.</p>
+        
+            <h4>Breaking TLS with Poorly Configured CORS</h4>
+            <p>If an application with HTTPS whitelists a domain using HTTP, attackers can exploit this. For example:</p>
+            <pre><code>GET /api/requestApiKey HTTP/1.1
+        Host: vulnerable-website.com
+        Origin: http://trusted-subdomain.vulnerable-website.com
+            </code></pre>
+            <p>An attacker could intercept and manipulate requests to exploit this vulnerability, even if HTTPS is used.</p>
+        
+            <h4>Intranets and CORS Without Credentials</h4>
+            <p>Intranet applications may use CORS without requiring credentials, which could be exploited by external attackers. For example:</p>
+            <pre><code>GET /reader?url=doc1.pdf
+        Host: intranet.normal-website.com
+        Origin: https://normal-website.com
+            </code></pre>
+            <p>An attacker could perform CORS-based attacks from an external site if the application does not require credentials.</p>
+        
+            <h3>How to Prevent CORS-Based Attacks</h3>
+            <h4>Proper Configuration of Cross-Origin Requests</h4>
+            <p>Ensure that the <code>Access-Control-Allow-Origin</code> header is set correctly to only trusted origins. Avoid dynamic reflection of origins from requests.</p>
+        
+            <h4>Only Allow Trusted Sites</h4>
+            <p>Origins specified in the <code>Access-Control-Allow-Origin</code> header should be well-controlled and trusted. Dynamic origin reflection without validation can be exploited.</p>
+        
+            <h4>Avoid Whitelisting Null</h4>
+            <p>Do not use <code>Access-Control-Allow-Origin: null</code> unless absolutely necessary. This is a potential vector for exploitation.</p>
+        
+            <h4>Avoid Wildcards in Internal Networks</h4>
+            <p>Avoid using wildcards (e.g., <code>*</code>) in CORS policies, especially for internal networks. Properly restrict access to internal resources.</p>
+        
+            <h4>CORS is Not a Substitute for Server-Side Security Policies</h4>
+            <p>CORS should complement, not replace, server-side security measures. Ensure proper authentication, session management, and protection of sensitive data.</p>
+        </div>
+    </div>
+
+    <div class="tool-row">
+        <div class="tool-name" onclick="toggleDetails('CSRF')">CSRF</div>
+        <div class="tool-details" id="CSRF">
+            <h2>CSRF (Cross-Site Request Forgery)</h2>
+        
+            <h3>What is CSRF?</h3>
+            <p>Cross-Site Request Forgery (CSRF) is a web security vulnerability that allows an attacker to induce users to perform actions they did not intend to perform. It partially circumvents the same-origin policy designed to prevent interference between different websites.</p>
+        
+            <h3>What is the impact of a CSRF attack?</h3>
+            <p>In a successful CSRF attack, the attacker causes the victim user to carry out an action unintentionally, such as changing their email address, password, or making a funds transfer. Depending on the action, the attacker might gain full control over the user’s account. If the user has a privileged role within the application, the attacker could potentially control all of the application’s data and functionality.</p>
+        
+            <h3>How does CSRF work?</h3>
+            <p>For a CSRF attack to be possible, three key conditions must be met:</p>
+            <ul>
+                <li><strong>A relevant action:</strong> An action within the application that the attacker wants to induce, such as modifying user permissions or changing a password.</li>
+                <li><strong>Cookie-based session handling:</strong> The application relies solely on session cookies to identify users. No additional mechanisms for tracking sessions or validating requests are in place.</li>
+                <li><strong>No unpredictable request parameters:</strong> The requests performing the action do not require parameters that the attacker cannot determine or guess.</li>
+            </ul>
+            <p>For example, if an application allows users to change their email address, the request might look like this:</p>
+            <pre><code>POST /email/change HTTP/1.1
+        Host: vulnerable-website.com
+        Content-Type: application/x-www-form-urlencoded
+        Content-Length: 30
+        Cookie: session=yvthwsztyeQkAPzeQ5gHgTvlyxHfsAfE
+        
+        email=wiener@normal-user.com
+            </code></pre>
+            <p>The attacker could craft an HTML page like this to exploit CSRF:</p>
+            <pre><code>&lt;html&gt;
+            &lt;body&gt;
+                &lt;form action="https://vulnerable-website.com/email/change" method="POST"&gt;
+                    &lt;input type="hidden" name="email" value="pwned@evil-user.net" /&gt;
+                &lt;/form&gt;
+                &lt;script&gt;
+                    document.forms[0].submit();
+                &lt;/script&gt;
+            &lt;/body&gt;
+            &lt;/html&gt;
+            </code></pre>
+            <p>If a victim visits this page while logged into the vulnerable website, their browser will include their session cookie in the request, and the vulnerable site will process it as if it came from the victim user.</p>
+        
+            <h3>Note</h3>
+            <p>CSRF can also arise in contexts where applications automatically include user credentials in requests, such as HTTP Basic authentication and certificate-based authentication.</p>
+        
+            <h3>How to construct a CSRF attack</h3>
+            <p>Manually creating the HTML for a CSRF exploit can be cumbersome. Using Burp Suite Professional's CSRF PoC generator is easier:</p>
+            <ol>
+                <li>Select a request in Burp Suite Professional that you want to test or exploit.</li>
+                <li>Right-click and choose <strong>Engagement tools / Generate CSRF PoC</strong>.</li>
+                <li>Burp Suite will generate HTML that triggers the selected request (excluding cookies, which will be added automatically by the victim's browser).</li>
+                <li>Tweak the options in the CSRF PoC generator if necessary, then copy the HTML into a web page.</li>
+                <li>Test the HTML in a browser logged in to the vulnerable website to see if the intended request is issued successfully.</li>
+            </ol>
+        
+            <h3>How to deliver a CSRF exploit</h3>
+            <p>CSRF exploits are often delivered similarly to reflected XSS. The attacker might place the malicious HTML on a controlled website or embed it in emails or social media messages. Alternatively, a simple CSRF attack using GET requests can be directly delivered via a malicious URL, such as:</p>
+            <pre><code>&lt;img src="https://vulnerable-website.com/email/change?email=pwned@evil-user.net"&gt;
+            </code></pre>
+        
+            <h3>Common defenses against CSRF</h3>
+            <p>Defending against CSRF typically involves implementing various measures to mitigate the risk:</p>
+            <ul>
+                <li><strong>CSRF Tokens:</strong> Unique, secret, and unpredictable values generated by the server and shared with the client. The client must include the correct token in sensitive requests, making it difficult for attackers to craft valid requests.</li>
+                <li><strong>SameSite Cookies:</strong> A browser security mechanism that controls when cookies are included in requests from other websites. SameSite restrictions can prevent attackers from triggering cross-site actions. As of 2021, Chrome enforces Lax SameSite restrictions by default, with other major browsers expected to follow.</li>
+                <li><strong>Referer-Based Validation:</strong> Verifying that requests originate from the application's own domain by checking the HTTP Referer header. This method is less effective than CSRF tokens but can be used in conjunction with other defenses.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="tool-row">
+        <div class="tool-name" onclick="toggleDetails('xss')">XSS</div>
+        <div class="tool-details" id="xss">
+            <h2>What is Cross-Site Scripting (XSS)?</h2>
+            <p>Cross-Site Scripting (XSS) is a web security vulnerability that allows an attacker to inject malicious scripts into web pages viewed by other users. This exploit enables attackers to manipulate the interactions users have with a vulnerable application, effectively circumventing the same-origin policy that typically prevents different websites from interfering with each other. XSS vulnerabilities can be used to impersonate users, access sensitive information, and execute arbitrary actions within the context of the victim’s session.</p>
+        
+            <h2>How Does XSS Work?</h2>
+            <p>XSS vulnerabilities occur when a web application includes untrusted data in its response without proper validation or escaping. This allows attackers to inject malicious JavaScript code into web pages that are then executed in the browsers of users who view those pages.</p>
+        
+            <h3>XSS Proof of Concept</h3>
+            <p>To demonstrate XSS vulnerabilities, attackers often use simple JavaScript payloads such as <code>alert()</code> to show that malicious code executes in the victim's browser. However, modern browsers may prevent certain methods like <code>alert()</code> in cross-origin contexts. As an alternative, other functions like <code>print()</code> might be used for demonstration purposes.</p>
+        
+            <h2>Types of XSS Attacks</h2>
+            <h3>Reflected XSS</h3>
+            <p>Reflected XSS occurs when user input from an HTTP request is immediately reflected in the application's response without proper validation.</p>
+            <p><strong>Example:</strong></p>
+            <pre><code>https://insecure-website.com/status?message=All+is+well.
+        &lt;p>Status: All is well.&lt;/p&gt;</code></pre>
+            <p>An attacker can exploit this by crafting a URL:</p>
+            <pre><code>https://insecure-website.com/status?message=&lt;script&gt;/* Bad stuff here... */&lt;/script&gt;
+        &lt;p>Status: &lt;script&gt;/* Bad stuff here... */&lt;/script&gt;&lt;/p&gt;</code></pre>
+        
+            <h3>Stored XSS</h3>
+            <p>Stored XSS (or persistent XSS) occurs when malicious input is stored on the server and later served to users, usually from a database or other persistent storage.</p>
+            <p><strong>Example:</strong></p>
+            <pre><code>A message board application allows users to post messages:
+        &lt;p>Hello, this is my message!&lt;/p&gt;
+        An attacker could post:
+        &lt;p&gt;&lt;script&gt;/* Bad stuff here... */&lt;/script&gt;&lt;/p&gt;</code></pre>
+        
+            <h3>DOM-based XSS</h3>
+            <p>DOM-based XSS arises from client-side scripts that process data in an unsafe manner and manipulate the DOM.</p>
+            <p><strong>Example:</strong></p>
+            <pre><code>JavaScript code on the page reads user input and displays it:
+        var search = document.getElementById('search').value;
+        var results = document.getElementById('results');
+        results.innerHTML = 'You searched for: ' + search;
+        If the attacker controls the input, they can inject:
+        You searched for: &lt;img src=1 onerror='/* Bad stuff here... */'&gt;</code></pre>
+        
+            <h2>What Can XSS Be Used For?</h2>
+            <ul>
+                <li>Impersonate Users: Attackers can act on behalf of the victim user.</li>
+                <li>Carry Out Actions: Perform actions the user is authorized to perform.</li>
+                <li>Read Data: Access any data the user can view.</li>
+                <li>Capture Credentials: Steal login credentials and other sensitive information.</li>
+                <li>Deface Websites: Alter the appearance of the site or inject malicious content.</li>
+                <li>Inject Malicious Code: Insert trojans or other harmful functionality into the site.</li>
+            </ul>
+        
+            <h2>Impact of XSS Vulnerabilities</h2>
+            <p>The impact of XSS depends on the application's functionality and the privileges of the compromised user. In applications with sensitive data or administrative privileges, the impact can be severe, potentially leading to full control over the application and all associated data.</p>
+        
+            <h2>Content Security Policy (CSP)</h2>
+            <p>Content Security Policy (CSP) is a browser feature that helps mitigate XSS risks by defining which content is allowed to be loaded and executed. By implementing a CSP, you can reduce the potential impact of XSS vulnerabilities.</p>
+        
+            <h2>Dangling Markup Injection</h2>
+            <p>Dangling markup injection involves exploiting cases where the application allows for capturing data cross-domain. This can sometimes bypass input filters or other defenses and capture sensitive information such as CSRF tokens.</p>
+        
+            <h2>How to Prevent XSS Attacks</h2>
+            <ul>
+                <li><strong>Filter Input on Arrival:</strong> Validate and sanitize user input as it is received to ensure it adheres to expected formats.</li>
+                <li><strong>Encode Data on Output:</strong> Properly encode output to prevent it from being interpreted as active content, using HTML, URL, JavaScript, or CSS encoding based on the context.</li>
+                <li><strong>Use Appropriate Response Headers:</strong> Employ headers like <code>Content-Type</code> and <code>X-Content-Type-Options</code> to ensure browsers handle responses as intended.</li>
+                <li><strong>Implement Content Security Policy (CSP):</strong> Use CSP to restrict the sources of content that can be loaded and executed, adding an additional layer of defense against XSS.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="tool-row">
+        <div class="tool-name" onclick="toggleDetails('dom')">DOM Vulnerabilities</div>
+        <div class="tool-details" id="dom">
+            <h2>What is the DOM?</h2>
+            <p>The Document Object Model (DOM) is a hierarchical representation of the elements on a web page, provided by the web browser. Websites use JavaScript to manipulate the DOM nodes and objects, as well as their properties. While DOM manipulation is an integral part of modern web functionality, insecure handling of data through JavaScript can lead to various vulnerabilities. DOM-based vulnerabilities occur when JavaScript code on a website takes user-controlled data (a <strong>source</strong>) and passes it into a dangerous function or location (a <strong>sink</strong>).</p>
+        
+            <h2>Taint-Flow Vulnerabilities</h2>
+            <p>Many DOM-based vulnerabilities stem from how client-side code manages attacker-controlled data. Understanding <strong>taint flow</strong> is crucial for exploiting or mitigating these vulnerabilities.</p>
+        
+            <h3>What is Taint Flow?</h3>
+            <p>Taint flow involves the movement of data from a <strong>source</strong> to a <strong>sink</strong>. A source is a JavaScript property that accepts potentially attacker-controlled data. A sink is a function or DOM object that can cause harm if the data is not handled securely.</p>
+        
+            <h3>Sources</h3>
+            <p>Sources are properties that can be influenced by an attacker. Examples include:</p>
+            <ul>
+                <li><code>location.search</code> (query string)</li>
+                <li><code>document.referrer</code> (referring URL)</li>
+                <li><code>document.cookie</code> (user's cookies)</li>
+                <li><code>window.name</code></li>
+                <li><code>localStorage</code></li>
+                <li><code>sessionStorage</code></li>
+                <li><code>IndexedDB</code></li>
+            </ul>
+        
+            <h3>Sinks</h3>
+            <p>Sinks are functions or objects that can cause undesirable effects if attacker-controlled data reaches them. Examples include:</p>
+            <ul>
+                <li><code>eval()</code> (executes JavaScript code)</li>
+                <li><code>document.body.innerHTML</code> (inserts HTML content)</li>
+                <li><code>window.location</code> (redirects the browser)</li>
+                <li><code>document.cookie</code> (manipulates cookies)</li>
+            </ul>
+        
+            <h3>Example of a Vulnerability</h3>
+            <p>Consider the following code:</p>
+            <pre><code>goto = location.hash.slice(1);
+        if (goto.startsWith('https:')) {
+        location = goto;
+        }</code></pre>
+            <p>This code is vulnerable to DOM-based open redirection because it directly uses the <code>location.hash</code> source in an unsafe manner. An attacker could exploit this by crafting a URL like:</p>
+            <pre><code>https://www.innocent-website.com/example#https://www.evil-user.net</code></pre>
+            <p>When a victim visits this URL, the JavaScript sets the <code>location</code> property to <code>https://www.evil-user.net</code>, redirecting the victim to the malicious site.</p>
+        
+            <h2>Common Sources</h2>
+            <ul>
+                <li><code>document.URL</code></li>
+                <li><code>document.documentURI</code></li>
+                <li><code>document.URLUnencoded</code></li>
+                <li><code>document.baseURI</code></li>
+                <li><code>location</code></li>
+                <li><code>document.cookie</code></li>
+                <li><code>document.referrer</code></li>
+                <li><code>window.name</code></li>
+                <li><code>history.pushState</code></li>
+                <li><code>history.replaceState</code></li>
+                <li><code>localStorage</code></li>
+                <li><code>sessionStorage</code></li>
+                <li><code>IndexedDB</code></li>
+                <li><code>Database</code></li>
+            </ul>
+        
+            <h2>Common Sinks and Vulnerabilities</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>DOM-based Vulnerability</th>
+                        <th>Example Sink</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>DOM XSS</td>
+                        <td><code>document.write()</code></td>
+                    </tr>
+                    <tr>
+                        <td>Open Redirection</td>
+                        <td><code>window.location</code></td>
+                    </tr>
+                    <tr>
+                        <td>Cookie Manipulation</td>
+                        <td><code>document.cookie</code></td>
+                    </tr>
+                    <tr>
+                        <td>JavaScript Injection</td>
+                        <td><code>eval()</code></td>
+                    </tr>
+                    <tr>
+                        <td>Document-Domain Manipulation</td>
+                        <td><code>document.domain</code></td>
+                    </tr>
+                    <tr>
+                        <td>WebSocket-URL Poisoning</td>
+                        <td><code>WebSocket()</code></td>
+                    </tr>
+                    <tr>
+                        <td>Link Manipulation</td>
+                        <td><code>element.src</code></td>
+                    </tr>
+                    <tr>
+                        <td>Web Message Manipulation</td>
+                        <td><code>postMessage()</code></td>
+                    </tr>
+                    <tr>
+                        <td>Ajax Request-Header Manipulation</td>
+                        <td><code>setRequestHeader()</code></td>
+                    </tr>
+                    <tr>
+                        <td>Local File-Path Manipulation</td>
+                        <td><code>FileReader.readAsText()</code></td>
+                    </tr>
+                    <tr>
+                        <td>Client-Side SQL Injection</td>
+                        <td><code>ExecuteSql()</code></td>
+                    </tr>
+                    <tr>
+                        <td>HTML5-Storage Manipulation</td>
+                        <td><code>sessionStorage.setItem()</code></td>
+                    </tr>
+                    <tr>
+                        <td>Client-Side XPath Injection</td>
+                        <td><code>document.evaluate()</code></td>
+                    </tr>
+                    <tr>
+                        <td>Client-Side JSON Injection</td>
+                        <td><code>JSON.parse()</code></td>
+                    </tr>
+                    <tr>
+                        <td>DOM-Data Manipulation</td>
+                        <td><code>element.setAttribute()</code></td>
+                    </tr>
+                    <tr>
+                        <td>Denial of Service</td>
+                        <td><code>RegExp()</code></td>
+                    </tr>
+                </tbody>
+            </table>
+        
+            <h2>How to Prevent DOM-based Taint-Flow Vulnerabilities</h2>
+            <p>Preventing DOM-based vulnerabilities involves ensuring that data from untrusted sources does not dynamically alter the value transmitted to any sink. If such functionality is necessary, client-side defenses should be implemented:</p>
+            <ul>
+                <li><strong>Validate Data:</strong> Use a whitelist approach to allow only known-safe content.</li>
+                <li><strong>Sanitize or Encode Data:</strong> Depending on context, use JavaScript escaping, HTML encoding, or URL encoding as appropriate.</li>
+            </ul>
+            <p>Refer to the specific vulnerability pages for measures to prevent specific issues.</p>
+        
+            <h2>DOM Clobbering</h2>
+            <p>DOM clobbering is a technique where HTML is injected into a page to manipulate the DOM and alter JavaScript behavior. A common form involves using an anchor element to overwrite a global variable, which the application might then use in an unsafe way, such as generating a dynamic script URL.</p>
+        </div>
+    </div>
+
+    <div class="tool-row">
+        <div class="tool-name" onclick="toggleDetails('file-upload-vulnerabilities')">File Upload Vulnerabilities</div>
+        <div class="tool-details" id="file-upload-vulnerabilities">
+            <p><strong>What are file upload vulnerabilities?</strong></p>
+            <p>File upload vulnerabilities are when a web server allows users to upload files to its filesystem without sufficiently validating things like their name, type, contents, or size. Failing to properly enforce restrictions on these could mean that even a basic image upload function can be used to upload arbitrary and potentially dangerous files instead. This could even include server-side script files that enable remote code execution.</p>
+            <p>In some cases, the act of uploading the file is in itself enough to cause damage. Other attacks may involve a follow-up HTTP request for the file, typically to trigger its execution by the server.</p>
+            
+            <p><strong>What is the impact of file upload vulnerabilities?</strong></p>
+            <p>The impact of file upload vulnerabilities generally depends on two key factors:</p>
+            <ul>
+                <li>Which aspect of the file the website fails to validate properly, whether that be its size, type, contents, and so on.</li>
+                <li>What restrictions are imposed on the file once it has been successfully uploaded.</li>
+            </ul>
+            <p>In the worst case scenario, the file's type isn't validated properly, and the server configuration allows certain types of file (such as .php and .jsp) to be executed as code. In this case, an attacker could potentially upload a server-side code file that functions as a web shell, effectively granting them full control over the server.</p>
+            <p>If the filename isn't validated properly, this could allow an attacker to overwrite critical files simply by uploading a file with the same name. If the server is also vulnerable to directory traversal, this could mean attackers are even able to upload files to unanticipated locations.</p>
+            <p>Failing to make sure that the size of the file falls within expected thresholds could also enable a form of denial-of-service (DoS) attack, whereby the attacker fills the available disk space.</p>
+            
+            <p><strong>How do file upload vulnerabilities arise?</strong></p>
+            <p>Given the fairly obvious dangers, it's rare for websites in the wild to have no restrictions whatsoever on which files users are allowed to upload. More commonly, developers implement what they believe to be robust validation that is either inherently flawed or can be easily bypassed.</p>
+            <p>For example, they may attempt to blacklist dangerous file types, but fail to account for parsing discrepancies when checking the file extensions. As with any blacklist, it's also easy to accidentally omit more obscure file types that may still be dangerous.</p>
+            <p>In other cases, the website may attempt to check the file type by verifying properties that can be easily manipulated by an attacker using tools like Burp Proxy or Repeater.</p>
+            <p>Ultimately, even robust validation measures may be applied inconsistently across the network of hosts and directories that form the website, resulting in discrepancies that can be exploited.</p>
+            
+            <p><strong>How do web servers handle requests for static files?</strong></p>
+            <p>Before we look at how to exploit file upload vulnerabilities, it's important that you have a basic understanding of how servers handle requests for static files.</p>
+            <p>Historically, websites consisted almost entirely of static files that would be served to users when requested. As a result, the path of each request could be mapped 1:1 with the hierarchy of directories and files on the server's filesystem. Nowadays, websites are increasingly dynamic and the path of a request often has no direct relationship to the filesystem at all. Nevertheless, web servers still deal with requests for some static files, including stylesheets, images, and so on.</p>
+            <p>The process for handling these static files is still largely the same. At some point, the server parses the path in the request to identify the file extension. It then uses this to determine the type of the file being requested, typically by comparing it to a list of preconfigured mappings between extensions and MIME types. What happens next depends on the file type and the server's configuration.</p>
+            <ul>
+                <li>If this file type is non-executable, such as an image or a static HTML page, the server may just send the file's contents to the client in an HTTP response.</li>
+                <li>If the file type is executable, such as a PHP file, and the server is configured to execute files of this type, it will assign variables based on the headers and parameters in the HTTP request before running the script. The resulting output may then be sent to the client in an HTTP response.</li>
+                <li>If the file type is executable, but the server is not configured to execute files of this type, it will generally respond with an error. However, in some cases, the contents of the file may still be served to the client as plain text. Such misconfigurations can occasionally be exploited to leak source code and other sensitive information.</li>
+            </ul>
+            
+            <p><strong>Exploiting unrestricted file uploads to deploy a web shell</strong></p>
+            <p>From a security perspective, the worst possible scenario is when a website allows you to upload server-side scripts, such as PHP, Java, or Python files, and is also configured to execute them as code. This makes it trivial to create your own web shell on the server.</p>
+            <p><strong>Web shell</strong></p>
+            <p>A web shell is a malicious script that enables an attacker to execute arbitrary commands on a remote web server simply by sending HTTP requests to the right endpoint.</p>
+            <p>If you're able to successfully upload a web shell, you effectively have full control over the server. This means you can read and write arbitrary files, exfiltrate sensitive data, even use the server to pivot attacks against both internal infrastructure and other servers outside the network. For example, the following PHP one-liner could be used to read arbitrary files from the server's filesystem:</p>
+            <pre><?php echo file_get_contents('/path/to/target/file'); ?></pre>
+            <p>Once uploaded, sending a request for this malicious file will return the target file's contents in the response.</p>
+            <p>A more versatile web shell may look something like this:</p>
+            <pre><?php echo system($_GET['command']); ?></pre>
+            <p>This script enables you to pass an arbitrary system command via a query parameter as follows:</p>
+            <pre>GET /example/exploit.php?command=id HTTP/1.1</pre>
+            
+            <p><strong>Exploiting flawed validation of file uploads</strong></p>
+            <p>In the wild, it's unlikely that you'll find a website that has no protection against file upload attacks like we saw in the previous lab. But just because defenses are in place, that doesn't mean that they're robust. You can sometimes still exploit flaws in these mechanisms to obtain a web shell for remote code execution.</p>
+            
+            <p><strong>Flawed file type validation</strong></p>
+            <p>When submitting HTML forms, the browser typically sends the provided data in a POST request with the content type application/x-www-form-url-encoded. This is fine for sending simple text like your name or address. However, it isn't suitable for sending large amounts of binary data, such as an entire image file or a PDF document. In this case, the content type multipart/form-data is preferred.</p>
+            <p>Consider a form containing fields for uploading an image, providing a description of it, and entering your username. Submitting such a form might result in a request that looks something like this:</p>
+            <pre>POST /images HTTP/1.1
+    Host: normal-website.com
+    Content-Length: 12345
+    Content-Type: multipart/form-data; boundary=---------------------------012345678901234567890123456
+    
+    ---------------------------012345678901234567890123456
+    Content-Disposition: form-data; name="image"; filename="example.jpg"
+    Content-Type: image/jpeg
+    
+    [...binary content of example.jpg...]
+    
+    ---------------------------012345678901234567890123456
+    Content-Disposition: form-data; name="description"
+    
+    This is an interesting description of my image.
+    
+    ---------------------------012345678901234567890123456
+    Content-Disposition: form-data; name="username"
+    
+    wiener
+    ---------------------------012345678901234567890123456--</pre>
+            <p>As you can see, the message body is split into separate parts for each of the form's inputs. Each part contains a Content-Disposition header, which provides some basic information about the input field it relates to. These individual parts may also contain their own Content-Type header, which tells the server the MIME type of the data that was submitted using this input.</p>
+            <p>One way that websites may attempt to validate file uploads is to check that this input-specific Content-Type header matches an expected MIME type. If the server is only expecting image files, for example, it may only allow types like image/jpeg and image/png. Problems can arise when the value of this header is implicitly trusted by the server. If no further validation is performed to check whether the contents of the file actually match the supposed MIME type, this defense can be easily bypassed using tools like Burp Repeater.</p>
+            
+            <p><strong>Preventing file execution in user-accessible directories</strong></p>
+            <p>While it's important to validate file uploads carefully, it's also crucial to ensure that any files uploaded are stored in directories that are not accessible from the web. Even if the file is correctly validated to ensure it's harmless, failing to restrict access to it could still present a security risk. For example, an attacker may exploit a file upload vulnerability to upload a web shell to a directory that's accessible from the web, potentially giving them full control over the server.</p>
+            <p>One common approach to prevent the execution of uploaded files is to configure the web server to disable execution in directories that store user-uploaded files. For example, if you use Apache, you might include the following directive in the relevant .htaccess file:</p>
+            <pre>php_flag engine off</pre>
+            <p>This disables PHP execution for that directory, rendering any PHP files uploaded by users non-functional.</p>
+            <p>In addition to this, you should also ensure that the filenames of uploaded files cannot be used to overwrite critical files or directories on the server. Use unique, non-predictable filenames and avoid allowing user input to control the names of files that are saved on the server.</p>
+            
+            <p><strong>Conclusions</strong></p>
+            <p>File upload vulnerabilities can have severe consequences, particularly when combined with flaws in file type validation or improper access controls. To mitigate these risks, implement robust validation mechanisms, use secure configurations for file handling, and regularly review your server's security practices.</p>
+        </div>
+    </div>
+
+    <div class="tool-row">
+        <div class="tool-name" onclick="toggleDetails('information-disclosure-details')">Information Disclosure</div>
+        <div class="tool-details" id="information-disclosure-details">
+            <p><strong>What is the HTTP Host Header?</strong></p>
+            <p>The HTTP Host header is a mandatory request header as of HTTP/1.1. It specifies the domain name that the client wants to access. For example, when a user visits <a href="https://portswigger.net/web-security">https://portswigger.net/web-security</a>, their browser will compose a request containing a Host header as follows:</p>
+            <pre>GET /web-security HTTP/1.1
+    Host: portswigger.net</pre>
+    
+            <p>In some cases, such as when the request has been forwarded by an intermediary system, the Host value may be altered before it reaches the intended back-end component. We will discuss this scenario in more detail below.</p>
+    
+            <p><strong>What is the Purpose of the HTTP Host Header?</strong></p>
+            <p>The purpose of the HTTP Host header is to help identify which back-end component the client wants to communicate with. If requests didn't contain Host headers, or if the Host header was malformed in some way, this could lead to issues when routing incoming requests to the intended application.</p>
+            <p>Historically, this ambiguity didn't exist because each IP address would only host content for a single domain. Nowadays, largely due to the ever-growing trend for cloud-based solutions and outsourcing much of the related architecture, it is common for multiple websites and applications to be accessible at the same IP address. This approach has also increased in popularity partly as a result of IPv4 address exhaustion.</p>
+    
+            <p><strong>Common Scenarios for Multiple Applications on a Single IP Address</strong></p>
+            <ul>
+                <li><strong>Virtual Hosting:</strong> A single web server hosts multiple websites or applications, which may be for different owners or the same owner. Websites hosted in this way on a single server are known as "virtual hosts". To a normal user accessing the website, a virtual host is often indistinguishable from a website being hosted on its own dedicated server.</li>
+                <li><strong>Routing Traffic via an Intermediary:</strong> Websites are hosted on distinct back-end servers, but all traffic between the client and servers is routed through an intermediary system, such as a load balancer or reverse proxy server. This setup is especially common when clients access the website via a content delivery network (CDN).</li>
+            </ul>
+    
+            <p><strong>How Does the HTTP Host Header Solve This Problem?</strong></p>
+            <p>In both scenarios, the Host header is relied on to specify the intended recipient. A common analogy is the process of sending a letter to somebody who lives in an apartment building. The entire building has the same street address, but behind this street address there are many different apartments that each need to receive the correct mail somehow. One solution to this problem is simply to include the apartment number or the recipient's name in the address. In the case of HTTP messages, the Host header serves a similar purpose.</p>
+            <p>When a browser sends the request, the target URL will resolve to the IP address of a particular server. When this server receives the request, it refers to the Host header to determine the intended back-end and forwards the request accordingly.</p>
+    
+            <p><strong>What is an HTTP Host Header Attack?</strong></p>
+            <p>HTTP Host header attacks exploit vulnerable websites that handle the value of the Host header in an unsafe way. If the server implicitly trusts the Host header and fails to validate or escape it properly, an attacker may be able to use this input to inject harmful payloads that manipulate server-side behavior. These attacks are often known as "Host header injection" attacks.</p>
+            <p>Off-the-shelf web applications typically don't know what domain they are deployed on unless it is manually specified in a configuration file during setup. When they need to know the current domain, for example, to generate an absolute URL included in an email, they may resort to retrieving the domain from the Host header:</p>
+            <pre>&lt;a href="https://_SERVER['HOST']/support"&gt;Contact support&lt;/a&gt;</pre>
+            <p>The header value may also be used in a variety of interactions between different systems of the website's infrastructure.</p>
+            <p>As the Host header is user controllable, this practice can lead to several issues:</p>
+            <ul>
+                <li>Web cache poisoning</li>
+                <li>Business logic flaws in specific functionality</li>
+                <li>Routing-based SSRF</li>
+                <li>Classic server-side vulnerabilities, such as SQL injection</li>
+            </ul>
+    
+            <p><strong>How Do HTTP Host Header Vulnerabilities Arise?</strong></p>
+            <p>HTTP Host header vulnerabilities typically arise due to the flawed assumption that the header is not user controllable. This creates implicit trust in the Host header and results in inadequate validation or escaping of its value, even though an attacker can easily modify this using tools like Burp Proxy.</p>
+            <p>Even if the Host header itself is handled more securely, depending on the configuration of the servers that deal with incoming requests, the Host can potentially be overridden by injecting other headers. Sometimes website owners are unaware that these headers are supported by default and, as a result, they may not be treated with the same level of scrutiny.</p>
+            <p>Many of these vulnerabilities arise not because of insecure coding but because of insecure configuration of one or more components in the related infrastructure. These configuration issues can occur because websites integrate third-party technologies into their architecture without necessarily understanding the configuration options and their security implications.</p>
+    
+            <p><strong>How to Prevent HTTP Host Header Attacks</strong></p>
+            <p>To prevent HTTP Host header attacks, the simplest approach is to avoid using the Host header altogether in server-side code. Double-check whether each URL really needs to be absolute. You will often find that you can just use a relative URL instead. This simple change can help you prevent web cache poisoning vulnerabilities in particular.</p>
+            <p>Other ways to prevent HTTP Host header attacks include:</p>
+            <ul>
+                <li><strong>Protect Absolute URLs:</strong> When you have to use absolute URLs, you should require the current domain to be manually specified in a configuration file and refer to this value instead of the Host header. This approach would eliminate the threat of password reset poisoning, for example.</li>
+                <li><strong>Validate the Host Header:</strong> If you must use the Host header, make sure you validate it properly. This should involve checking it against a whitelist of permitted domains and rejecting or redirecting any requests for unrecognized hosts. Consult the documentation of your framework for guidance on how to do this. For example, the Django framework provides the ALLOWED_HOSTS option in the settings file.</li>
+                <li><strong>Don't Support Host Override Headers:</strong> Check that you do not support additional headers that may be used to construct these attacks, in particular <code>X-Forwarded-Host</code>. Remember that these may be supported by default.</li>
+                <li><strong>Whitelist Permitted Domains:</strong> To prevent routing-based attacks on internal infrastructure, configure your load balancer or any reverse proxies to forward requests only to a whitelist of permitted domains.</li>
+                <li><strong>Be Careful with Internal-Only Virtual Hosts:</strong> When using virtual hosting, avoid hosting internal-only websites and applications on the same server as public-facing content. Otherwise, attackers may be able to access internal domains via Host header manipulation.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="tool-row">
+        <div class="tool-name" onclick="toggleDetails('http-request-smuggling-details')">HTTP Request Smuggling</div>
+        <div class="tool-details" id="http-request-smuggling-details">
+            <h3>What is HTTP Request Smuggling?</h3>
+            <p>HTTP request smuggling is a technique used to interfere with the way a web application processes sequences of HTTP requests. This often occurs when a web application employs multiple layers of HTTP servers, such as a front-end server (like a load balancer or reverse proxy) and one or more back-end servers. By exploiting discrepancies in how different servers interpret HTTP request boundaries, an attacker can manipulate requests in ways that lead to unauthorized access, bypassing of security controls, or even compromising other users.</p>
+    
+            <h3>How Does HTTP Request Smuggling Work?</h3>
+            <p>In a typical web architecture, users send requests to a front-end server, which then forwards these requests to back-end servers. The front-end server and back-end server must agree on where one request ends and another begins. However, if the front-end and back-end servers process HTTP requests differently, an attacker can exploit this mismatch to "smuggle" malicious requests.</p>
+            <p>Here’s how it works:</p>
+            <ul>
+                <li><strong>HTTP Request Boundaries:</strong> The front-end and back-end servers use different methods to determine the boundaries between requests. For example, the front-end might rely on the <code>Content-Length</code> header, while the back-end server uses <code>Transfer-Encoding: chunked</code>.</li>
+                <li><strong>Crafting Malicious Requests:</strong> An attacker crafts a request that takes advantage of these discrepancies. For example, they might include both <code>Content-Length</code> and <code>Transfer-Encoding</code> headers, each interpreted differently by the front-end and back-end servers.</li>
+                <li><strong>Smuggling Attack:</strong> The front-end server processes the request according to one set of rules, while the back-end server interprets it differently. This can lead to the front-end server forwarding part of the malicious request to the back-end server, where it might be executed or manipulated in unexpected ways.</li>
+            </ul>
+    
+            <h3>How Do HTTP Request Smuggling Vulnerabilities Arise?</h3>
+            <p>HTTP request smuggling vulnerabilities arise because the HTTP/1 specification allows two different ways to specify the length of a request message: <code>Content-Length</code> and <code>Transfer-Encoding</code>.</p>
+            <ul>
+                <li><strong>Content-Length:</strong> Specifies the exact length of the request body.</li>
+                <li><strong>Transfer-Encoding:</strong> Specifies that the request body is sent in chunks, ending with a zero-length chunk.</li>
+            </ul>
+            <p>When both headers are used together, conflicts can arise. The specification states that if both headers are present, <code>Content-Length</code> should be ignored. However, this can cause problems when different servers interpret these headers differently, leading to ambiguities in request boundaries.</p>
+    
+            <h3>Types of Request Smuggling Attacks</h3>
+            <h4>1. CL.TE (Content-Length and Transfer-Encoding)</h4>
+            <p><strong>Scenario:</strong> The front-end server uses <code>Content-Length</code>, while the back-end server uses <code>Transfer-Encoding</code>.</p>
+            <pre><code>POST / HTTP/1.1
+    Host: vulnerable-website.com
+    Content-Length: 13
+    Transfer-Encoding: chunked
+    
+    0
+    
+    SMUGGLED
+    </code></pre>
+            <p><strong>Explanation:</strong> The front-end server processes the request based on <code>Content-Length</code>, treating <code>SMUGGLED</code> as part of the next request. The back-end server processes the request based on <code>Transfer-Encoding</code>, treating <code>SMUGGLED</code> as part of a new request.</p>
+    
+            <h4>2. TE.CL (Transfer-Encoding and Content-Length)</h4>
+            <p><strong>Scenario:</strong> The front-end server uses <code>Transfer-Encoding</code>, while the back-end server uses <code>Content-Length</code>.</p>
+            <pre><code>POST / HTTP/1.1
+    Host: vulnerable-website.com
+    Transfer-Encoding: chunked
+    Content-Length: 13
+    
+    0
+    
+    SMUGGLED
+    </code></pre>
+            <p><strong>Explanation:</strong> The front-end server processes the request based on <code>Transfer-Encoding</code>, and the back-end server processes based on <code>Content-Length</code>, leading to potential smuggling of <code>SMUGGLED</code>.</p>
+    
+            <h4>3. TE.TE (Transfer-Encoding with Obfuscation)</h4>
+            <p><strong>Scenario:</strong> Both front-end and back-end servers support <code>Transfer-Encoding</code>, but one may be tricked into ignoring it.</p>
+            <p><strong>Example:</strong> An attacker might obfuscate the <code>Transfer-Encoding</code> header to bypass one server’s processing.</p>
+    
+            <h3>HTTP/2 and Request Smuggling</h3>
+            <p>HTTP/2 mitigates request smuggling attacks by using a single, robust mechanism to define request length, eliminating ambiguity. However, many websites use HTTP/2 for the front-end while the back-end servers may still use HTTP/1, leading to potential vulnerabilities if not handled correctly. This process is known as HTTP downgrading.</p>
+    
+            <h3>How to Prevent HTTP Request Smuggling</h3>
+            <ul>
+                <li><strong>Consistent Handling:</strong> Ensure that both front-end and back-end servers consistently handle request boundaries. If possible, avoid mixing <code>Content-Length</code> and <code>Transfer-Encoding</code> headers in a single request.</li>
+                <li><strong>Disable Obsolete Features:</strong> Disable support for obsolete headers or configurations that could lead to request smuggling, such as <code>Transfer-Encoding</code> on front-end servers if not needed.</li>
+                <li><strong>Secure Configuration:</strong> Configure web servers, load balancers, and reverse proxies to prevent ambiguity. Implement security controls that validate and sanitize incoming requests.</li>
+                <li><strong>Test for Vulnerabilities:</strong> Regularly test your application for request smuggling vulnerabilities using security tools and techniques to identify potential issues.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="tool-row">
+        <div class="tool-name" onclick="toggleDetails('information-disclosure-details')">Information Disclosure</div>
+        <div class="tool-details" id="information-disclosure-details">
+            <h3>What is Information Disclosure?</h3>
+            <p>Information disclosure, also known as information leakage, occurs when a website unintentionally reveals sensitive information to its users. This can include a variety of data, such as:</p>
+            <ul>
+                <li>Data about other users (e.g., usernames or financial information)</li>
+                <li>Sensitive commercial or business data</li>
+                <li>Technical details about the website and its infrastructure</li>
+            </ul>
+            <p>The risk of leaking sensitive user or business data is significant. Disclosing technical information, while sometimes less obviously harmful, can still expose an attack surface that might be exploited. Such disclosures can provide valuable clues that lead to high-severity attacks or further vulnerabilities.</p>
+            <p>Information leakage may happen unintentionally as users browse a website normally. More often, attackers will provoke the leak by interacting with the website in unexpected or malicious ways, analyzing responses to uncover useful information.</p>
+    
+            <h3>Examples of Information Disclosure</h3>
+            <ul>
+                <li>Revealing hidden directory names, their structure, and contents through a <code>robots.txt</code> file or directory listing</li>
+                <li>Providing access to source code files via temporary backups</li>
+                <li>Explicitly mentioning database table or column names in error messages</li>
+                <li>Unnecessarily exposing highly sensitive information, such as credit card details</li>
+                <li>Hard-coding API keys, IP addresses, database credentials, etc., in source code</li>
+                <li>Hinting at the existence or absence of resources, usernames, etc., through subtle differences in application behavior</li>
+            </ul>
+    
+            <h3>How Do Information Disclosure Vulnerabilities Arise?</h3>
+            <ul>
+                <li><strong>Failure to Remove Internal Content:</strong> Internal content, such as developer comments in markup, may be visible to users in a production environment.</li>
+                <li><strong>Insecure Configuration:</strong> Failing to disable debugging and diagnostic features can provide attackers with useful tools. Default configurations might also expose overly verbose error messages.</li>
+                <li><strong>Flawed Design and Behavior:</strong> Distinct responses for different error states can allow attackers to enumerate sensitive data, such as valid user credentials.</li>
+            </ul>
+    
+            <h3>Impact of Information Disclosure Vulnerabilities</h3>
+            <p>The impact of information disclosure vulnerabilities varies based on the nature of the information disclosed:</p>
+            <ul>
+                <li>Direct Impact: Revealing sensitive data, such as credit card details, can have severe consequences.</li>
+                <li>Indirect Impact: Disclosing technical information like directory structures or third-party frameworks might have minimal direct impact but can provide critical details for further exploits.</li>
+            </ul>
+    
+            <h3>Assessing the Severity of Information Disclosure Vulnerabilities</h3>
+            <p>The severity of information disclosure is context-dependent. The impact is higher if the leaked information can be exploited to perform harmful actions:</p>
+            <ul>
+                <li>For example, knowing a website uses an outdated framework version can be critical if it contains known vulnerabilities.</li>
+                <li>Focus on the impact and exploitability of the leaked information rather than just the presence of information disclosure.</li>
+            </ul>
+    
+            <h3>How to Prevent Information Disclosure Vulnerabilities</h3>
+            <ul>
+                <li><strong>Awareness:</strong> Ensure all team members are aware of what information is considered sensitive and handle it securely.</li>
+                <li><strong>Code Audits:</strong> Regularly audit code for potential information disclosure issues and automate tasks like stripping developer comments.</li>
+                <li><strong>Generic Error Messages:</strong> Use generic error messages to avoid giving attackers clues about application behavior.</li>
+                <li><strong>Disable Debugging Features:</strong> Ensure debugging and diagnostic features are turned off in production environments.</li>
+                <li><strong>Understand Configurations:</strong> Fully understand the configuration settings of third-party technologies and disable unnecessary features and settings.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="tool-row">
+        <div class="tool-name" onclick="toggleDetails('jwt-attacks-details')">JWT Attacks</div>
+        <div class="tool-details" id="jwt-attacks-details">
+            <h3>What are JWTs?</h3>
+            <p>JSON Web Tokens (JWTs) are a standardized format for sending cryptographically signed JSON data between systems. They can contain various kinds of data but are primarily used to send information ("claims") about users in authentication, session handling, and access control mechanisms.</p>
+            <p>Unlike classic session tokens, JWTs store all the data that a server needs client-side within the token itself. This makes them popular for distributed systems where users need to interact seamlessly with multiple back-end servers.</p>
+            
+            <h3>JWT Format</h3>
+            <p>A JWT consists of three parts: a header, a payload, and a signature, separated by dots. For example:</p>
+            <pre>eyJraWQiOiI5MTM2ZGRiMy1jYjBhLTRhMTktYTA3ZS1lYWRmNWE0NGM4YjUiLCJhbGciOiJSUzI1NiJ9.eyJpc3MiOiJwb3J0c3dpZ2dlciIsImV4cCI6MTY0ODAzNzE2NCwibmFtZSI6IkNhcmxvcyBNb250b3lhIiwic3ViIjoiY2FybG9zIiwicm9sZSI6ImJsb2dfYXV0aG9yIiwiZW1haWwiOiJjYXJsb3NAY2FybG9zLW1vbnRveWEubmV0IiwiaWF0IjoxNTE2MjM5MDIyfQ.SYZBPIBg2CRjXAJ8vCER0LA_ENjII1JakvNQoP-Hw6GG1zfl4JyngsZReIfqRvIAEi5L4HV0q7_9qGhQZvy9ZdxEJbwTxRs_6Lb-fZTDpW6lKYNdMyjw45_alSCZ1fypsMWz_2mTpQzil0lOtps5Ei_z7mM7M8gCwe_AGpI53JxduQOaB5HkT5gVrv9cKu9CsW5MS6ZbqYXpGyOG5ehoxqm8DL5tFYaW3lB50ELxi0KsuTKEbD0t5BCl0aCR2MBJWAbN-xeLwEenaqBiwPVvKixYleeDQiBEIylFdNNIMviKRgXiYuAvMziVPbwSgkZVHeEdF5MQP1Oe2Spac-6IfA</pre>
+            <p>The header and payload are base64url-encoded JSON objects. The header contains metadata about the token, while the payload contains the actual "claims" about the user. For example, decoding the payload might reveal:</p>
+            <pre>
+    {
+        "iss": "portswigger",
+        "exp": 1648037164,
+        "name": "Carlos Montoya",
+        "sub": "carlos",
+        "role": "blog_author",
+        "email": "carlos@carlos-montoya.net",
+        "iat": 1516239022
+    }
+            </pre>
+            <p>In most cases, this data can be easily read or modified by anyone with access to the token. The security of JWT-based systems relies heavily on the cryptographic signature.</p>
+            
+            <h3>JWT Signature</h3>
+            <p>The server that issues the token generates the signature by hashing the header and payload. Sometimes, this hash is also encrypted. This process involves a secret signing key, ensuring that data within the token hasn't been tampered with:</p>
+            <ul>
+                <li>Changing a single byte of the header or payload results in a mismatched signature.</li>
+                <li>Without the server's secret signing key, generating a valid signature for a given header or payload should be impossible.</li>
+            </ul>
+    
+            <h3>JWT vs JWS vs JWE</h3>
+            <p>The JWT specification is limited to representing information as a JSON object. In practice, JWTs are extended by JSON Web Signature (JWS) and JSON Web Encryption (JWE) specifications:</p>
+            <ul>
+                <li>A JWT is usually a JWS token, where the contents are only encoded.</li>
+                <li>JWEs are similar but encrypt the token's contents.</li>
+            </ul>
+    
+            <h3>What are JWT Attacks?</h3>
+            <p>JWT attacks involve users sending modified JWTs to the server to achieve malicious goals, such as bypassing authentication and access controls by impersonating authenticated users.</p>
+    
+            <h3>What is the Impact of JWT Attacks?</h3>
+            <p>The impact of JWT attacks is often severe. If an attacker can create valid tokens with arbitrary values, they may escalate their privileges or impersonate other users, taking full control of their accounts.</p>
+    
+            <h3>How Do Vulnerabilities to JWT Attacks Arise?</h3>
+            <p>JWT vulnerabilities typically arise from flawed handling within the application:</p>
+            <ul>
+                <li>Implementation flaws, such as improper signature verification, can allow attackers to tamper with the token's payload.</li>
+                <li>If the server's secret key is leaked, guessed, or brute-forced, attackers can generate valid signatures for arbitrary tokens, compromising the mechanism.</li>
+            </ul>
+    
+            <h3>How to Prevent JWT Attacks</h3>
+            <ul>
+                <li>Use an up-to-date library for handling JWTs and ensure developers understand its workings and security implications.</li>
+                <li>Perform robust signature verification on received JWTs and handle unexpected algorithms carefully.</li>
+                <li>Enforce a strict whitelist of permitted hosts for the <code>jku</code> header.</li>
+                <li>Avoid vulnerabilities such as path traversal or SQL injection via the <code>kid</code> header parameter.</li>
+            </ul>
+    
+            <h3>Additional Best Practices for JWT Handling</h3>
+            <ul>
+                <li>Always set an expiration date for issued tokens.</li>
+                <li>Avoid sending tokens in URL parameters where possible.</li>
+                <li>Include the <code>aud</code> (audience) claim or similar to specify the intended recipient of the token.</li>
+                <li>Enable token revocation on the issuing server (e.g., on logout).</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- OAuth Authentication -->
+    <div class="tool-row">
+        <div class="tool-name" onclick="toggleDetails('oauth-authentication-details')">OAuth Authentication</div>
+        <div class="tool-details" id="oauth-authentication-details">
+            <p><strong>What is OAuth?</strong></p>
+            <p>OAuth is a commonly used authorization framework that enables websites and web applications to request limited access to a user's account on another application. Crucially, OAuth allows the user to grant this access without exposing their login credentials to the requesting application. This means users can fine-tune which data they want to share rather than having to hand over full control of their account to a third party.</p>
+            <p>Although OAuth 2.0 is the current standard, some websites still use the legacy version 1a. OAuth 2.0 was written from scratch rather than being developed directly from OAuth 1.0. As a result, the two are very different. Please be aware that the term "OAuth" refers exclusively to OAuth 2.0 throughout these materials.</p>
+            
+            <p><strong>How does OAuth 2.0 work?</strong></p>
+            <p>OAuth 2.0 was originally developed as a way of sharing access to specific data between applications. It works by defining a series of interactions between three distinct parties, namely a client application, a resource owner, and the OAuth service provider.</p>
+            <ul>
+                <li><strong>Client application:</strong> The website or web application that wants to access the user's data.</li>
+                <li><strong>Resource owner:</strong> The user whose data the client application wants to access.</li>
+                <li><strong>OAuth service provider:</strong> The website or application that controls the user's data and access to it. They support OAuth by providing an API for interacting with both an authorization server and a resource server.</li>
+            </ul>
+            <p>There are numerous different ways that the actual OAuth process can be implemented. These are known as OAuth "flows" or "grant types". In this topic, we'll focus on the "authorization code" and "implicit" grant types as these are by far the most common. Broadly speaking, both of these grant types involve the following stages:</p>
+            <ul>
+                <li>The client application requests access to a subset of the user's data, specifying which grant type they want to use and what kind of access they want.</li>
+                <li>The user is prompted to log in to the OAuth service and explicitly give their consent for the requested access.</li>
+                <li>The client application receives a unique access token that proves they have permission from the user to access the requested data. Exactly how this happens varies significantly depending on the grant type.</li>
+                <li>The client application uses this access token to make API calls fetching the relevant data from the resource server.</li>
+            </ul>
+
+            <p><strong>OAuth authentication</strong></p>
+            <p>Although not originally intended for this purpose, OAuth has evolved into a means of authenticating users as well. For example, you're probably familiar with the option many websites provide to log in using your existing social media account rather than having to register with the website in question. Whenever you see this option, there's a good chance it is built on OAuth 2.0.</p>
+            <p>For OAuth authentication mechanisms, the basic OAuth flows remain largely the same; the main difference is how the client application uses the data that it receives. From an end-user perspective, the result of OAuth authentication is something that broadly resembles SAML-based single sign-on (SSO). In these materials, we'll focus exclusively on vulnerabilities in this SSO-like use case.</p>
+            <p>OAuth authentication is generally implemented as follows:</p>
+            <ul>
+                <li>The user chooses the option to log in with their social media account. The client application then uses the social media site's OAuth service to request access to some data that it can use to identify the user. This could be the email address that is registered with their account, for example.</li>
+                <li>After receiving an access token, the client application requests this data from the resource server, typically from a dedicated /userinfo endpoint.</li>
+                <li>Once it has received the data, the client application uses it in place of a username to log the user in. The access token that it received from the authorization server is often used instead of a traditional password.</li>
+            </ul>
+
+            <p><strong>How do OAuth authentication vulnerabilities arise?</strong></p>
+            <p>OAuth authentication vulnerabilities arise partly because the OAuth specification is relatively vague and flexible by design. Although there are a handful of mandatory components required for the basic functionality of each grant type, the vast majority of the implementation is completely optional. This includes many configuration settings that are necessary for keeping users' data secure. In short, there's plenty of opportunity for bad practice to creep in.</p>
+            <p>One of the other key issues with OAuth is the general lack of built-in security features. The security relies almost entirely on developers using the right combination of configuration options and implementing their own additional security measures on top, such as robust input validation. As you've probably gathered, there's a lot to take in and this is quite easy to get wrong if you're inexperienced with OAuth.</p>
+            <p>Depending on the grant type, highly sensitive data is also sent via the browser, which presents various opportunities for an attacker to intercept it.</p>
+            
+            <p><strong>Identifying OAuth authentication</strong></p>
+            <p>Recognizing when an application is using OAuth authentication is relatively straightforward. If you see an option to log in using your account from a different website, this is a strong indication that OAuth is being used.</p>
+            <p>The most reliable way to identify OAuth authentication is to proxy your traffic through Burp and check the corresponding HTTP messages when you use this login option. Regardless of which OAuth grant type is being used, the first request of the flow will always be a request to the /authorization endpoint containing a number of query parameters that are used specifically for OAuth. In particular, keep an eye out for the client_id, redirect_uri, and response_type parameters. For example, an authorization request will usually look something like this:</p>
+            <pre><code>GET /authorization?client_id=12345&redirect_uri=https://client-app.com/callback&response_type=token&scope=openid%20profile&state=ae13d489bd00e3c24 HTTP/1.1
+    Host: oauth-authorization-server.com</code></pre>
+            
+            <p><strong>Recon</strong></p>
+            <p>Doing some basic recon of the OAuth service being used can point you in the right direction when it comes to identifying vulnerabilities.</p>
+            <p>It goes without saying that you should study the various HTTP interactions that make up the OAuth flow - we'll go over some specific things to look out for later. If an external OAuth service is used, you should be able to identify the specific provider from the hostname to which the authorization request is sent. As these services provide a public API, there is often detailed documentation available that should tell you all kinds of useful information, such as the exact names of the endpoints and which configuration options are being used.</p>
+            <p>Once you know the hostname of the authorization server, you should always try sending a GET request to the following standard endpoints:</p>
+            <pre><code>/well-known/oauth-authorization-server
+    /well-known/openid-configuration</code></pre>
+            <p>These will often return a JSON configuration file containing key information, such as details of additional features that may be supported. This will sometimes tip you off about a wider attack surface and supported features that may not be mentioned in the documentation.</p>
+            
+            <p><strong>How to prevent OAuth authentication vulnerabilities</strong></p>
+            <p>To prevent OAuth authentication vulnerabilities, it is essential for both the OAuth provider and the client application to implement robust validation of the key inputs, especially the redirect_uri parameter. There is very little built-in protection in the OAuth specification, so it's up to developers themselves to make the OAuth flow as secure as possible.</p>
+            <p>It is important to note that vulnerabilities can arise both on the side of the client application and the OAuth service itself. Even if your own implementation is rock solid, you're still ultimately reliant on the application at the other end being equally robust.</p>
+            <p><strong>For OAuth service providers</strong></p>
+            <ul>
+                <li>Require client applications to register a whitelist of valid redirect_uris. Wherever possible, use strict byte-for-byte comparison to validate the URI in any incoming requests. Only allow complete and exact matches rather than using pattern matching. This prevents attackers from accessing other pages on the whitelisted domains.</li>
+                <li>Enforce use of the state parameter. Its value should also be bound to the user's session by including some unguessable, session-specific data, such as a hash containing the session cookie. This helps protect users against CSRF-like attacks. It also makes it much more difficult for an attacker to use any stolen authorization codes.</li>
+                <li>On the resource server, make sure you verify that the access token was issued to the same client_id that is making the request. You should also check the scope being requested to make sure that this matches the scope for which the token was originally granted.</li>
+            </ul>
+            <p><strong>For OAuth client applications</strong></p>
+            <ul>
+                <li>When using the authorization code grant type, use the code verifier and code challenge extension to mitigate the risk of authorization code interception attacks. This involves using a secure method to generate and validate the code challenge and code verifier. Using this technique, attackers will be unable to use intercepted authorization codes even if they are able to access them.</li>
+                <li>Validate all incoming OAuth tokens. Verify that they are intended for your client application, have not expired, and contain all the required claims. This should also include checking the validity of any tokens used to access the user's data on the resource server.</li>
+                <li>Always use HTTPS for all OAuth interactions. This helps prevent token interception attacks and other risks associated with sending sensitive data over an insecure connection.</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Prototype Pollution -->
+    <div class="tool-row">
+        <div class="tool-name" onclick="toggleDetails('prototype-pollution-details')">Prototype Pollution</div>
+        <div class="tool-details" id="prototype-pollution-details">
+            <p><strong>What is prototype pollution?</strong></p>
+            <p>Prototype pollution is a JavaScript vulnerability that enables an attacker to add arbitrary properties to global object prototypes, which may then be inherited by user-defined objects.</p>
+            <p>Although prototype pollution is often unexploitable as a standalone vulnerability, it lets an attacker control properties of objects that would otherwise be inaccessible. If the application subsequently handles an attacker-controlled property in an unsafe way, this can potentially be chained with other vulnerabilities. In client-side JavaScript, this commonly leads to DOM XSS, while server-side prototype pollution can even result in remote code execution.</p>
+            <p>If you're unfamiliar with how prototypes and inheritance work in JavaScript, we recommend reading the following overview before continuing.</p>
+
+            <p><strong>How do prototype pollution vulnerabilities arise?</strong></p>
+            <p>Prototype pollution vulnerabilities typically arise when a JavaScript function recursively merges an object containing user-controllable properties into an existing object, without first sanitizing the keys. This can allow an attacker to inject a property with a key like __proto__, along with arbitrary nested properties.</p>
+            <p>Due to the special meaning of __proto__ in a JavaScript context, the merge operation may assign the nested properties to the object's prototype instead of the target object itself. As a result, the attacker can pollute the prototype with properties containing harmful values, which may subsequently be used by the application in a dangerous way.</p>
+            <p>It's possible to pollute any prototype object, but this most commonly occurs with the built-in global Object.prototype.</p>
+            <p>Successful exploitation of prototype pollution requires the following key components:</p>
+            <ul>
+                <li>A prototype pollution source - This is any input that enables you to poison prototype objects with arbitrary properties.</li>
+                <li>A sink - In other words, a JavaScript function or DOM element that enables arbitrary code execution.</li>
+                <li>An exploitable gadget - This is any property that is passed into a sink without proper filtering or sanitization.</li>
+            </ul>
+
+            <p><strong>Prototype pollution sources</strong></p>
+            <p>A prototype pollution source is any user-controllable input that enables you to add arbitrary properties to prototype objects. The most common sources are as follows:</p>
+            <ul>
+                <li>The URL via either the query or fragment string (hash)</li>
+                <li>JSON-based input</li>
+                <li>Web messages</li>
+            </ul>
+
+            <p><strong>Prototype pollution via the URL</strong></p>
+            <p>Consider the following URL, which contains an attacker-constructed query string:</p>
+            <pre><code>https://vulnerable-website.com/?__proto__[evilProperty]=payload</code></pre>
+            <p>When breaking the query string down into key:value pairs, a URL parser may interpret __proto__ as an arbitrary string. But let's look at what happens if these keys and values are subsequently merged into an existing object as properties.</p>
+            <p>You might think that the __proto__ property, along with its nested evilProperty, will just be added to the target object as follows:</p>
+            <pre><code>{
+        existingProperty1: 'foo',
+        existingProperty2: 'bar',
+        __proto__: {
+            evilProperty: 'payload'
+        }
+    }</code></pre>
+            <p>However, this isn't the case. At some point, the recursive merge operation may assign the value of evilProperty using a statement equivalent to the following:</p>
+            <pre><code>targetObject.__proto__.evilProperty = 'payload';</code></pre>
+            <p>During this assignment, the JavaScript engine treats __proto__ as a getter for the prototype. As a result, evilProperty is assigned to the returned prototype object rather than the target object itself. Assuming that the target object uses the default Object.prototype, all objects in the JavaScript runtime will now inherit evilProperty, unless they already have a property of their own with a matching key.</p>
+            <p>In practice, injecting a property called evilProperty is unlikely to have any effect. However, an attacker can use the same technique to pollute the prototype with properties that are used by the application, or any imported libraries.</p>
+
+            <p><strong>Prototype pollution via JSON input</strong></p>
+            <p>User-controllable objects are often derived from a JSON string using the JSON.parse() method. Interestingly, JSON.parse() also treats any key in the JSON object as an arbitrary string, including things like __proto__. This provides another potential vector for prototype pollution.</p>
+            <p>Let's say an attacker injects the following malicious JSON, for example, via a web message:</p>
+            <pre><code>{
+        "__proto__": {
+            "evilProperty": "payload"
+        }
+    }</code></pre>
+            <p>If this is converted into a JavaScript object via the JSON.parse() method, the resulting object will in fact have a property with the key __proto__:</p>
+            <pre><code>const objectLiteral = {__proto__: {evilProperty: 'payload'}};
+    const objectFromJson = JSON.parse('{"__proto__": {"evilProperty": "payload"}}');
+
+    objectLiteral.hasOwnProperty('__proto__');     // false
+    objectFromJson.hasOwnProperty('__proto__');    // true</code></pre>
+            <p>If the object created via JSON.parse() is subsequently merged into an existing object without proper key sanitization, this will also lead to prototype pollution during the assignment, as we saw in the previous URL-based example.</p>
+
+            <p><strong>Prototype pollution sinks</strong></p>
+            <p>A prototype pollution sink is essentially just a JavaScript function or DOM element that you're able to access via prototype pollution, which enables you to execute arbitrary JavaScript or system commands. We've covered some client-side sinks extensively in our topic on DOM XSS.</p>
+            <p>As prototype pollution lets you control properties that would otherwise be inaccessible, this potentially enables you to reach a number of additional sinks within the target application. Developers who are unfamiliar with prototype pollution may wrongly assume that these properties are not user controllable, which means there may only be minimal filtering or sanitization in place.</p>
+
+            <p><strong>Prototype pollution gadgets</strong></p>
+            <p>A gadget provides a means of turning the prototype pollution vulnerability into an actual exploit. This is any property that is:</p>
+            <ul>
+                <li>Used by the application in an unsafe way, such as passing it to a sink without proper filtering or sanitization.</li>
+                <li>Attacker-controllable via prototype pollution. In other words, the object must be able to inherit a malicious version of the property added to the prototype by an attacker.</li>
+            </ul>
+            <p>A property cannot be a gadget if it is defined directly on the object itself. In this case, the object's own version of the property takes precedence over any malicious version you're able to add to the prototype. Robust websites may also explicitly set the prototype of the object to null, which ensures that it doesn't inherit any properties at all.</p>
+
+            <p><strong>Example of a prototype pollution gadget</strong></p>
+            <p>Many JavaScript libraries accept an object that developers can use to set different configuration options. The library code checks whether the developer has explicitly added certain properties to this object and, if so, adjusts the configuration accordingly. If a property that represents a particular option is not present, a predefined default option is often used instead. A simplified example may look something like this:</p>
+            <pre><code>let transport_url = config.transport_url || defaults.transport_url;</code></pre>
+            <p>Now imagine the library code uses this transport_url to add a script reference to the page:</p>
+            <pre><code>let script = document.createElement('script');
+    script.src = `${transport_url}/example.js`;
+    document.body.appendChild(script);</code></pre>
+            <p>If the website's developers haven't set a transport_url property on their config object, this is a potential gadget. In cases where an attacker is able to pollute the global Object.prototype with their own transport_url property, this will be inherited by the config object and, therefore, set as the src for this script to a domain of the attacker's choosing.</p>
+            <p>If the prototype can be polluted via a query parameter, for example, the attacker would simply have to induce a victim to visit a specially crafted URL to cause their browser to import a malicious JavaScript file from an attacker-controlled domain:</p>
+            <pre><code>https://vulnerable-website.com/?__proto__[transport_url]=//evil-user.net</code></pre>
+            <p>By providing a data: URL, an attacker could also directly embed an XSS payload within the query string as follows:</p>
+            <pre><code>https://vulnerable-website.com/?__proto__[transport_url]=data:,alert(1);</code></pre>
+            <p>Note that the trailing // in this example is simply to comment out the hardcoded /example.js suffix.</p>
+        </div>
+    </div>
+
+    <!-- Race Conditions -->
+    <div class="tool-row">
+        <div class="tool-name" onclick="toggleDetails('race-conditions-details')">Race Conditions</div>
+        <div class="tool-details" id="race-conditions-details">
+            <p><strong>What are race conditions?</strong></p>
+            <p>Race conditions are a common type of vulnerability closely related to business logic flaws. They occur when websites process requests concurrently without adequate safeguards. This can lead to multiple distinct threads interacting with the same data at the same time, resulting in a "collision" that causes unintended behavior in the application. A race condition attack uses carefully timed requests to cause intentional collisions and exploit this unintended behavior for malicious purposes.</p>
+            <p>The period of time during which a collision is possible is known as the "race window". This could be the fraction of a second between two interactions with the database, for example.</p>
+            <p>Like other logic flaws, the impact of a race condition is heavily dependent on the application and the specific functionality in which it occurs.</p>
+            <p>In this section, you'll learn how to identify and exploit different types of race conditions. We'll teach you how Burp Suite's built-in tooling can help you to overcome the challenges of performing classic attacks, plus a tried and tested methodology that enables you to detect novel classes of race conditions in hidden multi-step processes. These go far beyond the limit overruns that you may be familiar with already.</p>
+
+            <p><strong>How to prevent race condition vulnerabilities</strong></p>
+            <p>When a single request can transition an application through invisible sub-states, understanding and predicting its behavior is extremely difficult. This makes defense impractical. To secure an application properly, we recommend eliminating sub-states from all sensitive endpoints by applying the following strategies:</p>
+            <ul>
+                <li>Avoid mixing data from different storage places.</li>
+                <li>Ensure sensitive endpoints make state changes atomic by using the datastore's concurrency features. For example, use a single database transaction to check the payment matches the cart value and confirm the order.</li>
+                <li>As a defense-in-depth measure, take advantage of datastore integrity and consistency features like column uniqueness constraints.</li>
+                <li>Don't attempt to use one data storage layer to secure another. For example, sessions aren't suitable for preventing limit overrun attacks on databases.</li>
+                <li>Ensure your session handling framework keeps sessions internally consistent. Updating session variables individually instead of in a batch might be a tempting optimization, but it's extremely dangerous. This goes for ORMs too; by hiding away concepts like transactions, they're taking on full responsibility for them.</li>
+                <li>In some architectures, it may be appropriate to avoid server-side state entirely. Instead, you could use encryption to push the state client-side, for example, using JWTs. Note that this has its own risks, as we've covered extensively in our topic on JWT attacks.</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- SQL Injection -->
+    <div class="tool-row">
+        <div class="tool-name" onclick="toggleDetails('sql-injection-details')">SQL Injection (SQLi)</div>
+        <div class="tool-details" id="sql-injection-details">
+            <p><strong>What is SQL injection (SQLi)?</strong></p>
+            <p>SQL injection (SQLi) is a web security vulnerability that allows an attacker to interfere with the queries that an application makes to its database. This can allow an attacker to view data that they are not normally able to retrieve. This might include data that belongs to other users, or any other data that the application can access. In many cases, an attacker can modify or delete this data, causing persistent changes to the application's content or behavior.</p>
+            <p>In some situations, an attacker can escalate a SQL injection attack to compromise the underlying server or other back-end infrastructure. It can also enable them to perform denial-of-service attacks.</p>
+
+            <p><strong>What is the impact of a successful SQL injection attack?</strong></p>
+            <p>A successful SQL injection attack can result in unauthorized access to sensitive data, such as:</p>
+            <ul>
+                <li>Passwords.</li>
+                <li>Credit card details.</li>
+                <li>Personal user information.</li>
+            </ul>
+            <p>SQL injection attacks have been used in many high-profile data breaches over the years. These have caused reputational damage and regulatory fines. In some cases, an attacker can obtain a persistent backdoor into an organization's systems, leading to a long-term compromise that can go unnoticed for an extended period.</p>
+
+            <p><strong>How to detect SQL injection vulnerabilities</strong></p>
+            <p>You can detect SQL injection manually using a systematic set of tests against every entry point in the application. To do this, you would typically submit:</p>
+            <ul>
+                <li>The single quote character <code>'</code> and look for errors or other anomalies.</li>
+                <li>Some SQL-specific syntax that evaluates to the base (original) value of the entry point, and to a different value, and look for systematic differences in the application responses.</li>
+                <li>Boolean conditions such as <code>OR 1=1</code> and <code>OR 1=2</code>, and look for differences in the application's responses.</li>
+                <li>Payloads designed to trigger time delays when executed within a SQL query, and look for differences in the time taken to respond.</li>
+                <li>OAST payloads designed to trigger an out-of-band network interaction when executed within a SQL query, and monitor any resulting interactions.</li>
+            </ul>
+            <p>Alternatively, you can find the majority of SQL injection vulnerabilities quickly and reliably using Burp Scanner.</p>
+
+            <p><strong>SQL injection in different parts of the query</strong></p>
+            <p>Most SQL injection vulnerabilities occur within the WHERE clause of a SELECT query. Most experienced testers are familiar with this type of SQL injection.</p>
+            <p>However, SQL injection vulnerabilities can occur at any location within the query, and within different query types. Some other common locations where SQL injection arises are:</p>
+            <ul>
+                <li>In UPDATE statements, within the updated values or the WHERE clause.</li>
+                <li>In INSERT statements, within the inserted values.</li>
+                <li>In SELECT statements, within the table or column name.</li>
+                <li>In SELECT statements, within the ORDER BY clause.</li>
+            </ul>
+
+            <p><strong>SQL injection examples</strong></p>
+            <p>There are lots of SQL injection vulnerabilities, attacks, and techniques, that occur in different situations. Some common SQL injection examples include:</p>
+            <ul>
+                <li><strong>Retrieving hidden data</strong>, where you can modify a SQL query to return additional results.</li>
+                <li><strong>Subverting application logic</strong>, where you can change a query to interfere with the application's logic.</li>
+                <li><strong>UNION attacks</strong>, where you can retrieve data from different database tables.</li>
+                <li><strong>Blind SQL injection</strong>, where the results of a query you control are not returned in the application's responses.</li>
+            </ul>
+
+            <p><strong>Retrieving hidden data example</strong></p>
+            <p>Imagine a shopping application that displays products in different categories. When the user clicks on the Gifts category, their browser requests the URL:</p>
+            <pre><code>https://insecure-website.com/products?category=Gifts</code></pre>
+            <p>This causes the application to make a SQL query to retrieve details of the relevant products from the database:</p>
+            <pre><code>SELECT * FROM products WHERE category = 'Gifts' AND released = 1</code></pre>
+            <p>This SQL query asks the database to return:</p>
+            <ul>
+                <li>all details (*),</li>
+                <li>from the products table,</li>
+                <li>where the category is Gifts,</li>
+                <li>and released is 1.</li>
+            </ul>
+            <p>The restriction <code>released = 1</code> is being used to hide products that are not released. We could assume for unreleased products, <code>released = 0</code>.</p>
+            <p>The application doesn't implement any defenses against SQL injection attacks. This means an attacker can construct the following attack, for example:</p>
+            <pre><code>https://insecure-website.com/products?category=Gifts'--</code></pre>
+            <p>This results in the SQL query:</p>
+            <pre><code>SELECT * FROM products WHERE category = 'Gifts'--' AND released = 1</code></pre>
+            <p>Crucially, note that <code>--</code> is a comment indicator in SQL. This means that the rest of the query is interpreted as a comment, effectively removing it. In this example, this means the query no longer includes <code>AND released = 1</code>. As a result, all products are displayed, including those that are not yet released.</p>
+            <p>You can use a similar attack to cause the application to display all the products in any category, including categories that they don't know about:</p>
+            <pre><code>https://insecure-website.com/products?category=Gifts'+OR+1=1--</code></pre>
+            <p>This results in the SQL query:</p>
+            <pre><code>SELECT * FROM products WHERE category = 'Gifts' OR 1=1--' AND released = 1</code></pre>
+            <p>The modified query returns all items where either the category is Gifts, or 1 is equal to 1. As <code>1=1</code> is always true, the query returns all items.</p>
+
+            <p><strong>How to prevent SQL injection</strong></p>
+            <p>You can prevent most instances of SQL injection using parameterized queries instead of string concatenation within the query. These parameterized queries are also known as "prepared statements".</p>
+            <p>The following code is vulnerable to SQL injection because the user input is concatenated directly into the query:</p>
+            <pre><code>
+    String query = "SELECT * FROM products WHERE category = '"+ input + "'";
+    Statement statement = connection.createStatement();
+    ResultSet resultSet = statement.executeQuery(query);
+            </code></pre>
+            <p>You can rewrite this code in a way that prevents the user input from interfering with the query structure:</p>
+            <pre><code>
+    PreparedStatement statement = connection.prepareStatement("SELECT * FROM products WHERE category = ?");
+    statement.setString(1, input);
+    ResultSet resultSet = statement.executeQuery();
+            </code></pre>
+            <p>You can use parameterized queries for any situation where untrusted input appears as data within the query, including the WHERE clause and values in an INSERT or UPDATE statement. They can't be used to handle untrusted input in other parts of the query, such as table or column names, or the ORDER BY clause. Application functionality that places untrusted data into these parts of the query needs to take a different approach, such as:</p>
+            <ul>
+                <li>Whitelisting permitted input values.</li>
+                <li>Using different logic to deliver the required behavior.</li>
+            </ul>
+            <p>For a parameterized query to be effective in preventing SQL injection, the string that is used in the query must always be a hard-coded constant. It must never contain any variable data from any origin. Do not be tempted to decide case-by-case whether an item of data is trusted, and continue using string concatenation within the query for cases that are considered safe. It's easy to make mistakes about the possible origin of data, or for changes in other code to taint trusted data.</p>
+        </div>
+    </div>
+
+    <!-- Server-Side Template Injection -->
+    <div class="tool-row">
+        <div class="tool-name" onclick="toggleDetails('ssti-details')">Server-Side Template Injection (SSTI)</div>
+        <div class="tool-details" id="ssti-details">
+            <h3>What is Server-Side Template Injection?</h3>
+            <p>Server-Side Template Injection (SSTI) occurs when an attacker is able to inject malicious payloads into a server-side template, which are then executed by the server. Template engines are designed to dynamically generate web pages by combining fixed templates with user-provided data. SSTI vulnerabilities arise when user input is directly included in templates instead of being safely passed as data, allowing attackers to execute arbitrary template directives and potentially take complete control of the server.</p>
+
+            <h3>What is the Impact of Server-Side Template Injection?</h3>
+            <p>The impact of a successful SSTI attack can be severe:</p>
+            <ul>
+                <li><strong>Remote Code Execution (RCE):</strong> Attackers can gain full control over the server, allowing them to execute arbitrary commands or scripts.</li>
+                <li><strong>Data Exposure:</strong> Attackers may access sensitive data and files on the server.</li>
+                <li><strong>Server Compromise:</strong> Even without RCE, attackers may use SSTI to perform other attacks, like gaining unauthorized access to data or manipulating the server's behavior.</li>
+            </ul>
+            <p>The potential severity of SSTI vulnerabilities depends on the template engine in use and how it processes user input. In many cases, SSTI can lead to catastrophic security breaches.</p>
+
+            <h3>How Do Server-Side Template Injection Vulnerabilities Arise?</h3>
+            <p>SSTI vulnerabilities occur when user input is concatenated into a template instead of being passed as data. This improper handling of dynamic content can expose the server to various attacks.</p>
+            <ul>
+                <li><strong>Concatenation into Templates:</strong> When user input is directly concatenated into templates, it can introduce vulnerabilities. For example:</li>
+                <pre><code>
+    $output = $twig->render("Dear " . $_GET['name']);
+                </code></pre>
+                <p>If the <code>name</code> parameter contains template syntax, such as <code>{{bad-stuff-here}}</code>, it may allow an attacker to execute malicious code.</p>
+                <li><strong>Improper Template Design:</strong> Vulnerabilities can arise from poor design where user input is embedded into templates. For example, allowing users to customize parts of a template or submit new templates without proper validation can be risky.</li>
+            </ul>
+
+            <h3>How to Prevent Server-Side Template Injection Vulnerabilities</h3>
+            <p>To mitigate SSTI risks, follow these best practices:</p>
+            <ul>
+                <li><strong>Avoid Allowing User-Defined Templates:</strong> Where possible, do not allow users to submit or modify templates. This minimizes the risk of injection attacks.</li>
+                <li><strong>Use Logic-Less Template Engines:</strong> Employ template engines that separate logic from presentation, such as Mustache. These engines are less prone to SSTI because they limit the potential for executing arbitrary code.</li>
+                <li><strong>Sanitize and Validate User Input:</strong> Ensure that user input is thoroughly sanitized and validated before incorporating it into templates. Avoid direct concatenation of user data.</li>
+                <li><strong>Sandbox Execution:</strong> If using a template engine that supports it, execute user code in a restricted environment where dangerous modules and functions are removed.</li>
+                <li><strong>Deploy in Secure Environments:</strong> Run your template processing in a secured environment, such as a Docker container, to isolate and limit the potential impact of any SSTI vulnerabilities.</li>
+                <li><strong>Educate Developers:</strong> Ensure that developers are aware of the security implications of template engines and follow best practices to avoid introducing SSTI vulnerabilities.</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Server-Side Request Forgery (SSRF) -->
+    <div class="tool-row">
+        <div class="tool-name" onclick="toggleDetails('ssrf-details')">Server-Side Request Forgery (SSRF)</div>
+        <div class="tool-details" id="ssrf-details">
+            <h3>What is SSRF?</h3>
+            <p>Server-Side Request Forgery (SSRF) is a web security vulnerability that allows an attacker to cause the server-side application to make requests to an unintended location. These requests can be internal to the organization or to arbitrary external systems, potentially leaking sensitive data or allowing unauthorized actions.</p>
+            
+            <h3>What is the Impact of SSRF Attacks?</h3>
+            <p>The impact of a successful SSRF attack can vary, but it often includes:</p>
+            <ul>
+                <li><strong>Unauthorized Access:</strong> SSRF can allow attackers to access internal services that are not intended to be exposed.</li>
+                <li><strong>Data Leakage:</strong> Attackers might gain access to sensitive data or credentials stored within internal services.</li>
+                <li><strong>Remote Code Execution (RCE):</strong> In some cases, SSRF vulnerabilities can be exploited to execute arbitrary commands on the server.</li>
+                <li><strong>Malicious Onward Attacks:</strong> SSRF attacks against external systems may allow attackers to launch further attacks, potentially appearing to originate from the compromised organization.</li>
+            </ul>
+
+            <h3>Common SSRF Attacks</h3>
+            <p>SSRF attacks exploit trust relationships within an organization or towards the server itself. Some common scenarios include:</p>
+
+            <h4>SSRF Attacks Against the Server</h4>
+            <p>In these attacks, the application is tricked into making requests to its own server, often using loopback addresses like 127.0.0.1 or localhost. This can bypass access controls and expose sensitive internal endpoints. For example:</p>
+            <pre><code>
+    POST /product/stock HTTP/1.0
+    Content-Type: application/x-www-form-urlencoded
+    Content-Length: 118
+
+    stockApi=http://localhost/admin
+            </code></pre>
+            <p>This request causes the server to fetch the /admin page, potentially bypassing authentication controls if the request is made from localhost.</p>
+
+            <h4>Finding Hidden Attack Surface for SSRF Vulnerabilities</h4>
+            <p>Identifying SSRF vulnerabilities can be straightforward or challenging, depending on how URLs are used in the application:</p>
+            <ul>
+                <li><strong>Partial URLs in Requests:</strong> Some applications use only part of a URL in requests, such as hostnames or URL paths, which might still be vulnerable to SSRF if the full URL is constructed server-side.</li>
+                <li><strong>URLs within Data Formats:</strong> Formats like XML might include URLs that the server parses and requests. This can lead to SSRF vulnerabilities, especially when combined with XXE (XML External Entity) injection.</li>
+                <li><strong>SSRF via the Referer Header:</strong> Analytics tools often track the Referer header, which might include URLs that the server requests. This can be a vector for SSRF attacks, particularly if the Referer header is used to fetch external data.</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Web Cache Poisoning -->
+    <div class="tool-row">
+        <div class="tool-name" onclick="toggleDetails('web-cache-poisoning-details')">Web Cache Poisoning</div>
+        <div class="tool-details" id="web-cache-poisoning-details">
+            <h3>What is Web Cache Poisoning?</h3>
+            <p>Web cache poisoning is an advanced technique where an attacker exploits web server and cache behavior to serve a harmful HTTP response to users. This involves two phases:</p>
+            <ol>
+                <li><strong>Crafting a Harmful Response:</strong> The attacker elicits a response from the back-end server that contains a dangerous payload.</li>
+                <li><strong>Cache Poisoning:</strong> Ensuring that this harmful response is cached and served to users who visit the affected page.</li>
+            </ol>
+            <p>A poisoned web cache can lead to various attacks, including XSS, JavaScript injection, open redirection, and more.</p>
+
+            <h3>Web Cache Poisoning Research</h3>
+            <p>This technique was first popularized by the 2018 research paper <a href="https://research-paper-url">"Practical Web Cache Poisoning"</a> and further developed in 2020 with the paper <a href="https://research-paper-url">"Web Cache Entanglement: Novel Pathways to Poisoning"</a>. Detailed descriptions of these vulnerabilities can be found on our research page.</p>
+
+            <h3>How Does a Web Cache Work?</h3>
+            <p>A web cache sits between the server and the user, saving responses to requests to reduce server load. It serves cached responses for equivalent requests to minimize server interactions. The cache key, which typically includes the request line and Host header, determines whether a cached response is used. Components of the request not included in the cache key are considered "unkeyed" and ignored by the cache.</p>
+
+            <h3>What is the Impact of a Web Cache Poisoning Attack?</h3>
+            <p>The impact depends on:</p>
+            <ul>
+                <li><strong>Cached Payload:</strong> The nature of the harmful payload determines the attack's impact. Web cache poisoning can distribute various attacks based on the payload's capability.</li>
+                <li><strong>Traffic to the Affected Page:</strong> The attack's reach depends on the page's popularity. For instance, poisoning a major website's home page can affect thousands of users.</li>
+            </ul>
+
+            <h3>Constructing a Web Cache Poisoning Attack</h3>
+            <p>Steps to construct a basic web cache poisoning attack include:</p>
+            <ol>
+                <li><strong>Identify and Evaluate Unkeyed Inputs:</strong> Find inputs that the server ignores when caching responses, such as headers.</li>
+                <li><strong>Elicit a Harmful Response:</strong> Trigger a response containing the payload from the back-end server.</li>
+                <li><strong>Get the Response Cached:</strong> Ensure the harmful response is cached and served to users with matching cache keys.</li>
+            </ol>
+
+            <h4>Param Miner</h4>
+            <p>Automate the identification of unkeyed inputs using the Param Miner extension for Burp Suite. It guesses headers and logs any effects on the response, helping to pinpoint potential attack vectors.</p>
+
+            <h3>How to Prevent Web Cache Poisoning Vulnerabilities</h3>
+            <p>Preventative measures include:</p>
+            <ul>
+                <li><strong>Disable Caching:</strong> If feasible, turn off caching to eliminate the risk.</li>
+                <li><strong>Restrict Caching to Static Responses:</strong> Limit caching to static resources and ensure the genuine static resources are not replaced by malicious ones.</li>
+                <li><strong>Evaluate Third-Party Technologies:</strong> Ensure third-party technologies do not expose unnecessary headers or unkeyed inputs that could be exploited.</li>
+                <li><strong>Implement Precautions:</strong> Rewrite requests instead of excluding components from the cache key, avoid fat GET requests, and patch client-side vulnerabilities to prevent exploitation through cache quirks.</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- WebSockets -->
+    <div class="tool-row">
+        <div class="tool-name" onclick="toggleDetails('websockets-details')">WebSockets</div>
+        <div class="tool-details" id="websockets-details">
+            <h3>What are WebSockets?</h3>
+            <p>WebSockets are a bi-directional, full duplex communications protocol initiated over HTTP. They are commonly used in modern web applications for streaming data and asynchronous traffic.</p>
+
+            <h3>Difference Between HTTP and WebSockets</h3>
+            <p>Most communication between web browsers and web servers uses HTTP. With HTTP, the client sends a request, and the server returns a response, completing the transaction. WebSockets, however, provide long-lived connections that allow messages to be sent in both directions at any time. Unlike HTTP, WebSocket connections remain open, enabling real-time, low-latency communication.</p>
+
+            <h3>How are WebSocket Connections Established?</h3>
+            <p>WebSocket connections are typically created using client-side JavaScript:</p>
+            <pre><code>var ws = new WebSocket("wss://normal-website.com/chat");</code></pre>
+
+            <h3>Testing for WebSockets Security Vulnerabilities</h3>
+            <p>WebSockets can have security vulnerabilities similar to HTTP, including those related to user input, data handling, and more. Testing for these vulnerabilities involves manipulating WebSocket messages and connections using tools like Burp Suite.</p>
+
+            <h4>Manipulating WebSocket Traffic</h4>
+            <p>To find WebSockets security vulnerabilities, you can:</p>
+            <ul>
+                <li><strong>Intercept and Modify WebSocket Messages:</strong> Use Burp Proxy to view and modify WebSocket messages in real time.</li>
+                <li><strong>Replay and Generate New WebSocket Messages:</strong> Use Burp Repeater to resend or create new messages.</li>
+                <li><strong>Manipulate WebSocket Connections:</strong> Edit the WebSocket handshake to access more attack surfaces or update stale tokens.</li>
+            </ul>
+
+            <h4>Intercepting and Modifying WebSocket Messages</h4>
+            <ol>
+                <li>Open Burp's browser and browse to the WebSocket-enabled application.</li>
+                <li>In Burp Proxy, check the WebSockets history to find WebSocket messages.</li>
+                <li>In the Intercept tab, enable interception to view or modify messages.</li>
+                <li>Press "Forward" to send the modified message.</li>
+            </ol>
+
+            <h4>Replaying and Generating New WebSocket Messages</h4>
+            <ol>
+                <li>Select a WebSocket message in Burp Proxy and choose "Send to Repeater."</li>
+                <li>In Burp Repeater, edit and resend messages or create new ones.</li>
+                <li>View the message history in Burp Repeater, including those generated or modified.</li>
+            </ol>
+
+            <h4>Manipulating WebSocket Connections</h4>
+            <ol>
+                <li>Send a WebSocket message to Burp Repeater.</li>
+                <li>Click the pencil icon next to the WebSocket URL to open a wizard for connection management.</li>
+                <li>Edit the WebSocket handshake request details and reconnect if necessary.</li>
+                <li>Use the new connection to send messages in Burp Repeater.</li>
+            </ol>
+
+            <h3>WebSockets Security Vulnerabilities</h3>
+            <p>Common WebSocket vulnerabilities include:</p>
+            <ul>
+                <li>User-supplied input leading to SQL injection, XML external entity injection, or other issues.</li>
+                <li>Blind vulnerabilities that may only be detectable using out-of-band (OAST) techniques.</li>
+                <li>XSS or other client-side vulnerabilities from attacker-controlled data transmitted to other users.</li>
+            </ul>
+
+            <h3>How to Secure a WebSocket Connection</h3>
+            <p>To minimize WebSocket security risks, follow these guidelines:</p>
+            <ul>
+                <li><strong>Use the wss:// Protocol:</strong> Ensure WebSockets use TLS for secure communication.</li>
+                <li><strong>Hard Code WebSocket URLs:</strong> Avoid incorporating user-controllable data into WebSocket URLs.</li>
+                <li><strong>Protect Against CSRF:</strong> Safeguard the WebSocket handshake to prevent cross-site WebSockets hijacking.</li>
+                <li><strong>Treat Data as Untrusted:</strong> Handle all data received via WebSockets safely on both server and client ends to prevent input-based vulnerabilities.</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- XXE Injection -->
+    <div class="tool-row">
+        <div class="tool-name" onclick="toggleDetails('xxe-details')">XML External Entity (XXE) Injection</div>
+        <div class="tool-details" id="xxe-details">
+            <h3>What is XML External Entity Injection?</h3>
+            <p>XML external entity injection (XXE) is a web security vulnerability that allows an attacker to interfere with an application's processing of XML data. It often enables attackers to view files on the application server filesystem and interact with back-end or external systems that the application can access. In some cases, XXE attacks can escalate to compromise the underlying server or other infrastructure through server-side request forgery (SSRF).</p>
+
+            <h3>How do XXE Vulnerabilities Arise?</h3>
+            <p>XXE vulnerabilities occur when applications use XML format for data transmission and utilize standard libraries or APIs for XML processing. These XML parsers often support dangerous features by default, such as XML external entities, which can be exploited if not properly handled.</p>
+            
+            <h3>Types of XXE Attacks</h3>
+            <ul>
+                <li><strong>Retrieving Files:</strong> Using an external entity to access files from the server's filesystem.</li>
+                <li><strong>SSRF Attacks:</strong> Exploiting external entities to access internal services or systems.</li>
+                <li><strong>Blind XXE Exfiltration:</strong> Sending sensitive data from the server to an attacker-controlled system.</li>
+                <li><strong>Blind XXE Data Retrieval:</strong> Triggering error messages that contain sensitive data.</li>
+            </ul>
+
+            <h3>Exploiting XXE to Retrieve Files</h3>
+            <p>To exploit XXE for file retrieval, you need to:</p>
+            <ol>
+                <li>Introduce or modify a DOCTYPE element that defines an external entity containing the file path.</li>
+                <li>Alter a data value in the XML to utilize the defined external entity.</li>
+            </ol>
+            <p>For example, to retrieve the /etc/passwd file from a vulnerable shopping application, submit the following XML payload:</p>
+            <pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+    &lt;!DOCTYPE foo [ &lt;!ENTITY xxe SYSTEM "file:///etc/passwd"&gt; ]&gt;
+    &lt;stockCheck&gt;&lt;productId&gt;&amp;xxe;&lt;/productId&gt;&lt;/stockCheck&gt;</code></pre>
+            <p>This payload defines an external entity &xxe; whose value is the contents of the /etc/passwd file. When processed, the application's response includes the file contents:</p>
+            <pre><code>Invalid product ID: root:x:0:0:root:/root:/bin/bash
+    daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
+    bin:x:2:2:bin:/bin:/usr/sbin/nologin
+    ...</code></pre>
+
+            <h3>How to Prevent XXE Vulnerabilities</h3>
+            <p>To prevent XXE attacks, disable unnecessary XML features that can be exploited:</p>
+            <ul>
+                <li><strong>Disable External Entity Resolution:</strong> Configure the XML parser to ignore external entities.</li>
+                <li><strong>Disable XInclude:</strong> Prevent the use of XInclude to include external XML resources.</li>
+            </ul>
+            <p>Consult your XML parsing library or API documentation for instructions on how to disable these features. Ensuring that your XML parser does not support dangerous capabilities is crucial for protecting against XXE vulnerabilities.</p>
+        </div>
+    </div>
+
+</div>

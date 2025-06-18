@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Exam Prep</title>
+  <link rel="stylesheet" href="/static/style.css">
+
+</head>
+<body>
+<header id="title-block-header">
+</header>
+<h3
+id="below-is-a-table-to-help-identify-which-vulnerabilities-to-use-at-each-stage-in-the-burp-suite-exam.">Below
+is a table to help identify which vulnerabilities to use at each stage
+in the Burp Suite Exam.</h3>
+<ul>
+<li><p>Stages:</p>
+<ul>
+<li><p>Stage 1: Access any user account.</p></li>
+<li><p>Stage 2: Use your user account to access the admin interface at
+/admin, perhaps by elevating your privileges or compromising the
+administrator account.</p></li>
+<li><p>Stage 3: Use the admin interface to read the contents of
+/home/carlos/secret from the server’s filesystem, and submit it using
+“submit solution”.</p></li>
+</ul></li>
+<li><p>Links:</p>
+<ul>
+<li><p>https://portswigger.net/web-security/certification/exam-hints-and-guidance</p></li>
+<li><p>https://portswigger.net/web-security/certification/how-it-works#what-the-exam-involves</p></li>
+</ul></li>
+<li><p>Interactive Exploit - means that the category can be used to
+target active user sessions. This is important to keep in mind since the
+exam details mention that “Each application has up to one active user,
+who will be logged in either as a user or an administrator.”.</p></li>
+</ul>
+<p><br><br></p>
+<table>
+<colgroup>
+<col style="width: 43%" />
+<col style="width: 10%" />
+<col style="width: 10%" />
+<col style="width: 10%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr>
+<th>Categories</th>
+<th>Stage 1</th>
+<th>Stage 2</th>
+<th>Stage 3</th>
+<th>Interactive Exploit?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SQL Injection</td>
+<td>X</td>
+<td>X</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Authentication</td>
+<td>X</td>
+<td>X</td>
+<td></td>
+<td>X</td>
+</tr>
+<tr>
+<td>Directory Traversal</td>
+<td></td>
+<td></td>
+<td>X</td>
+<td></td>
+</tr>
+<tr>
+<td>Command Injection</td>
+<td></td>
+<td></td>
+<td>X</td>
+<td></td>
+</tr>
+<tr>
+<td>Business Logic Vulnerabilities</td>
+<td></td>
+<td>X</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Information Disclosure</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Access Control</td>
+<td>X</td>
+<td>X</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>File Upload Vulnerabilities</td>
+<td></td>
+<td></td>
+<td>X</td>
+<td>sometimes w/ xss</td>
+</tr>
+<tr>
+<td>Server-Side Request Forgery (SSRF)</td>
+<td></td>
+<td>X</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>XXE Injection</td>
+<td></td>
+<td></td>
+<td>X</td>
+<td></td>
+</tr>
+<tr>
+<td>Cross-site Scripting (XSS)</td>
+<td>X</td>
+<td>X</td>
+<td></td>
+<td>X</td>
+</tr>
+<tr>
+<td>Cross-site Request Forgery (CSRF)</td>
+<td></td>
+<td>X</td>
+<td></td>
+<td>X</td>
+</tr>
+<tr>
+<td>Cross-origin Resource Sharing (CORS)</td>
+<td>X</td>
+<td>X</td>
+<td></td>
+<td>X</td>
+</tr>
+<tr>
+<td>Clickjacking</td>
+<td>X</td>
+<td>X</td>
+<td></td>
+<td>X</td>
+</tr>
+<tr>
+<td>DOM-based Vulnerabilities</td>
+<td>X</td>
+<td>X</td>
+<td></td>
+<td>X</td>
+</tr>
+<tr>
+<td>WebSockets</td>
+<td>X</td>
+<td>X</td>
+<td></td>
+<td>X</td>
+</tr>
+<tr>
+<td>Insecure Deserialization</td>
+<td></td>
+<td>X</td>
+<td>X</td>
+<td></td>
+</tr>
+<tr>
+<td>Server-side Template Injection</td>
+<td></td>
+<td></td>
+<td>X</td>
+<td></td>
+</tr>
+<tr>
+<td>Web Cache Poisoning</td>
+<td>X</td>
+<td>X</td>
+<td></td>
+<td>X</td>
+</tr>
+<tr>
+<td>HTTP Host Header Attacks</td>
+<td>X</td>
+<td>X</td>
+<td></td>
+<td>X</td>
+</tr>
+<tr>
+<td>HTTP Request Smuggling</td>
+<td>X</td>
+<td>X</td>
+<td></td>
+<td>X</td>
+</tr>
+<tr>
+<td>OAuth Authentication</td>
+<td>X</td>
+<td>X</td>
+<td></td>
+<td>X</td>
+</tr>
+<tr>
+<td>JWT Attacks</td>
+<td>X</td>
+<td>X</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Prototype Pollution</td>
+<td>X</td>
+<td>X</td>
+<td>X</td>
+<td>X</td>
+</tr>
+<tr>
+<td>Essential Skills</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</body>
+</html>

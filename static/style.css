@@ -1,0 +1,782 @@
+/* Global Styles */
+body {
+    font-family: 'Roboto', sans-serif;
+    background: linear-gradient(135deg, #1a1a1a, #330000); /* Dark red and gradient black */
+    color: #f5f5f5;
+    margin: 0;
+    padding: 0;
+    line-height: 1.6;
+    overflow-x: hidden; /* Prevent horizontal scroll */
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+/* Tab and Content Styles */
+.tab-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 10px; /* Adjusted margin to ensure proper alignment */
+}
+
+.tab {
+    background-color: #222;
+    border: 1px solid #444;
+    border-radius: 5px 5px 0 0;
+    padding: 10px 20px;
+    cursor: pointer;
+    color: #f5f5f5;
+    margin: 0 5px;
+    text-align: center;
+    transition: background-color 0.3s, color 0.3s;
+    font-size: 16px;
+}
+
+.tab.active {
+    background-color: #990000;
+    color: #ffffff;
+}
+
+.tab-content {
+    display: none;
+    padding: 20px;
+    background: #333;
+    border: 1px solid #444;
+    border-radius: 0 0 5px 5px;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* Heading Styles */
+h1, h2, h3 {
+    text-align: center;
+    color: #ffffff;
+}
+
+h1 {
+    font-size: 2.5em;
+    font-weight: 700;
+}
+
+h2 {
+    font-size: 2em;
+    margin-top: 0;
+    font-weight: 400;
+}
+
+h3 {
+    font-size: 1.75em;
+    margin-top: 20px;
+    font-weight: 400;
+}
+
+/* Tool Row Styles */
+.tool-row {
+    margin: 20px 0;
+    border-bottom: 1px solid #666;
+}
+
+.tool-name {
+    background: #222;
+    padding: 10px;
+    cursor: pointer;
+    border-radius: 5px;
+    font-size: 18px;
+    font-weight: 700;
+    transition: background-color 0.3s;
+    color: #f5f5f5;
+}
+
+.tool-name:hover {
+    background: #444;
+}
+
+.tool-details {
+    display: none;
+    padding: 10px;
+    background: #444;
+    border-radius: 5px;
+}
+
+/* Code and Extra Mile Styles */
+code {
+    background: #555;
+    padding: 2px 4px;
+    border-radius: 4px;
+    color: #f5f5f5;
+}
+
+.extra-mile {
+    font-style: italic;
+    color: #cccccc;
+}
+
+/* Global Link Styles */
+a {
+    text-decoration: none;
+    color: #ff6666;
+    font-weight: bold;
+    background-color: #222;
+    padding: 8px 15px;
+    border-radius: 5px;
+    transition: background-color 0.3s, color 0.3s;
+    display: inline-block;
+}
+
+a:hover {
+    background-color: #990000;
+    color: #ffffff;
+}
+
+/* PortSwigger and Automated Enum Specific Styling */
+#portswigger ul, 
+#automated-enum {
+    list-style: none;
+    padding-left: 0;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+#portswigger ul li, 
+#automated-enum li {
+    width: 45%;
+    margin: 10px;
+    text-align: center;
+}
+
+#portswigger ul li a, 
+#automated-enum li a {
+    display: block;
+}
+
+#portswigger ul li a:hover, 
+#automated-enum li a:hover {
+    background-color: #990000;
+    color: #ffffff;
+}
+
+/* Collapse All Container and Button Styles */
+.collapse-all-container {
+    display: flex;
+    justify-content: center;
+    margin: 20px 0;
+}
+
+.collapse-all-btn {
+    background-color: #990000;
+    color: #ffffff;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.collapse-all-btn:hover {
+    background-color: #660000;
+}
+
+/* Button Container Styles */
+.button-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.back-to-top {
+    background-color: #d40000;
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    text-decoration: none;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transition: background-color 0.3s;
+}
+
+.back-to-top:hover {
+    background-color: #a30000;
+}
+
+.back-to-top:focus {
+    outline: none;
+}
+
+/* Swirling Line Effect */
+.container {
+    position: relative;
+    max-width: 1000px; /* Adjust as needed */
+    margin: auto;
+    padding: 80px; /* Adjusted padding to keep content aligned */
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    overflow: visible; /* Allow animations to overflow */
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5); /* Optional: Add shadow for better separation */
+    z-index: 1; /* Ensure it stays above animations */
+}
+
+.line-animation-wrapper {
+    position: absolute;
+    top: -80px; /* Adjusted to align with the container */
+    bottom: -80px; /* Adjusted to align with the container */
+    left: -80px; /* Adjusted to align with the container */
+    right: -80px; /* Adjusted to align with the container */
+    pointer-events: none; /* Ensure it doesn't interfere with clicks */
+    z-index: 0; /* Ensure it is below the content */
+    overflow: hidden; /* Prevent overflow of animations */
+}
+
+.line-animation {
+    position: absolute;
+    width: 2px; /* Thin lines */
+    height: 100%;
+    background: transparent;
+}
+
+.line-animation.left {
+    left: -2px; /* Adjust to match line width */
+    background: linear-gradient(90deg, rgba(255, 0, 0, 0.4), transparent); /* Thin red line */
+    animation: swirlLeft 8s linear infinite;
+}
+
+.line-animation.right {
+    right: -2px; /* Adjust to match line width */
+    background: linear-gradient(90deg, rgba(0, 0, 0, 0.4), transparent); /* Thin black line */
+    animation: swirlRight 8s linear infinite;
+}
+
+@keyframes swirlLeft {
+    0% {
+        transform: translateY(0) rotate(0deg);
+        background-position: 0 0;
+    }
+    50% {
+        transform: translateY(100%) rotate(180deg);
+        background-position: 100% 0;
+    }
+    100% {
+        transform: translateY(0) rotate(360deg);
+        background-position: 0 0;
+    }
+}
+
+@keyframes swirlRight {
+    0% {
+        transform: translateY(0) rotate(0deg);
+        background-position: 0 0;
+    }
+    50% {
+        transform: translateY(-100%) rotate(-180deg);
+        background-position: 0 100%;
+    }
+    100% {
+        transform: translateY(0) rotate(-360deg);
+        background-position: 0 0;
+    }
+}
+
+/* Hero Section */
+.hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 80vh;
+    text-align: center;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.7));
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+    margin: 0 20px;
+}
+
+.hero h1 {
+    font-size: 3em;
+    margin: 0.5em 0;
+    color: #ffffff;
+}
+
+.hero p {
+    font-size: 1.25em;
+    color: #dcdcdc;
+}
+
+/* Crossed Keyboard and Mouse Icon */
+.symbol {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    margin-bottom: 20px;
+    text-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+    animation: pulse 1.5s infinite;
+}
+
+/* Keyboard (top-left to bottom-right) */
+.symbol:before {
+    content: "";
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: 80px;
+    height: 20px;
+    background-color: #990000;
+    border-radius: 4px;
+    transform: rotate(-45deg);
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+}
+
+/* Mouse (bottom-left to top-right) */
+.symbol:after {
+    content: "";
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    width: 60px;
+    height: 100px;
+    background-color: #990000;
+    border-radius: 50%;
+    transform: rotate(45deg);
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* Feature Box Styles */
+.feature-box {
+    display: flex;
+    justify-content: space-around;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin: 20px;
+}
+
+.feature {
+    background: #222222;
+    border-radius: 8px;
+    padding: 20px;
+    flex: 1;
+    min-width: 200px;
+    text-align: center;
+    color: #ffffff;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+    transition: transform 0.3s ease;
+}
+
+.feature:hover {
+    transform: scale(1.05);
+}
+
+.feature h2 {
+    font-size: 1.5em;
+    color: #ff6666;
+}
+
+.feature p {
+    font-size: 1em;
+}
+
+/* Footer Styles */
+.footer {
+    background: rgba(0, 0, 0, 0.5);
+    color: #ffffff;
+    padding: 20px;
+    text-align: center;
+    font-size: 0.875em;
+}
+
+/* Additional Styles */
+.crossed {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100%;
+    height: 100%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+}
+
+.crossed .line {
+    position: absolute;
+    background: #ffffff;
+}
+
+.crossed .line.horizontal {
+    width: 100%;
+    height: 1px;
+    top: 50%;
+    left: 0;
+}
+
+.crossed .line.vertical {
+    width: 1px;
+    height: 100%;
+    left: 50%;
+    top: 0;
+}
+
+.line-animation.small {
+    width: 1px; /* Thinner lines */
+    height: 100%;
+}
+
+/* Sub-Tab Styles */
+.sub-tab-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 10px;
+}
+
+.sub-tab {
+    background-color: #333;
+    border: 1px solid #444;
+    border-radius: 5px 5px 0 0;
+    padding: 10px 20px;
+    cursor: pointer;
+    color: #f5f5f5;
+    margin: 0 5px;
+    text-align: center;
+    transition: background-color 0.3s, color 0.3s;
+    font-size: 14px;
+}
+
+.sub-tab.active {
+    background-color: #ff6666;
+    color: #ffffff;
+}
+
+.sub-tab-content {
+    display: none;
+    padding: 20px;
+    background: #444;
+    border: 1px solid #555;
+    border-radius: 0 0 5px 5px;
+}
+
+.sub-tab-content.active {
+    display: block;
+}
+
+/* Center the content of the notes */
+#view-notes {
+    text-align: center;
+}
+
+#notes-list {
+    list-style: none; /* Remove the default bullet points */
+    padding: 0;
+    margin: 0;
+}
+
+/* Style for each note item */
+#notes-list li {
+    margin-bottom: 10px; /* Space between notes */
+    font-size: 18px; /* Adjust font size as needed */
+    position: relative; /* For pseudo-element positioning */
+    padding-left: 30px; /* Add space to the left for the dagger */
+}
+
+/* Replace bullet with a dagger symbol */
+#notes-list li::before {
+    content: "\2020"; /* Unicode for dagger † */
+    position: absolute;
+    left: 0; /* Position closer to the text */
+    font-size: 20px;
+    color: #990000; /* Dagger color */
+    vertical-align: middle; /* Align with the middle of the text */
+}
+
+/* Adjust button placement under each note */
+#notes-list li button {
+    margin-left: 10px; /* Space between the note text and the buttons */
+}
+
+/* Optional: Add padding or margin to buttons for cleaner appearance */
+.note-action-btn {
+    margin-top: 5px;
+}
+
+/* Fixed position for notes management buttons */
+.notes-buttons-fixed {
+    position: fixed;
+    right: 20px;
+    top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 1000; /* Ensure the buttons are above other content */
+}
+
+/* Button styles */
+.noteslist-buttons {
+    background-color: #990000;
+    color: #ffffff;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.noteslist-buttons:hover {
+    background-color: #660000;
+}
+
+/* Importing Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+
+html {
+    color: #ffffff;
+    background-color: #111111;
+}
+
+body {
+    margin: 0 auto;
+    max-width: 80em; /* Increased width for a wider layout */
+    padding: 50px;
+    hyphens: auto;
+    overflow-wrap: break-word;
+    text-rendering: optimizeLegibility;
+    font-kerning: normal;
+    font-family: 'Roboto', Arial, sans-serif; /* Updated font-family */
+    background: linear-gradient(135deg, #111111, #440000 30%, #660000 60%, #111111); /* Modern gradient */
+    color: #ffffff;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6); /* Modern box shadow */
+}
+
+/* Media query adjustments for mobile */
+@media (max-width: 600px) {
+    body {
+        font-size: 0.9em;
+        padding: 12px;
+    }
+    h1 {
+        font-size: 1.8em;
+    }
+}
+
+/* Print styles */
+@media print {
+    html {
+        background-color: #ffffff;
+    }
+    body {
+        background-color: transparent;
+        color: #000000;
+        font-size: 12pt;
+    }
+    p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+    }
+    h2, h3, h4 {
+        page-break-after: avoid;
+    }
+}
+
+/* General styles */
+p {
+    margin: 1em 0;
+    line-height: 1.6; /* Improved line height for readability */
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+img {
+    max-width: 100%;
+}
+
+svg {
+    height: auto;
+    max-width: 100%;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.4em;
+    color: #ffffff;
+}
+
+h5, h6 {
+    font-size: 1em;
+    font-style: italic;
+}
+
+h6 {
+    font-weight: normal;
+}
+
+ol, ul {
+    padding-left: 1.7em;
+    margin-top: 1em;
+    font-size: 1em; /* Consistent font size for lists */
+}
+
+li {
+    margin-bottom: 0.5em; /* Space between list items */
+}
+
+/* Customize bullets */
+ul {
+    list-style-type: disc; /* Use disc bullets */
+}
+
+ol {
+    list-style-type: decimal; /* Use decimal numbers for ordered lists */
+}
+
+blockquote {
+    margin: 1em 0 1em 1.7em;
+    padding-left: 1em;
+    border-left: 2px solid #666666;
+    color: #cccccc;
+    font-style: italic; /* Italicize blockquotes for emphasis */
+}
+
+code {
+    background: #555555;
+    color: #ffffff;
+    font-family: 'Roboto Mono', Menlo, Monaco, Consolas, 'Lucida Console', monospace; /* Added monospaced font */
+    font-size: 85%;
+    margin: 0;
+    padding: 2px 4px;
+    border-radius: 4px;
+}
+
+pre {
+    margin: 1em 0;
+    overflow: auto;
+    background: #333333;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+pre code {
+    padding: 0;
+    overflow: visible;
+    overflow-wrap: normal;
+}
+
+.sourceCode {
+    background-color: #333333;
+    overflow: visible;
+    color: #ffffff;
+}
+
+hr {
+    background-color: #666666;
+    border: none;
+    height: 1px;
+    margin: 1em 0;
+}
+
+table {
+    margin: 1em 0;
+    border-collapse: collapse;
+    width: 100%;
+    overflow-x: auto;
+    display: block;
+    font-variant-numeric: lining-nums tabular-nums;
+}
+
+table caption {
+    margin-bottom: 0.75em;
+}
+
+tbody {
+    margin-top: 0.5em;
+    border-top: 1px solid #666666;
+    border-bottom: 1px solid #666666;
+}
+
+th {
+    border-top: 1px solid #666666;
+    padding: 0.25em 0.5em;
+    background: #444444;
+}
+
+td {
+    padding: 0.125em 0.5em;
+    background: #333333;
+}
+
+header {
+    margin-bottom: 4em;
+    text-align: center;
+    color: #ffffff;
+}
+
+#TOC li {
+    list-style: none;
+}
+
+#TOC ul {
+    padding-left: 1.3em;
+}
+
+#TOC > ul {
+    padding-left: 0;
+}
+
+#TOC a:not(:hover) {
+    text-decoration: none;
+}
+
+span.smallcaps {
+    font-variant: small-caps;
+}
+
+div.columns {
+    display: flex;
+    gap: min(4vw, 1.5em);
+}
+
+div.column {
+    flex: auto;
+    overflow-x: auto;
+}
+
+div.hanging-indent {
+    margin-left: 1.5em;
+    text-indent: -1.5em;
+}
+
+ul.task-list[class] {
+    list-style: none;
+}
+
+ul.task-list li input[type="checkbox"] {
+    font-size: inherit;
+    width: 0.8em;
+    margin: 0 0.8em 0.2em -1.6em;
+    vertical-align: middle;
+}
+
+.display.math {
+    display: block;
+    text-align: center;
+    margin: 0.5rem auto;
+}

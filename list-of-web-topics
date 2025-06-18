@@ -1,0 +1,30 @@
+API Testing
+Access Control
+Authentication
+Business Logic Vulnerabilities
+Clickjacking
+Command Injection
+Cross-Origin Resource Sharing (CORS)
+Cross-site Request Forgery (CSRF)
+Cross-site Scripting (XSS)
+DOM-based Vulnerabilities
+Directory Traversal
+Essential Skills
+Exam Prep
+File Upload Vulnerabilities
+GraphQL API Vulnerabilities
+HTTP Host Header Attacks
+HTTP Request Smuggling
+Information Disclosure
+Insecure Deserialization
+JWT Attacks
+NoSQL Injection
+OAuth Authentication
+Prototype Pollution
+Race Conditions
+SQL Injection
+Server-Side Template Injection
+Server-side Request Forgery (SSRF)
+Web Cache Poisoning
+WebSockets
+XXE Injection

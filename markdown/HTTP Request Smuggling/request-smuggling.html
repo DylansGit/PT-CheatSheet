@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Request Smugling</title>
+  <link rel="stylesheet" href="/static/style.css">
+  
+</head>
+<body>
+<header id="title-block-header">
+</header>
+<h1 id="http-request-smuggling">HTTP Request Smuggling</h1>
+<h2 id="summary">Summary</h2>
+<ul>
+<li><p><a href="#recon">Recon for HTTP Request Smugling</a></p></li>
+<li><p><a href="#cheat-sheet">Portswigger Labs Cheat Sheet /
+Payloads</a></p></li>
+<li><p><a
+href="#note-the-rest-of-the-payloads-for-the-other-practitioner-labs-can-be-found-in-the-sections-of-the-document">More
+Practitioner Labs</a></p></li>
+<li><p>Additional Note: There is a PDF attached in this folder that has
+a walk-through of the labs. The document does not need to be downloaded,
+it can be viewed inline in GitHub.</p></li>
+</ul>
+<p><br><br></p>
+<h2 id="recon">Recon</h2>
+<ul>
+<li><p>Links:</p>
+<ul>
+<li><p>https://portswigger.net/web-security/request-smuggling#how-do-http-request-smuggling-vulnerabilities-arise</p></li>
+<li><p>https://portswigger.net/web-security/request-smuggling/finding</p></li>
+</ul></li>
+</ul>
+<p><br><br></p>
+<h2 id="tools-and-burp-extensions-used">Tools and Burp Extensions
+Used:</h2>
+<ul>
+<li>HTTP Request Smuggler -
+https://github.com/portswigger/http-request-smuggler#practice</li>
+</ul>
+<p><br><br><br></p>
+<h2 id="cheat-sheet">Cheat Sheet</h2>
+<p><br><br></p>
+<p><strong>Important Notes:</strong></p>
+<ul>
+<li><p>These techniques are only possible using HTTP/1 requests.
+Browsers and other clients, including Burp, use HTTP/2 by default to
+communicate with servers that explicitly advertise support for it via
+ALPN as part of the TLS handshake. As a result, when testing sites with
+HTTP/2 support, you need to manually switch protocols in Burp Repeater.
+You can do this from the Request attributes section of the Inspector
+panel.</p></li>
+<li><p>When working with “TE.CL” payloads - To send this request is Burp
+Repeater, you will first need to go to the Repeater menu and ensure that
+the “Update Content-Length” option is unchecked.</p></li>
+<li><p>When submitting request smuggling payloads it is often required
+to include an arbitrary body parameter ( x= ) at the end, so that the
+next normal submitted request does not “break” the smuggled request, as
+it will be appended to the parameter (For example, this would avoid
+duplicate headers issues).</p></li>
+<li><p>All of the headers in the smuggled request are important such as
+the Host, Content-Type and Content-Length. The values for these headers
+need to be considered when capturing other user’s requests,
+etc.</p></li>
+</ul>
+<p><br><br></p>
+<h3 id="basic-cl.te-payload"><strong>Basic CL.TE payload</strong></h3>
+<ul>
+<li><p>Include both Content-Length (CL) and Transfer-Encoding (TE)
+headers.</p></li>
+<li><p>Here the front-end server is processing the request length using
+the CL header, which will process the entire body.</p></li>
+<li><p>The back-end server receives the same request but uses the TE
+header to process the request’s length. Since the terminating byte 0 is
+provided in the beginning of the body, the rest of the data will be left
+unprocessed and will remain in the connection queue. The next request
+that is submitted will be appended to this left over request data. So,
+the back-end server essentially see’s 2 requests in the payload
+submitted.</p></li>
+</ul>
+<figure>
+<img
+src="https://github.com/ChrisM-X/PortSwigger-Academy-CheatSheets/blob/master/HTTP%20Request%20Smuggling/Images/Picture1.png"
+alt="HRS-1" />
+<figcaption aria-hidden="true">HRS-1</figcaption>
+</figure>
+<figure>
+<img
+src="https://github.com/ChrisM-X/PortSwigger-Academy-CheatSheets/blob/master/HTTP%20Request%20Smuggling/Images/Picture2.png"
+alt="HRS-2" />
+<figcaption aria-hidden="true">HRS-2</figcaption>
+</figure>
+<figure>
+<img
+src="https://github.com/ChrisM-X/PortSwigger-Academy-CheatSheets/blob/master/HTTP%20Request%20Smuggling/Images/Picture15.png"
+alt="HRS-3" />
+<figcaption aria-hidden="true">HRS-3</figcaption>
+</figure>
+<p><br><br></p>
+<h3 id="basic-te.cl-payload"><strong>Basic TE.CL payload</strong></h3>
+<ul>
+<li><p>Include both Content-Length (CL) and Transfer-Encoding (TE)
+headers.</p></li>
+<li><p>The front-end server is using the TE header to determine the
+length of the request. The HTTP request smuggler extension can be used
+here to automatically update the bytes required. It will add in the
+start and end bytes (9d and 0) in this case.</p></li>
+<li><p>When the back-end server receives this request, it will use the
+CL header to determine the length of the request. Since the value is 4,
+it will leave the rest of the body unprocessed and will remain in the
+connection queue. The next request that is submitted will be appended to
+the x=1 parameter. The server here essentially see’s 2 request.</p>
+<ul>
+<li>Note: To send this request is Burp Repeater, you will first need to
+go to the Repeater menu and ensure that the “Update Content-Length”
+option is unchecked.</li>
+</ul></li>
+</ul>
+<figure>
+<img
+src="https://github.com/ChrisM-X/PortSwigger-Academy-CheatSheets/blob/master/HTTP%20Request%20Smuggling/Images/Picture3.png"
+alt="HRS-3" />
+<figcaption aria-hidden="true">HRS-3</figcaption>
+</figure>
+<figure>
+<img
+src="https://github.com/ChrisM-X/PortSwigger-Academy-CheatSheets/blob/master/HTTP%20Request%20Smuggling/Images/Picture4.png"
+alt="HRS-4" />
+<figcaption aria-hidden="true">HRS-4</figcaption>
+</figure>
+<p><br><br></p>
+<h3 id="basic-te.te-payload-obfuscating-te-header"><strong>Basic TE.TE
+payload (obfuscating TE header)</strong></h3>
+<ul>
+<li><p>https://portswigger.net/web-security/request-smuggling#te-te-behavior-obfuscating-the-te-header</p></li>
+<li><p>In this scenario, both the front-end and back-end servers support
+the TE header. We need to submit a payload that will obfuscate the TE
+header and identify if either of the servers reject the TE header and
+use the CL header for processing.</p></li>
+<li><p>CL.TE payload – the application times-out when using this method,
+which means the front-end application is using the TE header.</p></li>
+</ul>
+<figure>
+<img
+src="https://github.com/ChrisM-X/PortSwigger-Academy-CheatSheets/blob/master/HTTP%20Request%20Smuggling/Images/Picture5.png"
+alt="HRS-5" />
+<figcaption aria-hidden="true">HRS-5</figcaption>
+</figure>
+<ul>
+<li>TE.CL payload – the application does not time out and the back-end
+server processes the request using the CL header. This is the direction
+for exploitation since the obfuscated TE header prevented the back-end
+server from using it.</li>
+</ul>
+<figure>
+<img
+src="https://github.com/ChrisM-X/PortSwigger-Academy-CheatSheets/blob/master/HTTP%20Request%20Smuggling/Images/Picture6.png"
+alt="HRS-6" />
+<figcaption aria-hidden="true">HRS-6</figcaption>
+</figure>
+<figure>
+<img
+src="https://github.com/ChrisM-X/PortSwigger-Academy-CheatSheets/blob/master/HTTP%20Request%20Smuggling/Images/Picture7.png"
+alt="HRS-1" />
+<figcaption aria-hidden="true">HRS-1</figcaption>
+</figure>
+<p><br><br></p>
+<h3
+id="confirming-cl.te-vulnerability-via-differential-responses"><strong>Confirming
+CL.TE vulnerability via differential responses</strong></h3>
+<ul>
+<li><p>A request to GET / endpoint normally returns the home page of the
+application.</p></li>
+<li><p>A request to a random endpoint like GET /404, will return a 404
+Not Found response.</p></li>
+<li><p>This behavior will be used to identify if our request smuggling
+payload worked.</p></li>
+<li><p>The payload consists of a smuggled request that will be sent to
+the /404 endpoint, which would return a 404 error.</p></li>
+<li><p>The follow up request will be submitted to the GET / endpoint,
+however, instead of returning the home page, a 404 error is returned.
+Which proves the smuggled payload worked.</p></li>
+</ul>
+<figure>
+<img
+src="https://github.com/ChrisM-X/PortSwigger-Academy-CheatSheets/blob/master/HTTP%20Request%20Smuggling/Images/Picture8.png"
+alt="HRS-8" />
+<figcaption aria-hidden="true">HRS-8</figcaption>
+</figure>
+<figure>
+<img
+src="https://github.com/ChrisM-X/PortSwigger-Academy-CheatSheets/blob/master/HTTP%20Request%20Smuggling/Images/Picture9.png"
+alt="HRS-9" />
+<figcaption aria-hidden="true">HRS-9</figcaption>
+</figure>
+<p><br><br></p>
+<h3
+id="confirming-te.cl-vulnerability-via-differential-responses"><strong>Confirming
+TE.CL vulnerability via differential responses</strong></h3>
+<ul>
+<li><p>A request to GET / endpoint normally returns the home page of the
+application.</p></li>
+<li><p>A request to a random endpoint like GET /404 or POST /404, will
+return a 404 Not Found response.</p></li>
+<li><p>This behavior will be used to identify if our request smuggling
+payload worked.</p></li>
+<li><p>The payload consists of a smuggled request that will be sent to
+the /404 endpoint, which would return a 404 error. The CL header
+contains the value of 4, which covers the data up to the beginning of
+line 20.</p></li>
+<li><p>The follow up request receives a 404 error, even though the
+request is made to the home page / of the application. This proves that
+the payload worked as expected.</p></li>
+</ul>
+<figure>
+<img
+src="https://github.com/ChrisM-X/PortSwigger-Academy-CheatSheets/blob/master/HTTP%20Request%20Smuggling/Images/Picture10.png"
+alt="HRS-10" />
+<figcaption aria-hidden="true">HRS-10</figcaption>
+</figure>
+<figure>
+<img
+src="https://github.com/ChrisM-X/PortSwigger-Academy-CheatSheets/blob/master/HTTP%20Request%20Smuggling/Images/Picture11.png"
+alt="HRS-11" />
+<figcaption aria-hidden="true">HRS-11</figcaption>
+</figure>
+<p><br><br></p>
+<h3 id="using-te.cl-payload-to-bypass-front-end-controls"><strong>Using
+TE.CL payload to bypass front-end controls</strong></h3>
+<ul>
+<li><p>The /admin endpoint is only available to local users.</p></li>
+<li><p>A TE.CL payload was crafted where the smuggled request will be to
+the /admin endpoint, the Host header contains the value of
+localhost.</p></li>
+<li><p>Submitting a follow up request will return the normal response to
+the /admin request. We can send another request to delete the user,
+Carlos.</p></li>
+</ul>
+<figure>
+<img
+src="https://github.com/ChrisM-X/PortSwigger-Academy-CheatSheets/blob/master/HTTP%20Request%20Smuggling/Images/Picture12.png"
+alt="HRS-12" />
+<figcaption aria-hidden="true">HRS-12</figcaption>
+</figure>
+<p><br><br></p>
+<h3
+id="using-cl.te-payload-to-capture-other-users-requests"><strong>Using
+CL.TE payload to capture other user’s requests</strong></h3>
+<ul>
+<li><p>We need to identify if there is a request with parameters whose
+values are being reflected or stored in a response.</p></li>
+<li><p>In this scenario, the application has a blog where users can
+leave comments that can be viewed in the application.</p></li>
+<li><p>The “comment” parameter was intentionally injected last in the
+payload so the follow request will appear in the application’s UI. The
+CL header in the smuggled request payload matters and needs to be
+adjusted in order to capture all the data in the follow up request. A
+lot of trial/error can happen here.</p></li>
+<li><p>Since the victim user’s request contains the session cookie
+header, this will be captured in the smuggled request and can be used to
+access the application as that user.</p></li>
+</ul>
+<figure>
+<img
+src="https://github.com/ChrisM-X/PortSwigger-Academy-CheatSheets/blob/master/HTTP%20Request%20Smuggling/Images/Picture13.png"
+alt="HRS-13" />
+<figcaption aria-hidden="true">HRS-13</figcaption>
+</figure>
+<figure>
+<img
+src="https://github.com/ChrisM-X/PortSwigger-Academy-CheatSheets/blob/master/HTTP%20Request%20Smuggling/Images/Picture14.png"
+alt="HRS-14" />
+<figcaption aria-hidden="true">HRS-14</figcaption>
+</figure>
+<p><br><br></p>
+<h3
+id="note-the-rest-of-the-payloads-for-the-other-practitioner-labs-can-be-found-in-the-sections-of-the-document">Note
+The rest of the payloads for the other practitioner labs can be found in
+the sections of the document</h3>
+<ul>
+<li><p>The following can be found in the attached document:</p>
+<ul>
+<li><p>Exploiting HTTP request smuggling to bypass front-end security
+controls, CL.TE vulnerability</p></li>
+<li><p>Exploiting HTTP request smuggling to reveal front-end request
+rewriting</p></li>
+<li><p>Exploiting HTTP request smuggling to deliver reflected
+XSS</p></li>
+<li><p>Response queue poisoning via H2.TE request smuggling</p></li>
+<li><p>H2.CL request smuggling</p></li>
+<li><p>HTTP/2 request smuggling via CRLF injection</p></li>
+<li><p>HTTP/2 request splitting via CRLF injection</p></li>
+<li><p>CL.0 request smuggling</p></li>
+<li><p>Exploiting HTTP request smuggling to perform web cache
+poisoning</p></li>
+<li><p>Exploiting HTTP request smuggling to perform web cache
+deception</p></li>
+</ul></li>
+</ul>
+<p><br><br><br></p>
+<h3
+id="pending-to-complete-labs-that-are-missing-from-cheat-sheet.">Pending
+to complete labs that are missing from cheat sheet.</h3>
+<ul>
+<li><p>LAB EXPERT Bypassing access controls via HTTP/2 request
+tunnelling Not solved</p></li>
+<li><p>LAB EXPERT Web cache poisoning via HTTP/2 request tunnelling Not
+solved</p></li>
+<li><p>LAB EXPERT Client-side desync Not solved</p></li>
+<li><p>LAB EXPERT Browser cache poisoning via client-side desync Not
+solved</p></li>
+<li><p>LAB EXPERT Server-side pause-based request smuggling Not
+solved</p></li>
+</ul>
+</body>
+</html>

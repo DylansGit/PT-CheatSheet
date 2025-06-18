@@ -1,0 +1,25 @@
+<div class="sub-tab-container">
+    <div class="sub-tab" onclick="showSubTab(event, 'new-note')">New Note</div>
+    <div class="sub-tab" onclick="showSubTab(event, 'view-notes')">View Notes</div>
+</div>
+
+<!-- New Note Sub-tab -->
+<div id="new-note" class="sub-tab-content">
+    <h3>Create a New Note</h3>
+    <textarea id="note-input" placeholder="Write your note here..." rows="6" style="width:100%;"></textarea>
+    <button class="save-note-btn" onclick="saveNote()">Save Note</button>
+</div>
+
+<!-- View Notes Sub-tab -->
+<div id="view-notes" class="sub-tab-content" style="display: none;">
+    <h3>Your Notes</h3>
+    <ul id="notes-list">
+        <!-- Notes will be loaded here -->
+    </ul>
+</div>
+
+<!-- Fixed buttons container -->
+<div class="notes-buttons-fixed">
+    <!-- Buttons will be dynamically inserted here by JS -->
+</div>
+

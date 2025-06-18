@@ -1,0 +1,466 @@
+<h1>Linux Privilege Escalation</h1>
+            <!-- Enumeration Commands -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('linux-enumeration')">Enumeration</div>
+                <div class="tool-details" id="linux-enumeration">
+                    <div class="tool-command">hostname: <code>hostname</code></div>
+                    <p>Lists the name of the host.</p>
+                    <div class="tool-command">uname -a: <code>uname -a</code></div>
+                    <p>Prints kernel information.</p>
+                    <div class="tool-command">cat /proc/version: <code>cat /proc/version</code></div>
+                    <p>Prints kernel version and GCC version.</p>
+                    <div class="tool-command">cat /etc/issue: <code>cat /etc/issue</code></div>
+                    <p>Displays exact version of the OS.</p>
+                    <div class="tool-command">ps: <code>ps</code></div>
+                    <p>Lists running processes.</p>
+                    <div class="tool-command">ps -A: <code>ps -A</code></div>
+                    <p>Lists all running processes.</p>
+                    <div class="tool-command">ps axjf: <code>ps axjf</code></div>
+                    <p>Displays process tree.</p>
+                    <div class="tool-command">ps aux: <code>ps aux</code></div>
+                    <p>Displays processes with users.</p>
+                    <div class="tool-command">env: <code>env</code></div>
+                    <p>Shows all environment variables.</p>
+                    <div class="tool-command">sudo -l: <code>sudo -l</code></div>
+                    <p>Lists commands that any user can run as root without a password.</p>
+                    <div class="tool-command">groups: <code>groups</code></div>
+                    <p>Lists the groups that the current user is in.</p>
+                    <div class="tool-command">id: <code>id</code></div>
+                    <p>Lists IDs of the user and group.</p>
+                    <div class="tool-command">cat /etc/passwd: <code>cat /etc/passwd</code></div>
+                    <p>Displays all users.</p>
+                    <div class="tool-command">cat /etc/passwd | cut -d ":" -f 1: <code>cat /etc/passwd | cut -d ":" -f 1</code></div>
+                    <p>Removes other information and displays only users.</p>
+                    <div class="tool-command">ls /home: <code>ls /home</code></div>
+                    <p>Displays user directories.</p>
+                    <div class="tool-command">history: <code>history</code></div>
+                    <p>Shows previously run commands, which might contain sensitive information.</p>
+                    <div class="tool-command">ifconfig / ip a / ip route: <code>ifconfig</code> or <code>ip a</code> or <code>ip route</code></div>
+                    <p>Displays network-related information.</p>
+                    <div class="tool-command">netstat: <code>netstat</code></div>
+                    <p>Displays network route.</p>
+                    <div class="tool-command">netstat -a: <code>netstat -a</code></div>
+                    <p>Shows all listening and established connections.</p>
+                    <div class="tool-command">netstat -at: <code>netstat -at</code></div>
+                    <p>Displays TCP connections.</p>
+                    <div class="tool-command">netstat -au: <code>netstat -au</code></div>
+                    <p>Displays UDP connections.</p>
+                    <div class="tool-command">netstat -l: <code>netstat -l</code></div>
+                    <p>Displays listening connections.</p>
+                    <div class="tool-command">netstat -s: <code>netstat -s</code></div>
+                    <p>Shows network statistics.</p>
+                    <div class="tool-command">netstat -tp: <code>netstat -tp</code></div>
+                    <p>Displays connections with service name and PID. Add "l" for only listening ports.</p>
+                    <div class="tool-command">netstat -i: <code>netstat -i</code></div>
+                    <p>Displays interface-related information.</p>
+                    <div class="tool-command">find: <code>find</code></div>
+                    <p>Helps in locating files and directories. Examples:</p>
+                    <ul>
+                        <li><code>find . -name flag1.txt</code> - Find "flag1.txt" in the current directory.</li>
+                        <li><code>find /home -name flag1.txt</code> - Find "flag1.txt" in the /home directory.</li>
+                        <li><code>find / -type d -name config</code> - Find directory named "config".</li>
+                        <li><code>find / -type f -perm 0777</code> - Find files with 777 permissions.</li>
+                        <li><code>find / -perm a=x</code> - Find executable files.</li>
+                        <li><code>find /home -user frank</code> - Find files for user "frank" under "/home".</li>
+                        <li><code>find / -mtime 10</code> - Find files modified in the last 10 days.</li>
+                        <li><code>find / -atime 10</code> - Find files accessed in the last 10 days.</li>
+                        <li><code>find / -cmin -60</code> - Find files changed within the last hour.</li>
+                        <li><code>find / -amin -60</code> - Find files accessed within the last hour.</li>
+                        <li><code>find / -size 50M</code> - Find files with 50 MB size.</li>
+                        <li><code>find / -writable -type d 2>/dev/null</code> - Find world-writable directories.</li>
+                        <li><code>find / -perm -222 -type d 2>/dev/null</code> - Find world-writable folders.</li>
+                        <li><code>find / -perm -o w -type d 2>/dev/null</code> - Find world-writable folders.</li>
+                        <li><code>find / -perm -o x -type d 2>/dev/null</code> - Find world-executable folders.</li>
+                        <li><code>find / -name perl*</code> - Find files related to Perl.</li>
+                        <li><code>find / -name python*</code> - Find files related to Python.</li>
+                        <li><code>find / -name gcc*</code> - Find files related to GCC.</li>
+                        <li><code>find / -perm -u=s -type f 2>/dev/null</code> - Find files with SUID bit.</li>
+                    </ul>
+                </div>
+            </div>
+            <!-- Automated Enumeration Scripts -->
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('linux-auto-enum')">Automated Enumeration Scripts</div>
+                <div class="tool-details" id="linux-auto-enum">
+                    <p>In real-life scenarios, we often don’t have much time for manual enumeration. Instead, we can use some powerful automated scripts to streamline the process:</p>
+                    <ul id="automated-enum">
+                        <li><a href="https://github.com/carlospolop/privilege-escalation-awesome-scripts-suite/tree/master/linPEAS" target="_blank">LinPeas</a></li>
+                        <li><a href="https://github.com/rebootuser/LinEnum" target="_blank">LinEnum</a></li>
+                        <li><a href="https://github.com/mzet-/linux-exploit-suggester" target="_blank">LES (Linux Exploit Suggester)</a></li>
+                        <li><a href="https://github.com/diego-treitos/linux-smart-enumeration" target="_blank">Linux Smart Enumeration</a></li>
+                        <li><a href="https://github.com/linted/linuxprivchecker" target="_blank">Linux Priv Checker</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('linux-kernel-exploits')">Linux Kernel Exploits</div>
+                <div class="tool-details" id="linux-kernel-exploits">
+                    <p>After finding the version of the kernel, you can search for an appropriate exploit. Tools like “Linux Exploit Suggester” can assist in finding suitable exploits.</p>
+                    <p>Once you have the exploit, transfer the payload from your machine to the target machine, execute it, and you should gain higher privileges.</p>
+                    <p>For example, using an overlayfs exploit successfully resulted in elevated privileges.</p>
+                </div>
+            </div>
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('linux-sudo')">Sudo</div>
+                <div class="tool-details" id="linux-sudo">
+                    <p>One of the first steps when you gain access to a machine is to run <code>sudo -l</code>. This command lists all the files you can run as root without needing a password.</p>
+                    <p>If you find any executable that you can run, visit <a href="https://gtfobins.github.io/" target="_blank">GTFOBins</a> to check if the specified program is a system program or if you can modify it with <code>/bin/sh</code> to gain a shell.</p>
+                    <p>GTFOBins can be a lifesaver in these situations!</p>
+                </div>
+            </div>
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('linux-suid')">SUID (Set owner User ID)</div>
+                <div class="tool-details" id="linux-suid">
+                    <p>SUID is a permission that allows specific files to be run with the privileges of the file's owner, usually root. This can be very useful for privilege escalation.</p>
+                    <p>To find all SUID files, use the command:</p>
+                    <div class="tool-command"><code>find / -perm -u=s -type f 2>/dev/null</code></div>
+                    <p>After listing the SUID files, search for potential exploits or methods to bypass the permissions on <a href="https://gtfobins.github.io/" target="_blank">GTFOBins</a>.</p>
+                </div>
+            </div>
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('linux-capabilities')">Capabilities</div>
+                <div class="tool-details" id="linux-capabilities">
+                    <p>Capabilities are similar to SUID but provide a subset of root privileges to a process or a binary, rather than full root access.</p>
+                    <p>To list all binaries with capabilities, use the command:</p>
+                    <div class="tool-command"><code>getcap -r / 2>/dev/null</code></div>
+                    <p>Find the binaries with capabilities and check them on <a href="https://gtfobins.github.io/" target="_blank">GTFOBins</a> for functions related to capabilities. Try the suggested methods to see if any work for privilege escalation.</p>
+                </div>
+            </div>
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('linux-cron-jobs')">Cron Jobs</div>
+                <div class="tool-details" id="linux-cron-jobs">
+                    <p>Cron jobs are used for scheduling tasks to run automatically at specified intervals. By default, they run with the privileges of the owner of the cron job.</p>
+                    <p>To view the crontab configuration, use:</p>
+                    <div class="tool-command"><code>cat /etc/crontab</code></div>
+                    <p>Check the cron jobs listed. If you have permission to edit any of them, you can modify the job to execute a reverse shell or another payload. Monitor your listener to catch the reverse shell when the cron job runs.</p>
+                </div>
+            </div>
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('linux-path')">PATH</div>
+                <div class="tool-details" id="linux-path">
+                    <p>The PATH environment variable specifies the directories where executable files are located. When you run a command without specifying its full path, the system searches the directories listed in PATH to find the executable.</p>
+                    <p>To view the current PATH, use:</p>
+                    <div class="tool-command"><code>echo $PATH</code></div>
+                    <p>The output will be a colon-separated list of directories, such as:</p>
+                    <div class="tool-command"><code>/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin</code></div>
+                    <p>If you find writable directories in PATH, you can place a malicious script or binary there. To find writable paths, use:</p>
+                    <div class="tool-command"><code>find / -writable 2>/dev/null</code></div>
+                    <p>For example, if you discover a writable path where a script called "thm" exists, and you can run it as ROOT, you can create a binary that executes a shell:</p>
+                    <div class="tool-command"><code>echo "/bin/bash" > thm</code></div>
+                    <p>Make it executable:</p>
+                    <div class="tool-command"><code>chmod +x thm</code></div>
+                    <p>Add the directory to PATH:</p>
+                    <div class="tool-command"><code>export PATH=<new-path>:$PATH</code></div>
+                    <p>Now, when you run the binary, it will execute with root privileges if the script is located in the writable path and is executable.</p>
+                </div>
+            </div>
+            <div class="tool-row">
+                <div class="tool-name" onclick="toggleDetails('linux-nfs')">NFS (Network File Sharing)</div>
+                <div class="tool-details" id="linux-nfs">
+                    <p>To view the NFS (Network File System) configuration, use:</p>
+                    <div class="tool-command"><code>cat /etc/exports</code></div>
+                    <p>Alternatively, you can find mountable shares from your machine with:</p>
+                    <div class="tool-command"><code>showmount -e &lt;target IP&gt;</code></div>
+                    <p>Look for directories with the <code>no_root_squash</code> option, which means the share is writable and can be exploited for privilege escalation.</p>
+                    <p>Once you've identified writable shares, create a directory on your attacker machine (e.g., <code>/tmp</code>), and mount the target share:</p>
+                    <div class="tool-command"><code>mount -o rw &lt;targetIP&gt;:&lt;share-location&gt; &lt;directory path we created&gt;</code></div>
+                    <p>Navigate to the mounted directory and create a binary that grants root privileges:</p>
+                    <div class="tool-command"><code>echo "/bin/bash" &gt; <binary></code></div>
+                    <p>Make the binary executable and set the setuid bit to grant root privileges:</p>
+                    <div class="tool-command"><code>chmod +x <binary></code></div>
+                    <div class="tool-command"><code>chmod +s <binary></code></div>
+                    <p>Go back to the target machine, navigate to the mounted share, and execute the binary to get root privileges.</p>
+                </div>
+            </div>  
+            <div class="tool-name" onclick="toggleDetails('linux-notes')">Notes on Linux Privilege Escalation</div>
+            <div class="tool-details" id="linux-notes">
+                <p><strong>Enumeration is the key.</strong></p>
+                <p>Linux privilege escalation is all about:</p>
+                <ul class="notes-list">
+                    <li><strong>Collect</strong> - Enumeration, more enumeration and some more enumeration.</li>
+                    <li><strong>Process</strong> - Sort through data, analyze, and prioritize.</li>
+                    <li><strong>Search</strong> - Know what to search for and where to find the exploit code.</li>
+                    <li><strong>Adapt</strong> - Customize the exploit, so it fits. Not every exploit works for every system "out of the box".</li>
+                    <li><strong>Try</strong> - Get ready for (lots of) trial and error.</li>
+                </ul>
+                <h2>Operating System</h2>
+                <ul>
+                    <li><strong>What's the distribution type? What version?</strong></li>
+                    <li><code>cat /etc/issue</code></li>
+                    <li><code>cat /etc/*-release</code></li>
+                    <li><code>cat /etc/lsb-release</code></li>
+                    <li><code>cat /etc/redhat-release</code></li>
+                </ul>
+                <ul>
+                    <li><strong>What's the Kernel version? Is it 64-bit?</strong></li>
+                    <li><code>cat /proc/version</code></li>
+                    <li><code>uname -a</code></li>
+                    <li><code>uname -mrs</code></li>
+                    <li><code>rpm -q kernel</code></li>
+                    <li><code>dmesg | grep Linux</code></li>
+                    <li><code>ls /boot | grep vmlinuz-</code></li>
+                </ul>
+                <ul>
+                    <li><strong>What can be learnt from the environmental variables?</strong></li>
+                    <li><code>cat /etc/profile</code></li>
+                    <li><code>cat /etc/bashrc</code></li>
+                    <li><code>cat ~/.bash_profile</code></li>
+                    <li><code>cat ~/.bashrc</code></li>
+                    <li><code>cat ~/.bash_logout</code></li>
+                    <li><code>env</code></li>
+                    <li><code>set</code></li>
+                </ul>
+                <ul>
+                    <li><strong>Is there a printer?</strong></li>
+                    <li><code>lpstat -a</code></li>
+                </ul>
+                <h2>Applications & Services</h2>
+                <ul>
+                    <li><strong>What services are running? Which service has which user privilege?</strong></li>
+                    <li><code>ps aux</code></li>
+                    <li><code>ps -ef</code></li>
+                    <li><code>top</code></li>
+                    <li><code>cat /etc/service</code></li>
+                </ul>
+                <ul>
+                    <li><strong>Which service(s) are being run by root? Of these services, which are vulnerable - it's worth a double check!</strong></li>
+                    <li><code>ps aux | grep root</code></li>
+                    <li><code>ps -ef | grep root</code></li>
+                </ul>
+                <ul>
+                    <li><strong>What applications are installed? What version are they? Are they currently running?</strong></li>
+                    <li><code>ls -alh /usr/bin/</code></li>
+                    <li><code>ls -alh /sbin/</code></li>
+                    <li><code>dpkg -l</code></li>
+                    <li><code>rpm -qa</code></li>
+                    <li><code>ls -alh /var/cache/apt/archives</code></li>
+                    <li><code>ls -alh /var/cache/yum/</code></li>
+                </ul>
+                <ul>
+                    <li><strong>Any of the service(s) settings misconfigured? Are any (vulnerable) plugins attached?</strong></li>
+                    <li><code>cat /etc/syslog.conf</code></li>
+                    <li><code>cat /etc/chttp.conf</code></li>
+                    <li><code>cat /etc/lighttpd.conf</code></li>
+                    <li><code>cat /etc/cups/cupsd.conf</code></li>
+                    <li><code>cat /etc/inetd.conf</code></li>
+                    <li><code>cat /etc/apache2/apache2.conf</code></li>
+                    <li><code>cat /etc/my.conf</code></li>
+                    <li><code>cat /etc/httpd/conf/httpd.conf</code></li>
+                    <li><code>cat /opt/lampp/etc/httpd.conf</code></li>
+                    <li><code>ls -aRl /etc/ | awk '$1 ~ /^.*r.*/'</code></li>
+                </ul>
+                <ul>
+                    <li><strong>What jobs are scheduled?</strong></li>
+                    <li><code>crontab -l</code></li>
+                    <li><code>ls -alh /var/spool/cron</code></li>
+                    <li><code>ls -al /etc/ | grep cron</code></li>
+                    <li><code>ls -al /etc/cron*</code></li>
+                    <li><code>cat /etc/cron*</code></li>
+                    <li><code>cat /etc/at.allow</code></li>
+                    <li><code>cat /etc/at.deny</code></li>
+                    <li><code>cat /etc/cron.allow</code></li>
+                    <li><code>cat /etc/cron.deny</code></li>
+                    <li><code>cat /etc/crontab</code></li>
+                    <li><code>cat /etc/anacrontab</code></li>
+                    <li><code>cat /var/spool/cron/crontabs/root</code></li>
+                </ul>
+                <h3>Confidential Information & Users</h3>
+                <p><strong>Who are you? Who is logged in? Who has been logged in? Who else is there? Who can do what?</strong></p>
+                <ul>
+                    <li><code>id</code></li>
+                    <li><code>who</code></li>
+                    <li><code>w</code></li>
+                    <li><code>last</code></li>
+                    <li><code>cat /etc/passwd | cut -d:</code> # List of users</li>
+                    <li><code>grep -v -E "^#" /etc/passwd | awk -F: '$3 == 0 { print $1}'</code> # List of super users</li>
+                    <li><code>awk -F: '($3 == "0") {print}' /etc/passwd</code> # List of super users</li>
+                    <li><code>cat /etc/sudoers</code></li>
+                    <li><code>sudo -l</code></li>
+                </ul>
+
+                <h3>What sensitive files can be found?</h3>
+                <ul>
+                    <li><code>cat /etc/passwd</code></li>
+                    <li><code>cat /etc/group</code></li>
+                    <li><code>cat /etc/shadow</code></li>
+                    <li><code>ls -alh /var/mail/</code></li>
+                </ul>
+
+                <h3>Anything "interesting" in the home directorie(s)?</h3>
+                <ul>
+                    <li><code>ls -ahlR /root/</code></li>
+                    <li><code>ls -ahlR /home/</code></li>
+                </ul>
+
+                <h3>Are there any passwords in scripts, databases, configuration files, or log files?</h3>
+                <ul>
+                    <li><code>cat /var/apache2/config.inc</code></li>
+                    <li><code>cat /var/lib/mysql/mysql/user.MYD</code></li>
+                    <li><code>cat /root/anaconda-ks.cfg</code></li>
+                </ul>
+
+                <h3>What has the user been doing? Any password in plain text?</h3>
+                <ul>
+                    <li><code>cat ~/.bash_history</code></li>
+                    <li><code>cat ~/.nano_history</code></li>
+                    <li><code>cat ~/.atftp_history</code></li>
+                    <li><code>cat ~/.mysql_history</code></li>
+                    <li><code>cat ~/.php_history</code></li>
+                </ul>
+
+                <h3>What user information can be found?</h3>
+                <ul>
+                    <li><code>cat ~/.bashrc</code></li>
+                    <li><code>cat ~/.profile</code></li>
+                    <li><code>cat /var/mail/root</code></li>
+                    <li><code>cat /var/spool/mail/root</code></li>
+                </ul>
+
+                <h3>Can private-key information be found?</h3>
+                <ul>
+                    <li><code>cat ~/.ssh/authorized_keys</code></li>
+                    <li><code>cat ~/.ssh/identity.pub</code></li>
+                    <li><code>cat ~/.ssh/identity</code></li>
+                    <li><code>cat ~/.ssh/id_rsa.pub</code></li>
+                    <li><code>cat ~/.ssh/id_rsa</code></li>
+                    <li><code>cat ~/.ssh/id_dsa.pub</code></li>
+                    <li><code>cat ~/.ssh/id_dsa</code></li>
+                    <li><code>cat /etc/ssh/ssh_config</code></li>
+                    <li><code>cat /etc/ssh/sshd_config</code></li>
+                    <li><code>cat /etc/ssh/ssh_host_dsa_key.pub</code></li>
+                    <li><code>cat /etc/ssh/ssh_host_dsa_key</code></li>
+                    <li><code>cat /etc/ssh/ssh_host_rsa_key.pub</code></li>
+                    <li><code>cat /etc/ssh/ssh_host_rsa_key</code></li>
+                    <li><code>cat /etc/ssh/ssh_host_key.pub</code></li>
+                    <li><code>cat /etc/ssh/ssh_host_key</code></li>
+                </ul>
+
+                <h3>File Systems</h3>
+                <ul>
+                    <li>Which configuration files can be written in /etc/? Able to reconfigure a service?</li>
+                    <li><code>ls -aRl /etc/ | awk '$1 ~ /^.*w.*/' 2>/dev/null</code> # Anyone</li>
+                    <li><code>ls -aRl /etc/ | awk '$1 ~ /^..w/' 2>/dev/null</code> # Owner</li>
+                    <li><code>ls -aRl /etc/ | awk '$1 ~ /^.....w/' 2>/dev/null</code> # Group</li>
+                    <li><code>ls -aRl /etc/ | awk '$1 ~ /w.$/' 2>/dev/null</code> # Other</li>
+                    <li><code>find /etc/ -readable -type f 2>/dev/null</code> # Anyone</li>
+                    <li><code>find /etc/ -readable -type f -maxdepth 1 2>/dev/null</code> # Anyone</li>
+                </ul>
+
+                <h3>If commands are limited, can you break out of the "jail" shell?</h3>
+                <ul>
+                    <li><code>python -c 'import pty;pty.spawn("/bin/bash")'</code></li>
+                    <li><code>echo os.system('/bin/bash')</code></li>
+                    <li><code>/bin/sh -i</code></li>
+                </ul>
+
+                <h3>How are file-systems mounted?</h3>
+                <ul>
+                    <li><code>mount</code></li>
+                    <li><code>df -h</code></li>
+                </ul>
+
+                <h3>Are there any unmounted file-systems?</h3>
+                <ul>
+                    <li><code>cat /etc/fstab</code></li>
+                </ul>
+
+                <h3>What "Advanced Linux File Permissions" are used? Sticky bits, SUID &amp; GUID</h3>
+                <ul>
+                    <li><code>find / -perm -1000 -type d 2>/dev/null</code> # Sticky bit</li>
+                    <li><code>find / -perm -g=s -type f 2>/dev/null</code> # SGID</li>
+                    <li><code>find / -perm -u=s -type f 2>/dev/null</code> # SUID</li>
+                    <li><code>find / -perm -g=s -o -perm -u=s -type f 2>/dev/null</code> # SGID or SUID</li>
+                    <li><code>for i in `locate -r "bin$"`; do find $i \( -perm -4000 -o -perm -2000 \) -type f 2>/dev/null; done</code> # Search common *bin places</li>
+                    <li><code>find / -perm -g=s -o -perm -4000 ! -type l -maxdepth 3 -exec ls -ld {} \; 2>/dev/null</code> # Find SGID/SUID files</li>
+                </ul>
+
+                <h3>Where can files be written to and executed from?</h3>
+                <ul>
+                    <li><code>find / -writable -type d 2>/dev/null</code> # World-writeable folders</li>
+                    <li><code>find / -perm -222 -type d 2>/dev/null</code> # World-writeable folders</li>
+                    <li><code>find / -perm -o+w -type d 2>/dev/null</code> # World-writeable folders</li>
+                    <li><code>find / -perm -o+x -type d 2>/dev/null</code> # World-executable folders</li>
+                    <li><code>find / \( -perm -o+w -perm -o+x \) -type d 2>/dev/null</code> # World-writeable & executable</li>
+                </ul>
+
+                <h3>Any "problem" files? World-writeable, "nobody" files</h3>
+                <ul>
+                    <li><code>find / -xdev -type d \( -perm -0002 -a ! -perm -1000 \) -print</code> # World-writeable files</li>
+                    <li><code>find /dir -xdev \( -nouser -o -nogroup \) -print</code> # No-owner files</li>
+                </ul>
+
+                <h3>Preparation & Finding Exploit Code</h3>
+                <ul>
+                    <li>What development tools/languages are installed?</li>
+                    <li><code>find / -name perl*</code></li>
+                    <li><code>find / -name python*</code></li>
+                    <li><code>find / -name gcc*</code></li>
+                    <li><code>find / -name cc</code></li>
+                </ul>
+
+                <h3>How can files be uploaded?</h3>
+                <ul>
+                    <li><code>find / -name wget</code></li>
+                    <li><code>find / -name nc*</code></li>
+                    <li><code>find / -name netcat*</code></li>
+                    <li><code>find / -name tftp*</code></li>
+                    <li><code>find / -name ftp</code></li>
+                </ul>
+
+                <h3>Finding Exploit Code</h3>
+                <ul id="automated-enum">
+                    <li><a href="http://www.exploit-db.com">http://www.exploit-db.com</a></li>
+                    <li><a href="http://1337day.com">http://1337day.com</a></li>
+                    <li><a href="http://www.securiteam.com">http://www.securiteam.com</a></li>
+                    <li><a href="http://www.securityfocus.com">http://www.securityfocus.com</a></li>
+                    <li><a href="http://www.exploitsearch.net">http://www.exploitsearch.net</a></li>
+                    <li><a href="http://metasploit.com/modules/">http://metasploit.com/modules/</a></li>
+                    <li><a href="http://securityreason.com">http://securityreason.com</a></li>
+                    <li><a href="http://seclists.org/fulldisclosure/">http://seclists.org/fulldisclosure/</a></li>
+                    <li><a href="http://www.google.com">http://www.google.com</a></li>
+                </ul>
+
+                <h3>Finding more information regarding the exploit</h3>
+                <ul id="automated-enum">
+                    <li><a href="http://www.cvedetails.com">http://www.cvedetails.com</a></li>
+                    <li><a href="http://packetstormsecurity.org/files/cve/[CVE]">http://packetstormsecurity.org/files/cve/[CVE]</a></li>
+                    <li><a href="http://cve.mitre.org/cgi-bin/cvename.cgi?name=[CVE]">http://cve.mitre.org/cgi-bin/cvename.cgi?name=[CVE]</a></li>
+                    <li><a href="http://www.vulnview.com/cve-details.php?cvename=[CVE]">http://www.vulnview.com/cve-details.php?cvename=[CVE]</a></li>
+                </ul>
+
+                <h3>(Quick) "Common" exploits. Warning. Pre-compiled binaries files. Use at your own risk</h3>
+                <ul id="automated-enum">
+                    <li><a href="http://tarantula.by.ru/localroot/">http://tarantula.by.ru/localroot/</a></li>
+                    <li><a href="http://www.kecepatan.66ghz.com/file/local-root-exploit-priv9/">http://www.kecepatan.66ghz.com/file/local-root-exploit-priv9/</a></li>
+                </ul>
+
+                <h3>Mitigations</h3>
+                <ul>
+                    <li>Is any of the above information easy to find? Try doing it!</li>
+                    <li>Setup a cron job which automates script(s) and/or 3rd party products</li>
+                    <li>Is the system fully patched? Kernel, operating system, all applications, their plugins, and web services:</li>
+                    <li><code>apt-get update && apt-get upgrade</code></li>
+                    <li><code>yum update</code></li>
+                    <li>Are services running with the minimum level of privileges required?</li>
+                    <li>For example, do you need to run MySQL as root?</li>
+                </ul>
+
+                <h3>Scripts - Can any of this be automated?</h3>
+                <ul id="automated-enum">
+                    <li><a href="http://pentestmonkey.net/tools/unix-privesc-check/">http://pentestmonkey.net/tools/unix-privesc-check/</a></li>
+                    <li><a href="http://labs.portcullis.co.uk/application/enum4linux/">http://labs.portcullis.co.uk/application/enum4linux/</a></li>
+                    <li><a href="http://bastille-linux.sourceforge.net">http://bastille-linux.sourceforge.net</a></li>
+                </ul>
+
+                <h3>Other (quick) guides & Links: Enumeration</h3>
+                <ul id="automated-enum">
+                    <li><a href="http://www.0daysecurity.com/penetration-testing/enumeration.html">http://www.0daysecurity.com/penetration-testing/enumeration.html</a></li>
+                    <li><a href="http://www.microloft.co.uk/hacking/hacking3.htm">http://www.microloft.co.uk/hacking/hacking3.htm</a></li>
+                </ul>
+                
+                <h3>Other (quick) guides & Links: Misc</h3>
+                <ul id="automated-enum">
+                    <li><a href="http://jon.oberheide.org/files/stackjacking-infiltrate11.pdf">http://jon.oberheide.org/files/stackjacking-infiltrate11.pdf</a></li>
+                    <li><a href="http://pentest.cryptocity.net/files/clientsides/post_exploitation_fall09.pdf">http://pentest.cryptocity.net/files/clientsides/post_exploitation_fall09.pdf</a></li>
+                    <li><a href="http://insidetrust.blogspot.com/2011/04/quick-guide-to-linux-privilege.html">http://insidetrust.blogspot.com/2011/04/quick-guide-to-linux-privilege.html</a></li>
+                </ul>

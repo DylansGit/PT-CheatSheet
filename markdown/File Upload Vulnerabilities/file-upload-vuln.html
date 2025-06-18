@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>File Upload Vuln</title>
+  <link rel="stylesheet" href="/static/style.css">
+
+</head>
+<body>
+<header id="title-block-header">
+</header>
+<h1 id="file-upload-vulnerabilities">File Upload Vulnerabilities</h1>
+<h2 id="summary">Summary</h2>
+<ul>
+<li><p><a href="#recon">General Recon for File Upload
+Vulnerabilities</a></p></li>
+<li><p><a href="#cheat-sheet">Portswigger Labs Cheat Sheet /
+Payloads</a></p></li>
+</ul>
+<p><br></p>
+<h2 id="resources">Resources</h2>
+<ul>
+<li>https://portswigger.net/web-security/file-upload</li>
+<li>https://owasp.org/www-community/vulnerabilities/Unrestricted_File_Upload</li>
+<li>https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html</li>
+<li>https://owasp.org/www-project-web-security-testing-guide/stable/4-Web_Application_Security_Testing/10-Business_Logic_Testing/09-Test_Upload_of_Malicious_Files</li>
+</ul>
+<p><br></p>
+<h2 id="recon">Recon</h2>
+<ul>
+<li>Identify any file upload functionalities on the application either
+direct or indirect accessible functions. Then use the test cases here
+from the labs to identify vulnerability on the file upload process.</li>
+</ul>
+<p><br></p>
+<h2 id="cheat-sheet">Cheat Sheet</h2>
+<ul>
+<li><p>If you find a file upload functionality on an application, try
+out the following techniques as described in the labs. However, much
+more can be done depending on the which part of the file the application
+is not validating, how the application is using the file (e.g.,
+interpreters like XML parsers), and where the file is being
+stored.</p></li>
+<li><p>In some cases, uploading the file is enough to cause damage.
+However, in other cases the file will need to be “executed” somehow,
+such as requesting the file using an HTTP request.</p></li>
+<li><p>If the uploaded file is available within the Webroot, try
+submitting HTML/JavaScript file, then view the file. This may introduce
+an easy XSS vulnerability.</p></li>
+</ul>
+<p><br></p>
+<h3 id="no-protections---example">No Protections - Example</h3>
+<ul>
+<li><p>The application has no protections against malicious file uploads
+and the server is configured to execute these files as code.</p></li>
+<li><p>Upload a file with the following properties:</p>
+<ul>
+<li><p>File extension: .php</p></li>
+<li><p>Content-Type header: application/x-httpd-php</p></li>
+<li><p>File Content: &lt;?php echo
+file_get_contents(‘/path/to/target/file’); ?&gt;</p></li>
+</ul></li>
+</ul>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">&lt;?php</span> <span class="kw">echo</span> <span class="fu">file_get_contents</span>(<span class="st">&#39;/home/carlos/secret&#39;</span>)<span class="ot">;</span> <span class="kw">?&gt;</span></span></code></pre></div>
+<ul>
+<li>Now view the uploaded file within the Webroot and we should see the
+contents of the file specified. The “viewing” of the file here caused
+its execution.</li>
+</ul>
+<p><br><br><br> <img
+src="https://github.com/ChrisM-X/PortSwigger-Academy-CheatSheets/blob/master/File%20Upload%20Vulnerabilities/Images/FileUploads-1.png"
+alt="File Image" /></p>
+<p><br><br></p>
+<figure>
+<img
+src="https://github.com/ChrisM-X/PortSwigger-Academy-CheatSheets/blob/master/File%20Upload%20Vulnerabilities/Images/FileUploads-2.png"
+alt="File Image2" />
+<figcaption aria-hidden="true">File Image2</figcaption>
+</figure>
+<p><br><br></p>
+<h3 id="content-type-header-restriction-bypass">Content-Type Header
+Restriction Bypass</h3>
+<ul>
+<li>The application is only allowing mime types for - image/jpeg.
+However, it is not blocking malicious file types from being uploaded
+such as .php. Simply keep the Content-Type header, within the subpart of
+the request body, with the allowed mime type and upload the .php file to
+bypass this restriction.</li>
+</ul>
+<p><br></p>
+<h3
+id="chain-multiple-vulnerabilities-together-directory-traversal-and-malicious-file-upload">Chain
+multiple vulnerabilities together – directory traversal and malicious
+file upload</h3>
+<ul>
+<li><p>The application allows the user to upload malicious files,
+however, the directory that the file is uploaded to, is not configured
+with execution permissions.</p></li>
+<li><p>If the application is not performing input validation on the
+value used to determine the location of the uploaded file, we may be
+able to introduce a directory traversal attack to get the uploaded file
+into a different directory that has execution permissions.</p>
+<ul>
+<li>Example Payload</li>
+</ul></li>
+</ul>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">../../../file.php</span></span></code></pre></div>
+<p><br></p>
+<h3
+id="overwriting-a-configuration-file-extension-rejectlist-bypass">Overwriting
+a Configuration File / Extension Rejectlist Bypass</h3>
+<ul>
+<li><p>Servers usually won’t execute files unless they have been
+configured to do so. Many servers allow directory level configuration
+files to be used, which will override global configurations.</p></li>
+<li><p>In Apache server, we can upload the following configurations into
+a file called - .htaccess</p></li>
+</ul>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">AddType</span> application/x-httpd-php .php5</span></code></pre></div>
+<ul>
+<li><p>Which will map the file extension .php5 to the executable MIME
+type application/x-httpd-php. Now we can upload a file with the .php5
+file extension and the server will execute the code as php.</p></li>
+<li><p>This will bypass any reject list validations against files such
+as - .php.</p></li>
+</ul>
+<p><strong>The file extension can be any arbitrary value, as long as it
+is not blocked by the application.</strong></p>
+<ul>
+<li>Another example for Microsoft IIS servers can be found here -
+https://portswigger.net/web-security/file-upload#overriding-the-server-configuration</li>
+</ul>
+<p><br></p>
+<h3 id="bypass-file-extension-allow-list">Bypass File Extension Allow
+List</h3>
+<ul>
+<li><p>The null byte injection (%00) may bypass the file extension
+restriction, as this can alter the intended logic of the
+application.</p>
+<ul>
+<li>Example: If the application is only allowing files that have the
+extension .png. We can supply the following filename:</li>
+</ul></li>
+</ul>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">malicious.php%00.png</span></span></code></pre></div>
+<ul>
+<li>More bypass methods:
+https://portswigger.net/web-security/file-upload#obfuscating-file-extensions</li>
+</ul>
+<p><br></p>
+<h3 id="bypass-jpeg-signature-validation">Bypass JPEG Signature
+Validation</h3>
+<ul>
+<li><p>Here the application may be checking that the file’s contents
+begin with a certain byte structure (Magic Numbers).</p></li>
+<li><p>Simply inject the malicious code after the beginning bytes of the
+file to bypass this validation.</p></li>
+<li><p>Tools can be used to inject this malicious code in the metadata
+to avoid “breaking” the file/image.</p></li>
+<li><p>More Resources:</p>
+<ul>
+<li>https://book.hacktricks.xyz/pentesting-web/file-upload</li>
+<li>https://onestepcode.com/injecting-php-code-to-jpg/</li>
+</ul></li>
+</ul>
+<p><br><br> <img
+src="https://github.com/ChrisM-X/PortSwigger-Academy-CheatSheets/blob/master/File%20Upload%20Vulnerabilities/Images/FileUploads-3.png"
+alt="File Image3" /></p>
+<p><br><br> <img
+src="https://github.com/ChrisM-X/PortSwigger-Academy-CheatSheets/blob/master/File%20Upload%20Vulnerabilities/Images/FileUploads-4.png"
+alt="File Image4" /></p>
+<p><br></p>
+<h3 id="other-methods-of-exploiting-file-upload-vulnerabilities">Other
+methods of exploiting file upload vulnerabilities</h3>
+<ul>
+<li><p>Stored XSS by uploading HTML page with JavaScript</p></li>
+<li><p>Exploiting vulnerabilities specific to the parsing or processing
+of different file formats to cause XXE injection (.doc , .xls)</p></li>
+<li><p>Using the PUT method to upload files, use the OPTIONS request
+method to determine what methods are accepted.</p>
+<ul>
+<li>Link -
+https://portswigger.net/web-security/file-upload#exploiting-file-upload-vulnerabilities-without-remote-code-execution</li>
+</ul></li>
+</ul>
+<p><br><br></p>
+<h3
+id="pending-to-complete-labs-that-are-missing-from-cheat-sheet">Pending
+to complete labs that are missing from cheat sheet:</h3>
+<ul>
+<li>LAB EXPERT Web shell upload via race condition</li>
+</ul>
+</body>
+</html>
