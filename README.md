@@ -39,7 +39,7 @@ The platform includes hands-on content and structured explanations for:
 - WebSockets  
 - XXE Injection  
 
-Includes examples, diagrams, static images, and references like the [PortSwigger Cheat Sheet](https://portswigger.net/cheat-sheet).
+Includes examples, diagrams, static images, and references like the PortSwigger Cheat Sheet.
 
 ---
 
