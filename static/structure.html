@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Penetration Testing Cheatsheet</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap">
+
+</head>
+<body>
+    <div class="container">
+        <div class="tab-container">
+            <div class="tab active" onclick="showTab('cheatsheet')">Cheatsheet</div>
+            <div class="tab" onclick="showTab('portswigger')">PortSwigger Cheatsheet</div>
+            <div class="tab" onclick="showTab('windowsprivesc')">Windows PrivEsc</div>
+            <div class="tab" onclick="showTab('linuxprivesc')">Linux PrivEsc</div>
+        </div>
+
+        <div id="cheatsheet" class="tab-content active">
+            <!-- here is content -->
+            </div>
+
+            <div id="portswigger" class="tab-content">
+            <!-- here is content -->
+            </div>
+                     
+
+        <!-- Windows PrivEsc Content -->
+        <div id="windowsprivesc" class="tab-content">
+            <!-- here is content -->
+        </div>
+
+        <!-- Linux PrivEsc Content -->
+        <div id="linuxprivesc" class="tab-content">
+            <!-- here is content -->
+        </div>
+    </div>
+
+    <script>
+        function showTab(tabId) {
+            const tabs = document.querySelectorAll('.tab-content');
+            tabs.forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            const tabLinks = document.querySelectorAll('.tab');
+            tabLinks.forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            const selectedTab = document.getElementById(tabId);
+            selectedTab.classList.add('active');
+
+            const selectedTabLink = document.querySelector(`.tab[onclick="showTab('${tabId}')"]`);
+            selectedTabLink.classList.add('active');
+        }
+
+        function toggleDetails(id) {
+            const element = document.getElementById(id);
+            if (element.style.display === "none" || element.style.display === "") {
+                element.style.display = "block";
+            } else {
+                element.style.display = "none";
+            }
+        }
+    </script>
+</body>
+</html>

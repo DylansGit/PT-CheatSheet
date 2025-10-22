@@ -1,0 +1,305 @@
+body {
+    font-family: 'Roboto', sans-serif;
+    background: linear-gradient(135deg, #1a1a1a, #330000); /* Dark red and gradient black */
+    color: #f5f5f5;
+    margin: 0;
+    padding: 0;
+    line-height: 1.6;
+}
+
+.tab-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 10px; /* Adjusted margin to ensure proper alignment */
+}
+
+.tab {
+    background-color: #222;
+    border: 1px solid #444;
+    border-radius: 5px 5px 0 0;
+    padding: 10px 20px;
+    cursor: pointer;
+    color: #f5f5f5;
+    margin: 0 5px;
+    text-align: center;
+    transition: background-color 0.3s, color 0.3s;
+    font-size: 16px;
+}
+
+.tab.active {
+    background-color: #990000;
+    color: #ffffff;
+}
+
+.tab-content {
+    display: none;
+    padding: 20px;
+    background: #333;
+    border: 1px solid #444;
+    border-radius: 0 0 5px 5px;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+h1, h2, h3 {
+    text-align: center;
+    color: #ffffff;
+}
+
+h1 {
+    font-size: 2.5em;
+    font-weight: 700;
+}
+
+h2 {
+    font-size: 2em;
+    margin-top: 0;
+    font-weight: 400;
+}
+
+h3 {
+    font-size: 1.75em;
+    margin-top: 20px;
+    font-weight: 400;
+}
+
+.tool-row {
+    margin: 20px 0;
+    border-bottom: 1px solid #666;
+}
+
+.tool-name {
+    background: #222;
+    padding: 10px;
+    cursor: pointer;
+    border-radius: 5px;
+    font-size: 18px;
+    font-weight: 700;
+    transition: background-color 0.3s;
+    color: #f5f5f5;
+}
+
+.tool-name:hover {
+    background: #444;
+}
+
+.tool-details {
+    display: none;
+    padding: 10px;
+    background: #444;
+    border-radius: 5px;
+}
+
+code {
+    background: #555;
+    padding: 2px 4px;
+    border-radius: 4px;
+    color: #f5f5f5;
+}
+
+.extra-mile {
+    font-style: italic;
+    color: #cccccc;
+}
+
+/* Global link styles */
+a {
+    text-decoration: none;
+    color: #ff6666;
+    font-weight: bold;
+    background-color: #222;
+    padding: 8px 15px;
+    border-radius: 5px;
+    transition: background-color 0.3s, color 0.3s;
+    display: inline-block;
+}
+
+a:hover {
+    background-color: #990000;
+    color: #ffffff;
+}
+
+/* Specific styling for PortSwigger and Automated Enum sections */
+#portswigger ul, 
+#automated-enum {
+    list-style: none;
+    padding-left: 0;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+#portswigger ul li, 
+#automated-enum li {
+    width: 45%;
+    margin: 10px;
+    text-align: center;
+}
+
+#portswigger ul li a, 
+#automated-enum li a {
+    display: block;
+}
+
+#portswigger ul li a:hover, 
+#automated-enum li a:hover {
+    background-color: #990000;
+    color: #ffffff;
+}
+
+.collapse-all-container {
+    display: flex;
+    justify-content: center;
+    margin: 20px 0;
+}
+
+.collapse-all-btn {
+    background-color: #990000;
+    color: #ffffff;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.collapse-all-btn:hover {
+    background-color: #660000;
+}
+
+/* Button Container Styles */
+.button-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.back-to-top {
+    background-color: #d40000;
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    text-decoration: none;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transition: background-color 0.3s;
+}
+
+.back-to-top:hover {
+    background-color: #a30000;
+}
+
+.back-to-top:focus {
+    outline: none;
+}
+
+/* Swirling line effect */
+.container {
+    position: relative;
+    max-width: 1000px; /* Adjust as needed */
+    margin: auto;
+    padding: 80px; /* Adjusted padding to keep content aligned */
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    overflow: visible; /* Allow animations to overflow */
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5); /* Optional: Add shadow for better separation */
+    z-index: 1; /* Ensure it stays above animations */
+}
+
+.line-animation-wrapper {
+    position: absolute;
+    top: -80px; /* Adjusted to align with the container */
+    bottom: -80px; /* Adjusted to align with the container */
+    left: -80px; /* Adjusted to align with the container */
+    right: -80px; /* Adjusted to align with the container */
+    pointer-events: none; /* Ensure it doesn't interfere with clicks */
+    z-index: 0; /* Ensure it is below the content */
+    overflow: hidden; /* Prevent overflow of animations */
+}
+
+.line-animation {
+    position: absolute;
+    width: 2px; /* Thin lines */
+    height: 100%;
+    background: transparent;
+}
+
+.line-animation.left {
+    left: -2px; /* Adjust to match line width */
+    background: linear-gradient(90deg, rgba(255, 0, 0, 0.4), transparent); /* Thin red line */
+    animation: swirlLeft 8s linear infinite;
+}
+
+.line-animation.right {
+    right: -2px; /* Adjust to match line width */
+    background: linear-gradient(90deg, rgba(0, 0, 0, 0.4), transparent); /* Thin black line */
+    animation: swirlRight 8s linear infinite;
+}
+
+@keyframes swirlLeft {
+    0% {
+        transform: translateY(0) rotate(0deg);
+        background-position: 0 0;
+    }
+    50% {
+        transform: translateY(100%) rotate(180deg);
+        background-position: 100% 0;
+    }
+    100% {
+        transform: translateY(0) rotate(360deg);
+        background-position: 0 0;
+    }
+}
+
+@keyframes swirlRight {
+    0% {
+        transform: translateY(0) rotate(0deg);
+        background-position: 0 0;
+    }
+    50% {
+        transform: translateY(-100%) rotate(-180deg);
+        background-position: 0 100%;
+    }
+    100% {
+        transform: translateY(0) rotate(-360deg);
+        background-position: 0 0;
+    }
+}
+
+.sub-tab-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.sub-tab {
+    padding: 10px 20px;
+    cursor: pointer;
+    background-color: #333;
+    color: #fff;
+    margin-right: 10px;
+    border-radius: 5px;
+}
+
+.sub-tab:hover {
+    background-color: #444;
+}
+
+.sub-tab-content {
+    display: none;
+}
+
+.sub-tab-content.active {
+    display: block;
+}

@@ -1,0 +1,245 @@
+/* Importing Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+
+html {
+    color: #ffffff;
+    background-color: #111111;
+}
+
+body {
+    margin: 0 auto;
+    max-width: 80em; /* Increased width for a wider layout */
+    padding: 50px;
+    hyphens: auto;
+    overflow-wrap: break-word;
+    text-rendering: optimizeLegibility;
+    font-kerning: normal;
+    font-family: 'Roboto', Arial, sans-serif; /* Updated font-family */
+    background: linear-gradient(135deg, #111111, #440000 30%, #660000 60%, #111111); /* Modern gradient */
+    color: #ffffff;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6); /* Modern box shadow */
+}
+
+/* Media query adjustments for mobile */
+@media (max-width: 600px) {
+    body {
+        font-size: 0.9em;
+        padding: 12px;
+    }
+    h1 {
+        font-size: 1.8em;
+    }
+}
+
+/* Print styles */
+@media print {
+    html {
+        background-color: #ffffff;
+    }
+    body {
+        background-color: transparent;
+        color: #000000;
+        font-size: 12pt;
+    }
+    p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+    }
+    h2, h3, h4 {
+        page-break-after: avoid;
+    }
+}
+
+/* General styles */
+p {
+    margin: 1em 0;
+    line-height: 1.6; /* Improved line height for readability */
+}
+
+a {
+    color: #66cccc;
+    text-decoration: none;
+}
+
+a:visited {
+    color: #66cccc;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+img {
+    max-width: 100%;
+}
+
+svg {
+    height: auto;
+    max-width: 100%;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.4em;
+    color: #ffffff;
+}
+
+h5, h6 {
+    font-size: 1em;
+    font-style: italic;
+}
+
+h6 {
+    font-weight: normal;
+}
+
+ol, ul {
+    padding-left: 1.7em;
+    margin-top: 1em;
+    font-size: 1em; /* Consistent font size for lists */
+}
+
+li {
+    margin-bottom: 0.5em; /* Space between list items */
+}
+
+/* Customize bullets */
+ul {
+    list-style-type: disc; /* Use disc bullets */
+}
+
+ol {
+    list-style-type: decimal; /* Use decimal numbers for ordered lists */
+}
+
+blockquote {
+    margin: 1em 0 1em 1.7em;
+    padding-left: 1em;
+    border-left: 2px solid #666666;
+    color: #cccccc;
+    font-style: italic; /* Italicize blockquotes for emphasis */
+}
+
+code {
+    background: #555555;
+    color: #ffffff;
+    font-family: 'Roboto Mono', Menlo, Monaco, Consolas, 'Lucida Console', monospace; /* Added monospaced font */
+    font-size: 85%;
+    margin: 0;
+    padding: 2px 4px;
+    border-radius: 4px;
+}
+
+pre {
+    margin: 1em 0;
+    overflow: auto;
+    background: #333333;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+pre code {
+    padding: 0;
+    overflow: visible;
+    overflow-wrap: normal;
+}
+
+.sourceCode {
+    background-color: #333333;
+    overflow: visible;
+    color: #ffffff;
+}
+
+hr {
+    background-color: #666666;
+    border: none;
+    height: 1px;
+    margin: 1em 0;
+}
+
+table {
+    margin: 1em 0;
+    border-collapse: collapse;
+    width: 100%;
+    overflow-x: auto;
+    display: block;
+    font-variant-numeric: lining-nums tabular-nums;
+}
+
+table caption {
+    margin-bottom: 0.75em;
+}
+
+tbody {
+    margin-top: 0.5em;
+    border-top: 1px solid #666666;
+    border-bottom: 1px solid #666666;
+}
+
+th {
+    border-top: 1px solid #666666;
+    padding: 0.25em 0.5em;
+    background: #444444;
+}
+
+td {
+    padding: 0.125em 0.5em;
+    background: #333333;
+}
+
+header {
+    margin-bottom: 4em;
+    text-align: center;
+    color: #ffffff;
+}
+
+#TOC li {
+    list-style: none;
+}
+
+#TOC ul {
+    padding-left: 1.3em;
+}
+
+#TOC > ul {
+    padding-left: 0;
+}
+
+#TOC a:not(:hover) {
+    text-decoration: none;
+}
+
+span.smallcaps {
+    font-variant: small-caps;
+}
+
+div.columns {
+    display: flex;
+    gap: min(4vw, 1.5em);
+}
+
+div.column {
+    flex: auto;
+    overflow-x: auto;
+}
+
+div.hanging-indent {
+    margin-left: 1.5em;
+    text-indent: -1.5em;
+}
+
+ul.task-list[class] {
+    list-style: none;
+}
+
+ul.task-list li input[type="checkbox"] {
+    font-size: inherit;
+    width: 0.8em;
+    margin: 0 0.8em 0.2em -1.6em;
+    vertical-align: middle;
+}
+
+.display.math {
+    display: block;
+    text-align: center;
+    margin: 0.5rem auto;
+}
