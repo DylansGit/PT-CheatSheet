@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Curated Resources — PT-CS</title>
+
+  <!-- reuse site CSS when embedded on the site, otherwise fallback simple styles -->
+  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    /* small page-specific tweaks to match PT-CS tone */
+    body { background: transparent; color: #fff; font-family: Roboto, sans-serif; }
+    main { padding: 18px; }
+    h1 { text-align:center; margin-bottom:12px; }
+    .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(300px,1fr)); gap:14px; max-width:1100px; margin:18px auto; }
+    .card { background:#111; border:1px solid rgba(255,255,255,0.04); padding:14px 16px; border-radius:8px; box-shadow: 0 6px 18px rgba(0,0,0,0.4); }
+    .card a { display:block; font-weight:700; color:#ff6666; text-decoration:none; margin-bottom:8px; }
+    .card p { color:#cfcfcf; margin:0; font-size:14px; line-height:1.45; }
+    .section-title { font-size:1.05rem; font-weight:700; margin:18px 0 8px 0; color:#fff; text-align:center; }
+    .bottom-area { margin-top:22px; max-width:1100px; margin-left:auto; margin-right:auto; }
+    .learn-list { display:grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap:10px; }
+    .learn-list a { padding:10px 12px; background:#0e0e0e; border-radius:8px; display:block; color:#ff6666; font-weight:700; text-decoration:none; }
+    @media (max-width:520px){ .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Curated Tools & Learning Links</h1>
+    <p style="text-align:center;color:#cfcfcf;max-width:900px;margin:0 auto 18px;">A compact, opinionated list of read‑first resources, tools, and training platforms — quick descriptions beneath each link. Styled to match the PT‑CheatSheet look and feel.</p>
+
+    <div class="grid">
+      <div class="card">
+        <a href="https://github.com/swisskyrepo/PayloadsAllTheThings" target="_blank" rel="noopener">PayloadsAllTheThings</a>
+        <p>A huge collection of payloads and techniques for web, binary, and cloud testing — excellent reference when crafting exploits or PoCs.</p>
+      </div>
+
+      <div class="card">
+        <a href="https://github.com/The-XSS-Rat/SecurityTesting/tree/master" target="_blank" rel="noopener">The‑XSS‑Rat SecurityTesting</a>
+        <p>Community‑curated XSS and web testing examples, templates and practical guides — useful for learning attack patterns and PoC construction.</p>
+      </div>
+
+      <div class="card">
+        <a href="https://hackersonlineclub.com/command-injection-cheatsheet/" target="_blank" rel="noopener">Command Injection Cheatsheet</a>
+        <p>Concise command injection tricks and payloads — very practical when you need quick escalation or RCE vectors during web testing.</p>
+      </div>
+
+      <div class="card">
+        <a href="https://www.revshells.com/" target="_blank" rel="noopener">RevShells</a>
+        <p>Curated reverse shell one‑liners for many platforms and languages — lifesaver for pivoting, callbacks and manual post‑exploitation steps.</p>
+      </div>
+
+      <div class="card">
+        <a href="https://blog.g0tmi1k.com/2011/08/basic-linux-privilege-escalation/" target="_blank" rel="noopener">Basic Linux PrivEsc (g0tmi1k)</a>
+        <p>A classic, hands‑on Linux privilege escalation writeup — start here for kernel exploits, misconfigs, SUID checks and practical checklists.</p>
+      </div>
+
+      <div class="card">
+        <a href="https://gchq.github.io/CyberChef/" target="_blank" rel="noopener">CyberChef</a>
+        <p>Browser-based “Swiss army knife” for data transformations — encoding, crypto, parsing, and quick forensic helpers. Indispensable for fast analysis.</p>
+      </div>
+
+      <div class="card">
+        <a href="https://hashes.com/en/tools/hash_identifier" target="_blank" rel="noopener">Hashes.com — Hash Identifier</a>
+        <p>Identify hash types and run quick cracking attempts. Useful when you encounter a hash and need a fast classification plus cracking options.</p>
+      </div>
+
+      <div class="card">
+        <a href="https://sectools.org/" target="_blank" rel="noopener">SecTools.org</a>
+        <p>Community list of security tools across categories (network, web, forensics, infra) — a great place to discover alternatives and niche utilities.</p>
+      </div>
+
+      <div class="card">
+        <a href="https://gtfobins.github.io/" target="_blank" rel="noopener">GTFOBins</a>
+        <p>Command snippets and escape techniques for common system binaries that can be abused for privilege escalation on UNIX systems.</p>
+      </div>
+
+      <div class="card">
+        <a href="https://lolbas-project.github.io/" target="_blank" rel="noopener">LOLBAS (Living Off The Land Binaries And Scripts)</a>
+        <p>Windows equivalent to GTFOBins — documents how built‑in Windows binaries and scripts can be leveraged by attackers or testers.</p>
+      </div>
+
+      <div class="card">
+        <a href="https://www.exploit-db.com/" target="_blank" rel="noopener">Exploit‑DB</a>
+        <p>Large, searchable archive of published exploits and PoCs — useful for tracking CVEs and practical exploit code when assessing targets.</p>
+      </div>
+
+      <div class="card">
+        <a href="https://www.owasp.org/" target="_blank" rel="noopener">OWASP</a>
+        <p>Official project pages, top‑10 guidance, and many free tools/docs for web security best practices and testing methodologies.</p>
+      </div>
+
+      <div class="card">
+        <a href="https://github.com/GTFOBins/gtfobins" target="_blank" rel="noopener">GTFOBins GitHub (mirror)</a>
+        <p>Project source and community contributions for GTFOBins — handy if you want to fork or contribute your own snippets.</p>
+      </div>
+
+    </div>
+
+    <div class="bottom-area">
+      <div class="section-title">Learning Platforms & CTF / Labs</div>
+      <div class="learn-list">
+        <a href="https://tryhackme.com/" target="_blank" rel="noopener">TryHackMe</a>
+        <a href="https://www.hackthebox.com/" target="_blank" rel="noopener">Hack The Box</a>
+        <a href="https://pwn.college/" target="_blank" rel="noopener">pwn.college</a>
+        <a href="https://portswigger.net/" target="_blank" rel="noopener">PortSwigger Academy</a>
+        <a href="https://www.bugbountyhunter.com/training/" target="_blank" rel="noopener">BugBountyHunter Training</a>
+        <a href="https://www.offensive-security.com/" target="_blank" rel="noopener">Offensive Security</a>
+        <a href="https://overthewire.org/" target="_blank" rel="noopener">OverTheWire</a>
+        <a href="https://root-me.org/" target="_blank" rel="noopener">Root‑Me</a>
+        <a href="https://www.udemy.com/" target="_blank" rel="noopener">Udemy (Search security courses)</a>
+        <a href="https://www.coursera.org/" target="_blank" rel="noopener">Coursera (Security & crypto tracks)</a>
+      </div>
+
+      <div style="margin-top:18px;color:#cfcfcf;font-size:14px;">Want more? I can add tags, categories, icons, or a small search filter to this page — tell me how you want it organized and I’ll update it directly.</div>
+    </div>
+  </main>
+</body>
+</html>
