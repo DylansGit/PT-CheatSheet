@@ -47,7 +47,7 @@
     'linuxprivesc': { filename: 'linux-priv-esc.html', divId: 'linuxprivesc' },
     'imagescheatsheet': { filename: 'images-cheat-sheet.html', divId: 'imagescheatsheet' },
     'topics': { filename: 'topics.html', divId: 'topics' },
-    'notebook': { filename: 'notebook.html', divId: 'notebook' }
+    'resources': { filename: 'resources-links.html', divId: 'resources' }
   };
 
   async function loadContentIntoTab(path, preserveTabActive = true) {
