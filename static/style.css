@@ -1,16 +1,17 @@
 body {
     font-family: 'Roboto', sans-serif;
-    background: linear-gradient(135deg, #1a1a1a, #330000); /* Dark red and gradient black */
+    background: linear-gradient(135deg, #1a1a1a, #330000);
     color: #f5f5f5;
     margin: 0;
     padding: 0;
     line-height: 1.6;
 }
 
+/* --- Tabs --- */
 .tab-container {
     display: flex;
     justify-content: center;
-    margin-top: 10px; /* Adjusted margin to ensure proper alignment */
+    margin-top: 10px;
 }
 
 .tab {
@@ -43,6 +44,7 @@ body {
     display: block;
 }
 
+/* --- Headings --- */
 h1, h2, h3 {
     text-align: center;
     color: #ffffff;
@@ -65,6 +67,7 @@ h3 {
     font-weight: 400;
 }
 
+/* --- Tool Rows --- */
 .tool-row {
     margin: 20px 0;
     border-bottom: 1px solid #666;
@@ -92,6 +95,7 @@ h3 {
     border-radius: 5px;
 }
 
+/* --- Code blocks --- */
 code {
     background: #555;
     padding: 2px 4px;
@@ -104,7 +108,7 @@ code {
     color: #cccccc;
 }
 
-/* Global link styles */
+/* --- Links --- */
 a {
     text-decoration: none;
     color: #ff6666;
@@ -121,8 +125,8 @@ a:hover {
     color: #ffffff;
 }
 
-/* Specific styling for PortSwigger and Automated Enum sections */
-#portswigger ul, 
+/* --- PortSwigger & Enum Layouts --- */
+#portswigger ul,
 #automated-enum {
     list-style: none;
     padding-left: 0;
@@ -131,24 +135,25 @@ a:hover {
     justify-content: center;
 }
 
-#portswigger ul li, 
+#portswigger ul li,
 #automated-enum li {
     width: 45%;
     margin: 10px;
     text-align: center;
 }
 
-#portswigger ul li a, 
+#portswigger ul li a,
 #automated-enum li a {
     display: block;
 }
 
-#portswigger ul li a:hover, 
+#portswigger ul li a:hover,
 #automated-enum li a:hover {
     background-color: #990000;
     color: #ffffff;
 }
 
+/* --- Collapse Button --- */
 .collapse-all-container {
     display: flex;
     justify-content: center;
@@ -170,7 +175,7 @@ a:hover {
     background-color: #660000;
 }
 
-/* Button Container Styles */
+/* --- Floating Buttons --- */
 .button-container {
     position: fixed;
     bottom: 20px;
@@ -204,79 +209,63 @@ a:hover {
     outline: none;
 }
 
-/* Swirling line effect */
+/* --- Container --- */
 .container {
     position: relative;
-    max-width: 1000px; /* Adjust as needed */
+    max-width: 1000px;
     margin: auto;
-    padding: 80px; /* Adjusted padding to keep content aligned */
+    padding: 80px;
     background: rgba(255, 255, 255, 0.1);
     border-radius: 8px;
-    overflow: visible; /* Allow animations to overflow */
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5); /* Optional: Add shadow for better separation */
-    z-index: 1; /* Ensure it stays above animations */
+    overflow: visible;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    z-index: 1;
 }
 
+/* --- Line Animations --- */
 .line-animation-wrapper {
     position: absolute;
-    top: -80px; /* Adjusted to align with the container */
-    bottom: -80px; /* Adjusted to align with the container */
-    left: -80px; /* Adjusted to align with the container */
-    right: -80px; /* Adjusted to align with the container */
-    pointer-events: none; /* Ensure it doesn't interfere with clicks */
-    z-index: 0; /* Ensure it is below the content */
-    overflow: hidden; /* Prevent overflow of animations */
+    top: -80px;
+    bottom: -80px;
+    left: -80px;
+    right: -80px;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
 }
 
 .line-animation {
     position: absolute;
-    width: 2px; /* Thin lines */
+    width: 2px;
     height: 100%;
     background: transparent;
 }
 
 .line-animation.left {
-    left: -2px; /* Adjust to match line width */
-    background: linear-gradient(90deg, rgba(255, 0, 0, 0.4), transparent); /* Thin red line */
+    left: -2px;
+    background: linear-gradient(90deg, rgba(255, 0, 0, 0.4), transparent);
     animation: swirlLeft 8s linear infinite;
 }
 
 .line-animation.right {
-    right: -2px; /* Adjust to match line width */
-    background: linear-gradient(90deg, rgba(0, 0, 0, 0.4), transparent); /* Thin black line */
+    right: -2px;
+    background: linear-gradient(90deg, rgba(0, 0, 0, 0.4), transparent);
     animation: swirlRight 8s linear infinite;
 }
 
 @keyframes swirlLeft {
-    0% {
-        transform: translateY(0) rotate(0deg);
-        background-position: 0 0;
-    }
-    50% {
-        transform: translateY(100%) rotate(180deg);
-        background-position: 100% 0;
-    }
-    100% {
-        transform: translateY(0) rotate(360deg);
-        background-position: 0 0;
-    }
+    0% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(100%) rotate(180deg); }
+    100% { transform: translateY(0) rotate(360deg); }
 }
 
 @keyframes swirlRight {
-    0% {
-        transform: translateY(0) rotate(0deg);
-        background-position: 0 0;
-    }
-    50% {
-        transform: translateY(-100%) rotate(-180deg);
-        background-position: 0 100%;
-    }
-    100% {
-        transform: translateY(0) rotate(-360deg);
-        background-position: 0 0;
-    }
+    0% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-100%) rotate(-180deg); }
+    100% { transform: translateY(0) rotate(-360deg); }
 }
 
+/* --- Sub-Tabs --- */
 .sub-tab-container {
     display: flex;
     justify-content: center;
@@ -303,3 +292,219 @@ a:hover {
 .sub-tab-content.active {
     display: block;
 }
+
+/* --- Search wrapper anchored to right side --- */
+#search-wrapper {
+  position: relative;
+  display: flex;
+  justify-content: flex-end; /* pushes bar to right edge of container */
+  align-items: center;
+  gap: 6px;
+  margin: 10px 20px 20px 20px; /* spacing from container edges */
+  z-index: 10;
+}
+
+/* search box itself */
+#site-search {
+  background: #111;
+  border: 1px solid #444;
+  color: #f5f5f5;
+  padding: 8px 12px;
+  border-radius: 6px;
+  width: 320px;
+  font-size: 15px;
+}
+
+#site-search::placeholder {
+  color: #aaa;
+}
+
+/* X clear button */
+#search-clear {
+  background: none;
+  border: none;
+  color: #bbb;
+  font-size: 18px;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+#search-clear:hover {
+  color: #fff;
+}
+
+/* dropdown now aligns exactly below the search box */
+#search-results {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px); /* directly below */
+  right: 0;              /* align with input’s right edge */
+  width: 320px;          /* same as search bar */
+  background: #0a0a0a;
+  border: 1px solid #222;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+  max-height: 60vh;
+  overflow-y: auto;
+  z-index: 9999;
+  padding: 8px;
+}
+
+/* dropdown items */
+#search-results-list div {
+  padding: 8px 10px;
+  border-bottom: 1px solid #333;
+  cursor: pointer;
+}
+
+#search-results-list div:hover {
+  background: #990000;
+  color: #fff;
+}
+
+/* --- Apply same modern grid layout to Topics tab --- */
+#topics ul {
+  list-style: none;
+  padding: 0;
+  margin: 40px auto;
+  max-width: 900px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+#topics ul li {
+  text-align: center;
+}
+
+#topics ul li a {
+  display: block;
+  padding: 16px 20px;
+  background: #111;
+  border-radius: 8px;
+  text-decoration: none;
+  color: #ff6666;
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  transition: all 0.25s ease;
+}
+
+#topics ul li a:hover {
+  background: #990000;
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 10px rgba(0,0,0,0.6);
+}
+
+/* Center heading and add spacing */
+#topics h1 {
+  text-align: center;
+  font-size: 2.2em;
+  margin-top: 20px;
+  margin-bottom: 25px;
+  color: #fff;
+}
+
+
+/* Make markdown pages' lists look like the PortSwigger grid/buttons */
+.markdown-body ul {
+  list-style: none;
+  padding: 0;
+  margin: 24px auto;
+  max-width: 900px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.markdown-body ul li {
+  text-align: center;
+  margin: 0;
+}
+
+.markdown-body ul li a,
+.markdown-body ul li p > a,
+.markdown-body ul li code {
+  display: block;
+  padding: 12px 16px;
+  background: #111;
+  border-radius: 8px;
+  text-decoration: none;
+  color: #ff6666;
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: 0.2px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease, color .18s ease;
+  word-break: break-word;
+}
+
+.markdown-body ul li a:hover,
+.markdown-body ul li p > a:hover,
+.markdown-body ul li code:hover {
+  background: #990000;
+  color: #fff;
+  transform: translateY(-3px);
+  box-shadow: 0 8px 18px rgba(0,0,0,0.6);
+}
+
+/* fallback: keep nested TOC lists from becoming huge groups */
+.markdown-body ul ul {
+  display: block;
+  margin: 8px 0 0 1.2em;
+  grid-column: 1 / -1;
+}
+
+/* --- Top Bar --- */
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 10px 0 5px 0; /* reduce top blank space */
+  padding: 0 10px;
+}
+
+/* Logo styling */
+.ptcs-logo {
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.4);
+  transition: transform 0.2s ease;
+}
+
+.ptcs-logo:hover {
+  transform: scale(1.06);
+}
+
+/* Compact search styling */
+#search-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+#site-search {
+  background: #111;
+  border: 1px solid #444;
+  color: #eee;
+  padding: 6px 10px;
+  border-radius: 6px;
+  min-width: 240px;
+}
+
+#search-clear {
+  background: none;
+  border: none;
+  color: #bbb;
+  font-size: 18px;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+#search-clear:hover {
+  color: #fff;
+}
+

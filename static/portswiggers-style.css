@@ -243,3 +243,95 @@ ul.task-list li input[type="checkbox"] {
     text-align: center;
     margin: 0.5rem auto;
 }
+
+
+/* --- Restore PortSwigger grid layout --- */
+#portswigger ul {
+  list-style: none;
+  padding: 0;
+  margin: 40px auto;
+  max-width: 900px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+#portswigger ul li {
+  text-align: center;
+}
+
+#portswigger ul li a {
+  display: block;
+  padding: 16px 20px;
+  background: #111;
+  border-radius: 8px;
+  text-decoration: none;
+  color: #ff6666;
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  transition: all 0.25s ease;
+}
+
+#portswigger ul li a:hover {
+  background: #990000;
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 10px rgba(0,0,0,0.6);
+}
+
+/* Center heading and widen spacing */
+#portswigger h1 {
+  text-align: center;
+  font-size: 2.2em;
+  margin-top: 20px;
+  margin-bottom: 25px;
+  color: #fff;
+}
+
+
+/* --- Apply same modern grid layout to Topics tab --- */
+#topics ul {
+  list-style: none;
+  padding: 0;
+  margin: 40px auto;
+  max-width: 900px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+#topics ul li {
+  text-align: center;
+}
+
+#topics ul li a {
+  display: block;
+  padding: 16px 20px;
+  background: #111;
+  border-radius: 8px;
+  text-decoration: none;
+  color: #ff6666;
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  transition: all 0.25s ease;
+}
+
+#topics ul li a:hover {
+  background: #990000;
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 10px rgba(0,0,0,0.6);
+}
+
+/* Center heading and add spacing */
+#topics h1 {
+  text-align: center;
+  font-size: 2.2em;
+  margin-top: 20px;
+  margin-bottom: 25px;
+  color: #fff;
+}

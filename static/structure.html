@@ -4,12 +4,38 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Penetration Testing Cheatsheet</title>
+
     <link rel="stylesheet" href="/static/style.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap">
-
+    <script src="/static/main.js" defer></script>
 </head>
-<body>
+
+<body style="overflow:visible;">
     <div class="container">
+        <!-- PT-CS logo (click => showHomePage) -->
+        <a href="/" onclick="if(window.showHomePage){ showHomePage(); return false; }" aria-label="PT-CS Home" style="text-decoration:none;">
+        <img src="/static/ptcs-logo.svg" alt="PT-CS" class="ptcs-logo">
+        </a>
+
+        <!-- 🔍 Simple Search Bar -->
+        <div id="search-wrapper" style="display:flex;justify-content:flex-end;gap:8px;margin:10px 0;position:relative;z-index:5;">
+            <input id="site-search" placeholder="Search..."
+                   style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#eee;
+                          padding:6px 10px;border-radius:6px;min-width:240px;">
+            <button id="search-clear"
+                    style="background:transparent;border:none;color:#aaa;margin-left:6px;cursor:pointer;font-size:16px;">✕</button>
+        </div>
+
+        <!-- dropdown results -->
+        <div id="search-results"
+             style="display:none;position:absolute;right:25px;top:70px;background:#0a0a0a;
+                    border:1px solid #222;border-radius:8px;max-width:450px;max-height:60vh;
+                    overflow:auto;z-index:10;padding:8px;">
+            <div id="search-results-list"></div>
+            <div style="padding:6px;font-size:12px;color:#9aa0a6;">Press Esc to close</div>
+        </div>
+
+        <!-- Tab Navigation -->
         <div class="tab-container">
             <div class="tab active" onclick="showTab('cheatsheet')">Cheatsheet</div>
             <div class="tab" onclick="showTab('portswigger')">PortSwigger Cheatsheet</div>
@@ -17,21 +43,19 @@
             <div class="tab" onclick="showTab('linuxprivesc')">Linux PrivEsc</div>
         </div>
 
+        <!-- Tab Contents -->
         <div id="cheatsheet" class="tab-content active">
             <!-- here is content -->
-            </div>
+        </div>
 
-            <div id="portswigger" class="tab-content">
+        <div id="portswigger" class="tab-content">
             <!-- here is content -->
-            </div>
-                     
+        </div>
 
-        <!-- Windows PrivEsc Content -->
         <div id="windowsprivesc" class="tab-content">
             <!-- here is content -->
         </div>
 
-        <!-- Linux PrivEsc Content -->
         <div id="linuxprivesc" class="tab-content">
             <!-- here is content -->
         </div>
@@ -40,29 +64,23 @@
     <script>
         function showTab(tabId) {
             const tabs = document.querySelectorAll('.tab-content');
-            tabs.forEach(tab => {
-                tab.classList.remove('active');
-            });
+            tabs.forEach(tab => tab.classList.remove('active'));
 
             const tabLinks = document.querySelectorAll('.tab');
-            tabLinks.forEach(tab => {
-                tab.classList.remove('active');
-            });
+            tabLinks.forEach(tab => tab.classList.remove('active'));
 
             const selectedTab = document.getElementById(tabId);
-            selectedTab.classList.add('active');
+            if (selectedTab) selectedTab.classList.add('active');
 
             const selectedTabLink = document.querySelector(`.tab[onclick="showTab('${tabId}')"]`);
-            selectedTabLink.classList.add('active');
+            if (selectedTabLink) selectedTabLink.classList.add('active');
         }
 
         function toggleDetails(id) {
             const element = document.getElementById(id);
-            if (element.style.display === "none" || element.style.display === "") {
-                element.style.display = "block";
-            } else {
-                element.style.display = "none";
-            }
+            if (!element) return;
+            element.style.display =
+                (element.style.display === "none" || element.style.display === "") ? "block" : "none";
         }
     </script>
 </body>
