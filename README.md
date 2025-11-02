@@ -1,46 +1,65 @@
-# PT CheatSheet
+# 🛡️ PT-CheatSheet  
 
-A compact, forkable pen-testing cheat sheet web app — quick references, small cheat-sheets, and tools notes for common web / infra security topics.
+A modern, forkable penetration-testing reference hub — built for speed, clarity, and accessibility.  
+Includes interactive cheat-sheets, quick command references, and a growing library of curated resources for offensive & defensive security learning.  
 
-This site is a lightweight Flask app that serves static HTML cheat sheets, small image cheat-sheets, and a simple notebook for notes. Anyone can fork and contribute — contributions welcome. All rights reserved to the internet.
-
----
-
-## What this repo contains
-
-- `server.py` — small Flask server used to serve pages and a tiny notes API.  
-- `templates/` — base HTML pages (index).  
-- `content/` — per-topic HTML cheat sheets (home.html, tools-cheat-sheet.html, etc.).  
-- `markdown/` — additional markdown-converted pages and examples.  
-- `static/` — CSS, JS and images (`main.js`, `style.css`, images).  
-- `requirements.txt` — Python dependencies for deployment.  
-- `Procfile` — simple command for production hosts (e.g. Render).
+Live demo: **[Render-hosted instance](https://pt-cheatsheet.onrender.com)** (example — yours may differ).  
 
 ---
 
-## Cheat sheet sections (examples included)
+## ⚙️ Overview  
 
-The site includes (but is not limited to) cheat sheets for:
+**PT-CheatSheet** is a lightweight Flask-powered web app serving static HTML cheat sheets.  
+Each tab represents a key pentesting domain: web security, privilege escalation, tooling, and curated study resources.  
+
+Everything is fully static — no login, no database, no cookies — just fast access to knowledge.  
+
+---
+
+## 📂 Repository structure  
+
+| Path | Description |
+|------|--------------|
+| `server.py` | Tiny Flask server that serves all HTML/CSS/JS pages. |
+| `templates/` | Base layout (`index.html`). |
+| `content/` | Topic cheat sheets (`tools-cheat-sheet.html`, `linux-priv-esc.html`, etc.). |
+| `markdown/` | Markdown-converted PortSwigger Academy pages. |
+| `static/` | Assets — `main.js`, `style.css`, images, icons. |
+| `requirements.txt` | Python dependencies. |
+| `Procfile` | Render/Heroku startup command (`gunicorn server:app`). |
+
+---
+
+## 🧭 Current tabs  
+
+- **Tools Cheatsheet** — quick reference for common pentest tools  
+- **PortSwigger Cheatsheet** — full list of web vulnerability labs & writeups  
+- **Windows PrivEsc** — commands, tools, and PowerShell snippets  
+- **Linux PrivEsc** — enumeration, privilege escalation, and post-exploitation commands  
+- **Images Cheatsheet** — visual, image-based quick references  
+- **Topics** — thematic entry points for each cheat sheet section  
+- **Resources** *(new)* — curated collection of external links, learning platforms, and must-have tools  
+
+> 🗑️ The legacy *Notebook* tab was removed for simplicity — all notes and routes related to `/save-note`, `/get-notes`, etc., have been deprecated.  
+
+
+## 🧰 Cheat sheet categories  
+
+The site includes pages for (among others):
 
 - API Testing  
 - Access Control  
 - Authentication  
 - Business Logic Vulnerabilities  
-- Clickjacking  
 - Command Injection  
-- CORS (Cross-Origin Resource Sharing)  
-- CSRF (Cross-site Request Forgery)  
-- XSS (Cross-site Scripting)  
-- DOM-based Vulnerabilities  
+- Cross-Origin Resource Sharing (CORS)  
+- Cross-Site Request Forgery (CSRF)  
+- Cross-Site Scripting (XSS)  
 - Directory Traversal  
-- Essential Skills  
-- Exam Prep  
+- DOM-based Vulnerabilities  
 - File Upload Vulnerabilities  
 - GraphQL API Vulnerabilities  
-- HTTP Host Header Attacks  
 - HTTP Request Smuggling  
-- Information Disclosure  
-- Insecure Deserialization  
 - JWT Attacks  
 - NoSQL Injection  
 - OAuth Authentication  
@@ -48,77 +67,67 @@ The site includes (but is not limited to) cheat sheets for:
 - Race Conditions  
 - SQL Injection  
 - Server-Side Template Injection (SSTI)  
-- SSRF (Server-side Request Forgery)  
+- Server-Side Request Forgery (SSRF)  
+- XXE Injection  
 - Web Cache Poisoning  
 - WebSockets  
-- XXE Injection  
 
-Also included: tools cheat sheets, images cheat sheets, Windows & Linux privilege escalation notes, and small utilities / examples.
+…and many others from the PortSwigger Academy collection.  
 
----
 
-## Quick start — run locally
+## 🧠 New “Resources” tab  
 
-> Recommended: create & activate a virtualenv first.
+A modern grid of curated external links with short descriptions, matching the site’s dark-red gradient theme.  
+Includes:
 
-# create venv (optional but recommended)
+- PayloadsAllTheThings  
+- GTFOBins & LOLBAS  
+- RevShells  
+- CyberChef  
+- Sectools.org  
+- Exploit-DB  
+- TryHackMe / HackTheBox / pwn.college / PortSwigger Academy / BugBountyHunter  
+- …and dozens more hand-picked tools and learning platforms.  
+
+
+## 🚀 Run locally  
+
+# (recommended) create and activate a virtual environment
 python -m venv .venv
-
 # Windows
 .venv\Scripts\activate
-
 # macOS / Linux
 source .venv/bin/activate
 
 # install dependencies
 pip install -r requirements.txt
 
-# run locally (Flask dev server)
+# start Flask development server
 python server.py
+Then open http://127.0.0.1:5000 in your browser.
 
-# open http://127.0.0.1:5000 in your browser
-Notes:
+☁️ Deploy to Render (or similar)
+Render automatically redeploys on every push to GitHub.
+If deploying manually, ensure the Start Command is:
 
-The Flask app serves index.html from templates/ and loads content from /content/<filename> and /markdown/<filename>.
 
-Notes API endpoints:
+gunicorn server:app
+🧩 For local testing on Windows, use python server.py instead of Gunicorn.
 
-POST /save-note — save new note (JSON { "note": "..." })
+🔒 Security & usage note
+This repository includes educational pentesting materials.
+⚠️ Do not upload or distribute executable pentest tools, cracked binaries, or payloads.
+Keep this repository strictly for documentation, notes, and references.
 
-GET /get-notes — fetch notes
+Use responsibly — for authorized testing and education only.
 
-DELETE /delete-note/<index> — delete note by index
+🤝 Contributing
+Fork → branch → edit → pull request.
 
-POST /edit-note/<index> — edit note (JSON { "note": "..." })
+All contributions welcome — fix typos, improve styling, add cheat sheets, or propose new resource links.
+Please keep commits focused and readable.
 
-Production (Render / Heroku style)
-Procfile in repo root should contain:
-
-makefile
-Copy code
-web: gunicorn server:app
-If deploying to Render, ensure the Start Command is gunicorn server:app.
-
-Do not attempt to run gunicorn on Windows locally — use python server.py locally for testing.
-
-Routes overview
-/ → index page (loads tabs UI)
-
-/static/<path:filename> → static assets (CSS / JS / images)
-
-/content/<filename> → HTML cheat sheet fragments
-
-/markdown/<path:filename> → markdown-derived pages
-
-Notes API (see Quick start)
-
-Security & safety note (important)
-This repo contains references and example files related to pentesting. Some content (keygens, activators, cracked installers or tools you may have kept locally) will be detected as malicious by antivirus software. Do not upload or reintroduce cracked software or unknown executables. If you include pentest tools (linpeas, binwalk, VMs) keep them in a dedicated, offline folder and only store non-executable notes in the repo.
-
-Contributing
-Contributions welcome! Fork the repo, open a branch, make changes, and send a PR with a short description of the change. Keep content focused, cite sources where appropriate, and avoid including potentially malicious binaries in PRs.
-
-Contact & credits
-Created and maintained by Dylan — contributions from the community welcome.
-
-All rights reserved to the internet. Anyone can fork and contribute.
+🧑‍💻 Credits
+Created and maintained by Dylan (@DylansGit)
+Design, code, and structure by the PT-CheatSheet project.
+All rights reserved to the internet — fork freely, learn openly.
