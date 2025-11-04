@@ -513,42 +513,49 @@ a:hover {
 
 /* Make the main container fit smaller screens and reduce padding */
 @media (max-width: 900px) {
+  .tab-container {
+    display: flex;
+    flex-wrap: wrap;            /* ✅ allow two rows */
+    justify-content: center;    /* ✅ center the group */
+    gap: 8px;
+    padding: 8px 6px 12px;
+  }
+
+  .tab {
+    flex: 1 1 44%;              /* ✅ roughly two per row */
+    text-align: center;
+    padding: 8px 10px;
+    font-size: 14px;
+    margin: 0;
+    min-width: 130px;
+  }
+
   .container {
     padding: 28px 18px;
     max-width: 92%;
   }
 
-  /* make the tab container horizontally scrollable instead of wrapping */
-  .tab-container {
-    gap: 8px;
-    padding: 6px 6px;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: thin;
-  }
-  .tab {
-    flex: 0 0 auto;
-    padding: 8px 12px;
-    font-size: 14px;
-    margin: 0 6px;
-  }
-
-  /* shrink search bar on small screens */
   #search-wrapper { margin: 8px 6px; }
   #site-search { width: 160px; min-width: 120px; padding: 8px 10px; font-size:14px; }
   #search-results { right: 10px; width: calc(100% - 20px); left: 10px; top: calc(100% + 6px); }
 
-  /* cards grid -> single column for narrow screens */
   .grid { grid-template-columns: 1fr; padding: 0 6px; }
   .card { padding:12px; }
 
-  /* floating buttons smaller and with more room */
   .button-container { right: 12px; bottom: 12px; }
   .back-to-top { width:44px; height:44px; font-size:20px; }
 
-  /* reduce overall font sizes slightly */
   body, .card p, .markdown-body { font-size: 14px; }
 }
+
+/* optional: narrower phones */
+@media (max-width: 480px) {
+  .tab {
+    flex: 1 1 100%;           /* ✅ one per line on very small phones */
+    font-size: 13px;
+  }
+}
+
 
 /* Very small screens (phones in portrait) */
 @media (max-width: 420px) {
