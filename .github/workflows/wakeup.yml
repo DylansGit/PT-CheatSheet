@@ -1,0 +1,14 @@
+name: Wake Render App
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'   # every 10 minutes
+  workflow_dispatch: {}       # optional manual run
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Keep Render app alive
+        run: |
+          curl -s -o /dev/null -w "%{http_code}" https://pt-cheatsheet.onrender.com || echo "Request failed"
