@@ -509,63 +509,59 @@ a:hover {
 }
 
 
-/* ========== Mobile / small screen tweaks ========== */
-
-/* Make the main container fit smaller screens and reduce padding */
+/* ========== Mobile / small screen tweaks (merged & cleaned) ========== */
 @media (max-width: 900px) {
   .tab-container {
     display: flex;
-    flex-wrap: wrap;            /* ✅ allow two rows */
-    justify-content: center;    /* ✅ center the group */
+    flex-wrap: wrap;
+    justify-content: center;
     gap: 8px;
     padding: 8px 6px 12px;
   }
-
   .tab {
-    flex: 1 1 44%;              /* ✅ roughly two per row */
+    flex: 1 1 44%;
     text-align: center;
     padding: 8px 10px;
     font-size: 14px;
     margin: 0;
     min-width: 130px;
   }
-
-  .container {
-    padding: 28px 18px;
-    max-width: 92%;
-  }
-
+  .container { padding: 28px 18px; max-width: 92%; }
   #search-wrapper { margin: 8px 6px; }
   #site-search { width: 160px; min-width: 120px; padding: 8px 10px; font-size:14px; }
   #search-results { right: 10px; width: calc(100% - 20px); left: 10px; top: calc(100% + 6px); }
-
   .grid { grid-template-columns: 1fr; padding: 0 6px; }
   .card { padding:12px; }
-
   .button-container { right: 12px; bottom: 12px; }
   .back-to-top { width:44px; height:44px; font-size:20px; }
-
   body, .card p, .markdown-body { font-size: 14px; }
-}
 
-/* optional: narrower phones */
-@media (max-width: 480px) {
-  .tab {
-    flex: 1 1 100%;           /* ✅ one per line on very small phones */
-    font-size: 13px;
+  /* PortSwigger / button-style links — target list items only to avoid inline anchors */
+  .markdown-body ul li a,
+  .portswigger-container a {
+    display: inline-block;
+    width: 47%;
+    margin: 3px 1.5%;
+    text-align: center;
+    word-wrap: break-word;
+    font-size: 14px;
+    padding: 6px 8px;
   }
 }
 
-
-/* Very small screens (phones in portrait) */
-@media (max-width: 420px) {
+/* narrower phones: one tab per line */
+@media (max-width: 480px) {
+  .tab { flex: 1 1 100%; font-size: 13px; }
   .container { padding: 18px 12px; }
   #site-search { width: 120px; min-width: 100px; }
-  .tab { padding: 7px 10px; font-size: 13px; }
+  .tab { padding: 7px 10px; }
   .grid { gap: 10px; }
   .card p { font-size: 13px; line-height:1.4; }
+  .markdown-body ul li a,
+  .portswigger-container a { width: 100%; margin: 4px 0; } /* single column for tiny screens */
 }
 
+/* hide heavy animations on small devices */
 @media (max-width: 700px) {
   .line-animation-wrapper { display: none; }
 }
