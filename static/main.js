@@ -403,12 +403,14 @@
 
 (function () {
   function ensurePortSwiggerCSS() {
-    if (document.getElementById('portswigger-css')) return; // Already loaded
+    if (document.getElementById('portswigger-css')) return;
     const link = document.createElement('link');
     link.id = 'portswigger-css';
     link.rel = 'stylesheet';
+    link.href = '/static/style.css';  // <-- add this line
     document.head.appendChild(link);
   }
+
 
   const originalShowTab = window.showTab;
   window.showTab = async function (tabId) {
