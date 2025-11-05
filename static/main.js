@@ -2,44 +2,6 @@
 // Single-file, DOM-ready. Search indexes elements inside HTML content and navigates to them.
 
 (function () {
-
-  // --- Paste this helper near the top, before any code that injects HTML ---
-  function injectHtmlIntoTab(html, root) {
-    // parse fetched HTML into a Document
-    const doc = new DOMParser().parseFromString(html, 'text/html');
-
-    // Move stylesheet links and inline <style> from fetched doc into real head (avoid duplicates)
-    const fetchedStyles = Array.from(doc.querySelectorAll('link[rel="stylesheet"], style'));
-    fetchedStyles.forEach(n => {
-      try {
-        // simple dedupe: by href for link, by first 60 chars for inline style
-        if (n.tagName.toLowerCase() === 'link' && n.href) {
-          if (!document.head.querySelector(`link[rel="stylesheet"][href="${n.getAttribute('href')}"]`)) {
-            const clone = n.cloneNode(true);
-            document.head.appendChild(clone);
-          }
-        } else {
-          // inline style node
-          const marker = n.textContent && n.textContent.trim().slice(0, 60);
-          const foundInline = Array.from(document.head.querySelectorAll('style')).some(s =>
-            (s.textContent || '').trim().slice(0,60) === marker
-          );
-          if (!foundInline) {
-            const clone = n.cloneNode(true);
-            document.head.appendChild(clone);
-          }
-        }
-      } catch (e) {
-        // ignore potential cross-origin or malformed nodes
-        console.warn('injectHtmlIntoTab: style injection issue', e);
-      }
-    });
-
-    // Prefer an inner logical container to inject (avoid injecting full <html> or <head>)
-    const preferred = doc.querySelector('#portswigger-local') || doc.querySelector('main') || doc.body;
-    root.innerHTML = `<div class="tab-content active">${(preferred && preferred.innerHTML) || ''}</div>`;
-  }
-
   // -------------------------
   // Utility helpers
   // -------------------------
@@ -98,13 +60,10 @@
       if (!contentDiv) return;
       // if path starts with "markdown/" wrap in .markdown-body so CSS can style it like the ports. 
       if (path && path.startsWith('markdown/')) {
-        // markdown pages already styled by markdown CSS, wrap them
         contentDiv.innerHTML = `<div class="tab-content active"><div class="markdown-body">${html}</div></div>`;
       } else {
-        // parse fetched HTML and inject only its content while copying styles to head
-        injectHtmlIntoTab(html, contentDiv);
+        contentDiv.innerHTML = `<div class="tab-content active">${html}</div>`;
       }
-
       // optional: remove "active" from other tabs UI (not removing content)
       if (preserveTabActive === false) return;
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -448,11 +407,8 @@
     const link = document.createElement('link');
     link.id = 'portswigger-css';
     link.rel = 'stylesheet';
-    // point to your global site stylesheet (matches portswigger-cheat-sheet.html)
-    link.href = '/static/style.css';
     document.head.appendChild(link);
   }
-
 
   const originalShowTab = window.showTab;
   window.showTab = async function (tabId) {
@@ -474,17 +430,12 @@
             const href = a.getAttribute('href');
             if (!href) return;
             fetch(href)
-              .then(res => {
-                if (!res.ok) throw new Error('Failed to fetch ' + href);
-                return res.text();
-              })
+              .then(res => res.text())
               .then(html => {
-                injectHtmlIntoTab(html, root);
-                // ensure a base global stylesheet is present as a fallback
-                ensurePortSwiggerCSS();
+                root.innerHTML = `<div class="tab-content active">${html}</div>`;
+                ensurePortSwiggerCSS(); // keep style applied for markdown
               })
               .catch(() => alert('Failed to load: ' + href));
-
           });
         });
       }, 400);
