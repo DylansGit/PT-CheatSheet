@@ -47,7 +47,9 @@
     'linuxprivesc': { filename: 'linux-priv-esc.html', divId: 'linuxprivesc' },
     'imagescheatsheet': { filename: 'images-cheat-sheet.html', divId: 'imagescheatsheet' },
     'topics': { filename: 'topics.html', divId: 'topics' },
-    'resources': { filename: 'resources-links.html', divId: 'resources' }
+    'resources': { filename: 'resources-links.html', divId: 'resources' },
+    'aiseccheatsheet': { filename: 'ai-sec-cheat-sheet.html', divId: 'aiseccheatsheet' },
+
   };
 
   async function loadContentIntoTab(path, preserveTabActive = true) {
@@ -101,9 +103,20 @@
   }
 
   function scrollToTop() {
+    // collapse open sections
     collapseAllRows();
+
+    // force both scroll roots to zero
+    const tab = document.querySelector('#tab-content');
+    if (tab) tab.scrollTop = 0;
+
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+
+    // smooth correction to the window in case browser ignores direct assignments
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
+
 
   // expose globals for inline onclicks
   window.showTab = showTab;
@@ -436,3 +449,4 @@
     }
   };
 })();
+

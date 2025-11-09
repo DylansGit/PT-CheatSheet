@@ -634,12 +634,20 @@ html, body, .container, .tab-container, .tab-content, .grid, .markdown-body {
 /* --- Fix double scrollbar on dynamic tabs --- */
 html, body {
   height: 100%;
-  overflow-y: auto;
+  margin: 0;
+  overflow-y: auto;   /* allow page to scroll normally */
 }
 
 .container {
-  overflow-y: visible !important;  /* allow full page scroll only */
+  min-height: 100vh;  /* always at least full viewport height */
+  overflow: visible !important;
+}
+
+#tab-content,
+.tab-content.active {
+  overflow: visible !important;   /* remove internal scrollbars */
   height: auto !important;
   max-height: none !important;
-  padding-bottom: 100px;           /* spacing for bottom buttons */
 }
+
+
