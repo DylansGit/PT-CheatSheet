@@ -212,64 +212,52 @@
       if (built) return;
       INDEX = [];
       // index content files for .tool-row and portswigger anchors
-      for (const f of CONTENT_FILES) {
+      // --- Parallel indexing ---
+      await Promise.all(CONTENT_FILES.map(async (f) => {
         try {
           const res = await fetch('/content/' + f);
-          if (!res.ok) continue;
+          if (!res.ok) return;
           const html = await res.text();
           const doc = new DOMParser().parseFromString(html, 'text/html');
 
-          // 1) index each .tool-row as its own entry
-          const toolRows = qsa('.tool-row', doc);
-          toolRows.forEach((row, idx) => {
-            // title attempt: .tool-name, h2/h3 inside row
-            let title = '';
+          // .tool-row entries
+          qsa('.tool-row', doc).forEach((row, idx) => {
             const t = row.querySelector('.tool-name') || row.querySelector('h2') || row.querySelector('h3');
-            if (t) title = t.textContent.trim();
+            const title = t ? t.textContent.trim() : '';
             const text = (row.textContent || '').replace(/\s+/g, ' ').trim();
-            const excerpt = text.slice(0, 240);
-            INDEX.push({ type: 'content', path: f, kind: 'tool-row', index: idx, title: title || `${f} — tool ${idx+1}`, excerpt, body: text });
+            INDEX.push({ type: 'content', path: f, kind: 'tool-row', index: idx, title: title || `${f} — tool ${idx+1}`, excerpt: text.slice(0,240), body: text });
           });
 
-          // 2) if this is portswigger file, index every anchor
+          // PortSwigger anchors
           if (f.toLowerCase().includes('portswigger')) {
-            const anchors = qsa('a[href]', doc);
-            anchors.forEach((a, idx) => {
+            qsa('a[href]', doc).forEach((a) => {
               const href = a.getAttribute('href') || '';
               const text = (a.textContent || href).trim();
-              INDEX.push({ type: 'content', path: f, kind: 'link', href, title: text, excerpt: (a.title || text).slice(0, 200), body: text });
+              INDEX.push({ type:'content', path:f, kind:'link', href, title:text, excerpt:(a.title||text).slice(0,200), body:text });
             });
           }
 
-          // 3) also index page-level headings as fallback
-          const headings = qsa('h1,h2,h3,p', doc).slice(0, 30); // limit
-          headings.forEach(h => {
+          // Headings fallback
+          qsa('h1,h2,h3,p', doc).slice(0,30).forEach(h => {
             const t = (h.textContent || '').trim();
-            if (!t) return;
-            INDEX.push({ type: 'content', path: f, kind: 'text', title: t.slice(0,80), excerpt: t.slice(0,200), body: t });
+            if (t) INDEX.push({ type:'content', path:f, kind:'text', title:t.slice(0,80), excerpt:t.slice(0,200), body:t });
           });
-        } catch (err) {
-          console.warn('index content fail', f, err);
-        }
-      }
+        } catch {}
+      }));
 
-      // index markdown pages: use headings & paragraphs
-      for (const f of MARKDOWN_FILES) {
+      await Promise.all(MARKDOWN_FILES.map(async (f) => {
         try {
           const res = await fetch('/markdown/' + f);
-          if (!res.ok) continue;
+          if (!res.ok) return;
           const html = await res.text();
           const doc = new DOMParser().parseFromString(html, 'text/html');
-          const nodes = qsa('h1,h2,h3,p,li', doc).slice(0, 200);
-          nodes.forEach(n => {
+          qsa('h1,h2,h3,p,li', doc).slice(0,200).forEach(n => {
             const txt = (n.textContent || '').trim();
-            if (!txt) return;
-            INDEX.push({ type: 'markdown', path: f, kind: 'text', title: txt.slice(0,80), excerpt: txt.slice(0,200), body: txt });
+            if (txt) INDEX.push({ type:'markdown', path:f, kind:'text', title:txt.slice(0,80), excerpt:txt.slice(0,200), body:txt });
           });
-        } catch (err) {
-          console.warn('index markdown fail', f, err);
-        }
-      }
+        } catch {}
+      }));
+
 
       built = true;
       console.log('[Search] Index built, entries:', INDEX.length);
@@ -394,8 +382,12 @@
   }); // end DOMContentLoaded (search)
   
   // initialize home on load
-  document.addEventListener('DOMContentLoaded', () => { showHomePage(); });
+  document.addEventListener('DOMContentLoaded', () => {
+  showHomePage();
+  buildIndex().catch(console.warn);
+  });
 })();
+
 
 // ------------------------------------------------------
 // PortSwigger tab CSS loader + link handler (final version)
@@ -444,12 +436,3 @@
     }
   };
 })();
-
-
-// --- Preload search index early ---
-window.addEventListener('DOMContentLoaded', () => {
-  // start building the search index in background as soon as page loads
-  if (typeof buildIndex === 'function') {
-    buildIndex();
-  }
-});
