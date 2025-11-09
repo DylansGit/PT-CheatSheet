@@ -56,8 +56,10 @@ html, body {
 }
 
 .tab-content.active {
-    display: block;
+  display: block;
+  overflow: visible !important;
 }
+
 
 /* --- Headings --- */
 h1, h2, h3 {
@@ -629,12 +631,15 @@ html, body, .container, .tab-container, .tab-content, .grid, .markdown-body {
 }
 
 
+/* --- Fix double scrollbar on dynamic tabs --- */
 html, body {
-  overflow-y: auto;
   height: 100%;
+  overflow-y: auto;
 }
 
 .container {
-  overflow: visible !important;
+  overflow-y: visible !important;  /* allow full page scroll only */
   height: auto !important;
+  max-height: none !important;
+  padding-bottom: 100px;           /* spacing for bottom buttons */
 }
