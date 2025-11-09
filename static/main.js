@@ -444,3 +444,12 @@
     }
   };
 })();
+
+
+// --- Preload search index early ---
+window.addEventListener('DOMContentLoaded', () => {
+  // start building the search index in background as soon as page loads
+  if (typeof buildIndex === 'function') {
+    buildIndex();
+  }
+});
