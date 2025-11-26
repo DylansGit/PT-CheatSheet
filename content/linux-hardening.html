@@ -1,0 +1,1301 @@
+<h1>Linux Hardening</h1>
+
+<p class="section-intro">
+    Hardening isn't about ticking boxes or following some generic CIS list. It's about
+    building a Linux environment where breaking in is difficult, staying in is even harder,
+    and every misstep leaves a footprint you can actually trace. Everything here is based on
+    practical reality: what attackers try first, what they rely on when they escalate, and
+    what admins discover too late.
+
+    The goal is simple: shrink the attack surface, lock down the things that matter,
+    monitor what changes, and make persistence a pain in the ass. No theory. No “nice to
+    have.” Only the hardening steps that meaningfully change the security posture of a
+    real machine - the kind you'd trust in production, or an IR environment, or your own
+    lab when you start throwing malware at it.
+</p>
+
+
+
+<!-- 1. SSH Hardening -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('hard-ssh')">
+        1. SSH Hardening
+    </div>
+    <div class="tool-details" id="hard-ssh">
+
+<pre>
+# --- Core Restrictions ---
+
+# Disable root SSH login entirely
+sed -i 's/^PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
+
+# Enforce key-based authentication only (no password guessing ever)
+sed -i 's/^PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
+
+# Restrict which users are allowed to access SSH
+echo "AllowUsers youruser" >> /etc/ssh/sshd_config
+
+
+# --- Protocol & Cipher Hardening ---
+
+# Enforce modern key exchange, MACs, and ciphers
+cat <<EOF >> /etc/ssh/sshd_config
+KexAlgorithms curve25519-sha256
+MACs hmac-sha2-256
+Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com
+EOF
+
+# Disable outdated/weak algorithms
+echo "HostKeyAlgorithms -ssh-rsa" >> /etc/ssh/sshd_config
+
+
+# --- Idle Timeout & Max Auth Attempts ---
+
+# Disconnect idle sessions (prevents abandoned shells)
+echo "ClientAliveInterval 300"  >> /etc/ssh/sshd_config
+echo "ClientAliveCountMax 2"    >> /etc/ssh/sshd_config
+
+# Reduce brute-force window
+echo "MaxAuthTries 2"           >> /etc/ssh/sshd_config
+echo "MaxSessions 2"            >> /etc/ssh/sshd_config
+
+
+# --- Port, Banner, and Logging ---
+
+# Move SSH to a non-standard port (not security, but cuts noise)
+# echo "Port 2222" >> /etc/ssh/sshd_config
+
+# Legal warning banner (also deters bots that parse banners)
+cat <<'EOF' > /etc/issue.net
+Unauthorized access prohibited.
+All actions are logged.
+EOF
+echo "Banner /etc/issue.net" >> /etc/ssh/sshd_config
+
+# Increase SSH logging.
+echo "LogLevel VERBOSE" >> /etc/ssh/sshd_config
+
+
+# --- Key Management Hygiene ---
+
+# Generate a strong key
+ssh-keygen -t ed25519 -a 100 -f ~/.ssh/id_ed25519
+
+# Ensure strict permissions
+chmod 700 ~/.ssh
+chmod 600 ~/.ssh/authorized_keys
+
+# Optional: disable agent forwarding (attackers love abusing it)
+echo "AllowAgentForwarding no" >> /etc/ssh/sshd_config
+
+
+# --- Restart SSH ---
+systemctl restart sshd
+</pre>
+
+
+<p><b>Why this matters:</b></p>
+<ul>
+    <li>Password login is the #1 entry method for brute-force bots and scanners</li>
+    <li>Restricting users instantly shrinks the attack surface</li>
+    <li>Modern ciphers prevent legacy downgrade attacks</li>
+    <li>Idle timeout + low MaxAuthTries kills brute-force attempts quickly</li>
+    <li>Banner + logging gives you traceability during investigations</li>
+    <li>Proper key management prevents privilege escalation through weak SSH hygiene</li>
+</ul>
+
+<p><b>Optional but highly recommended:</b></p>
+<ul>
+    <li>Enable <code>fail2ban</code> to automatically block repeated attackers</li>
+    <li>Disable agent forwarding and X11 forwarding unless you explicitly need them</li>
+    <li>Use a firewall (ufw/nftables) so SSH is the only exposed remote surface</li>
+    <li>Rotate SSH keys twice a year in production</li>
+</ul>
+
+<p>This setup gives you a hardened, predictable, low-noise SSH surface that's safe to expose to the internet.</p>
+
+    </div>
+</div>
+
+
+
+<!-- 2. Kernel & Sysctl Hardening -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('hard-sysctl')">
+        2. Kernel & Sysctl Hardening
+    </div>
+    <div class="tool-details" id="hard-sysctl">
+
+<pre>
+# ============================
+# Kernel Network Hardening
+# ============================
+
+# Disable IP forwarding (no accidental routing)
+net.ipv4.ip_forward = 0
+
+# Disable packet forwarding for IPv6 as well
+net.ipv6.conf.all.forwarding = 0
+
+# Do not accept redirects (prevents MITM tricks)
+net.ipv4.conf.all.accept_redirects = 0
+net.ipv4.conf.default.accept_redirects = 0
+
+# Do not send redirects (keep machine silent)
+net.ipv4.conf.all.send_redirects = 0
+net.ipv4.conf.default.send_redirects = 0
+
+# Drop source-routed packets (ancient but still abused)
+net.ipv4.conf.all.accept_source_route = 0
+net.ipv6.conf.all.accept_source_route = 0
+
+# Reverse path filtering hard mode (anti-spoofing)
+net.ipv4.conf.all.rp_filter = 1
+
+# Log suspicious packets
+net.ipv4.conf.all.log_martians = 1
+
+
+# ============================
+# Kernel Attack-Surface Reduction
+# ============================
+
+# Disable magic SysRq (prevents low-level kernel commands)
+kernel.sysrq = 0
+
+# Disable kernel pointer exposure (ASLR boost)
+kernel.kptr_restrict = 2
+
+# Hide kernel symbols from unprivileged users
+kernel.dmesg_restrict = 1
+
+# Disable core dumps from SUID binaries (abuse prevention)
+fs.suid_dumpable = 0
+
+# Enable ASLR
+kernel.randomize_va_space = 2
+
+
+# ============================
+# Filesystem Behavior
+# ============================
+
+# Restrict hardlinks (stop privilege-escalation tricks)
+fs.protected_hardlinks = 1
+
+# Restrict symlinks (hardens against race attacks)
+fs.protected_symlinks = 1
+
+# Prevent unprivileged user namespace creation (major privilege boundary)
+kernel.unprivileged_userns_clone = 0
+
+
+# ============================
+# Apply settings
+# ============================
+# Save and reload everything:
+sysctl -p /etc/sysctl.conf
+</pre>
+
+
+<p><b>Why these settings matter:</b></p>
+<ul>
+    <li><b>Redirects, forwarding, source routing</b> - classic MITM footholds</li>
+    <li><b>rp_filter</b> - shuts down spoofed packets dead</li>
+    <li><b>sysrq, kptr_restrict, dmesg_restrict</b> - block kernel-level info leaks</li>
+    <li><b>ASLR</b> - forces address randomization, breaking trivial exploits</li>
+    <li><b>protected_hardlinks/symlinks</b> - closes common privilege-escalation holes</li>
+    <li><b>userns_clone=0</b> - stops container escape-style attacks on bare metal</li>
+</ul>
+
+<p><b>Pro tip:</b>  
+After updating <code>/etc/sysctl.conf</code>, apply instantly with <code>sysctl -p</code>.  
+Reboot afterwards for anything touching namespaces or ASLR.</p>
+
+<p>
+This block represents the real-world baseline you deploy on bastions, production servers,
+honeypots, or any system you want to be harder to exploit.
+</p>
+
+    </div>
+</div>
+
+
+
+<!-- 3. Filesystem Protections -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('hard-fs')">
+        3. Filesystem Protections
+    </div>
+    <div class="tool-details" id="hard-fs">
+
+<pre>
+# ============================================
+# /tmp, /var/tmp, /dev/shm - the danger zones
+# ============================================
+
+# These directories are globally writable.
+# Attackers drop temp payloads, scripts, shared memory implants.
+# Make them executable *only* when explicitly needed.
+
+# Lock down /tmp and /var/tmp
+mount -o remount,noexec,nosuid,nodev /tmp
+mount -o remount,noexec,nosuid,nodev /var/tmp
+
+# Lock down shared memory
+mount -o remount,noexec,nosuid,nodev /dev/shm
+
+
+# ============================================
+# Detect world-writable directories (high risk)
+# ============================================
+
+# Attackers hijack PATH by planting fake binaries in writable dirs
+find / -type d -perm -002 2>/dev/null
+
+# Add sticky-bit to protect shared directories
+chmod +t /tmp /var/tmp
+
+
+# ============================================
+# Immutable Flags (chattr)
+# ============================================
+
+# Protect critical configs from tampering
+chattr +i /etc/resolv.conf
+chattr +i /etc/hosts
+chattr +i /etc/ssh/sshd_config
+
+# Remove immutability when editing:
+# chattr -i /path
+
+
+# ============================================
+# Detect SUID/SGID binaries (privilege escalation risk)
+# ============================================
+
+# List all SUID binaries
+find / -perm -4000 -type f 2>/dev/null
+
+# Common cleanup:
+chmod u-s /usr/bin/passwd
+chmod u-s /usr/bin/chfn
+chmod u-s /usr/bin/chsh
+
+# SGID scan
+find / -perm -2000 -type f 2>/dev/null
+
+
+# ============================================
+# Mount Options - the quiet armor
+# ============================================
+
+# Add these to /etc/fstab for permanent protection:
+
+/tmp      tmpfs   defaults,noexec,nosuid,nodev  0  0
+/var/tmp  tmpfs   defaults,noexec,nosuid,nodev  0  0
+/dev/shm  tmpfs   defaults,noexec,nosuid,nodev  0  0
+
+# For external drives:
+defaults,nodev,nosuid,noexec
+
+
+# ============================================
+# LVM Snapshots - IR lifesaver
+# ============================================
+
+# Create a snapshot before high-risk operations:
+lvcreate -s -n root_snap -L 2G /dev/vg0/root
+
+# Restore if needed:
+lvconvert --merge /dev/vg0/root_snap
+
+
+# ============================================
+# Detect abnormal file changes
+# ============================================
+
+# Recent changes (past 24 hours)
+find / -mtime -1 -type f 2>/dev/null
+
+# Files with no owner (often artifacts)
+find / -nouser -o -nogroup 2>/dev/null
+
+# Find suspicious hidden files
+find / -type f -name ".*" ! -path "/proc/*"
+</pre>
+
+
+<p><b>Why this matters:</b></p>
+<ul>
+    <li><b>/tmp, /var/tmp, /dev/shm</b> are the #1 landing zones for malicious code</li>
+    <li><b>Immutable flags</b> stop silent config edits cold</li>
+    <li><b>SUID/SGID scans</b> catch privilege-escalation footholds</li>
+    <li><b>Mount options</b> quietly neutralize entire attack classes</li>
+    <li><b>LVM snapshots</b> let you roll back after an intrusion or bad update</li>
+    <li><b>World-writable scans</b> prevent PATH hijacking and binary planting</li>
+</ul>
+
+<p>
+filesystem hardening gives you high-leverage defenses: low maintenance, zero performance loss, 
+and massive reduction in persistence and exploitation risk.
+</p>
+
+    </div>
+</div>
+
+
+<!-- 4. User & Group Hardening -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('hard-users')">
+        4. User & Group Hardening
+    </div>
+    <div class="tool-details" id="hard-users">
+
+<pre>
+# ==================================================
+# ENUMERATION - Know who can log in (step zero)
+# ==================================================
+
+# Show all real users with valid shells
+awk -F: '$7 ~ /(bash|sh|zsh)$/ {print $1, $7}' /etc/passwd
+
+# Show service accounts pretending to have shells
+awk -F: '$3 < 1000 && $7 ~ /(bash|sh)$/ {print "[SUSPECT]", $1, $7}' /etc/passwd
+
+# List sudo-capable groups (sudo / wheel / adm / admin)
+grep -E 'sudo|wheel|adm|admin' /etc/group
+
+# Show who is in wheel/sudo
+getent group sudo
+getent group wheel
+
+
+# ==================================================
+# ACCOUNT HYGIENE - disable what you don't trust
+# ==================================================
+
+# Lock account (no login allowed)
+usermod -L username
+
+# Expire password immediately (forces reset)
+chage -d 0 username
+
+# Disable shell access but keep account
+usermod -s /usr/sbin/nologin username
+
+# Remove SSH keys from unused accounts
+rm -f /home/username/.ssh/authorized_keys
+
+
+# ==================================================
+# PASSWORD POLICY (simple but strong)
+# ==================================================
+
+# Minimum password length
+sed -i 's/^PASS_MIN_LEN.*/PASS_MIN_LEN   14/' /etc/login.defs
+
+# Password expiry (90 days)
+chage -M 90 username
+
+# Prevent password reuse (last 5)
+sed -i 's/^password.*/password    requisite     pam_pwhistory.so use_authtok remember=5/' \
+    /etc/pam.d/common-password
+
+
+# ==================================================
+# SHELL AUDIT - detect weird shells
+# ==================================================
+
+# List users with suspicious shells (nologin expected)
+awk -F: '$7 !~ /(bash|sh|zsh|nologin|false)$/ {print "[WEIRD SHELL]", $1, $7}' /etc/passwd
+
+# List interactive shells for auditing
+grep -E "/(bash|zsh|sh)$" /etc/shells
+
+
+# ==================================================
+# CLEANUP - remove legacy, unused, abandoned accounts
+# ==================================================
+
+# Find accounts not used for > 90 days
+lastlog | grep -E "Never|90 days"
+
+# Find home directories with no corresponding user
+find /home -maxdepth 1 -type d -printf "%f\n" | while read h; do 
+    id "$h" &>/dev/null || echo "[ORPHANED HOME] $h";
+done
+
+
+# ==================================================
+# SUDO HARDENING - reduce privilege boundaries
+# ==================================================
+
+# Require password for every sudo action
+sed -i 's/^%sudo.*/%sudo ALL=(ALL:ALL) ALL/' /etc/sudoers
+
+# Log every sudo attempt (successful or not)
+echo "Defaults logfile=/var/log/sudo.log" >> /etc/sudoers
+
+# Disable direct root sudo (forces identity tracking)
+echo "Defaults !root_sudo" >> /etc/sudoers
+
+
+# ==================================================
+# CHECK USERS WITH ACTIVE SSH KEYS
+# ==================================================
+for u in /home/*; do 
+    [ -f "$u/.ssh/authorized_keys" ] && echo "$u has SSH keys";
+done
+</pre>
+
+
+<p><b>Why this matters:</b></p>
+<ul>
+    <li>User accounts define your entire privilege boundary - this is the real attack surface</li>
+    <li>Old accounts are the most common persistence foothold</li>
+    <li>Weak password policies open the door for brute-force and lateral movement</li>
+    <li>Suspicious shells = instant red flag (shell backdoor, misconfigured service account)</li>
+    <li>Proper sudo logging gives IR the full “who did what” timeline</li>
+</ul>
+
+<p><b>Operational advice:</b></p>
+<ul>
+    <li>Audit users monthly - and automatically prune stale accounts</li>
+    <li>Never allow shared accounts (no shared passwords, no shared SSH keys)</li>
+    <li>You should always know exactly who can SSH in and who has sudo</li>
+</ul>
+
+<p>
+User & group hardening is boring until it saves you. It's one of the highest-ROI
+steps in Linux security - and one of the most ignored.
+</p>
+
+    </div>
+</div>
+
+
+<!-- 5. Auditing & Logging -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('hard-audit')">
+        5. Auditing & Logging
+    </div>
+    <div class="tool-details" id="hard-audit">
+
+<pre>
+# ============================================
+# 1. Install & Enable auditd
+# ============================================
+apt install auditd audispd-plugins -y
+systemctl enable auditd
+systemctl start auditd
+
+# Ensure auditd can't be stopped by non-root
+sed -i 's/^disp_qos.*/disp_qos = lossless/' /etc/audit/auditd.conf
+
+
+# ============================================
+# 2. Core Rules - track what actually matters
+# ============================================
+
+# Track execution of any binary in /usr/bin (including sudo actions)
+auditctl -w /usr/bin -p x -k exec_watch
+
+# Track modifications to /etc (high-impact config changes)
+auditctl -w /etc -p wa -k etc_changes
+
+# Track access to shadow/password files
+auditctl -w /etc/shadow -p wa -k shadow_access
+
+# Track sudoers and privilege boundaries
+auditctl -w /etc/sudoers -p wa -k sudoers_edit
+auditctl -w /etc/sudoers.d -p wa -k sudoers_edit
+
+# Track changes to cron or scheduled tasks
+auditctl -w /etc/cron.d -p wa -k cron_mod
+auditctl -w /etc/cron.daily -p wa -k cron_mod
+auditctl -w /etc/crontab -p wa -k cron_mod
+
+# Track kernel module loading
+auditctl -a always,exit -F arch=b64 -S init_module,finit_module -k module_load
+
+
+# ============================================
+# 3. Reviewing Logs
+# ============================================
+
+# Search by key (recommended)
+ausearch -k exec_watch
+ausearch -k cron_mod
+
+# Convert to human-readable report
+aureport -x --summary
+aureport -f --summary
+
+# Full timeline (powerful during IR)
+ausearch -ts recent | aureport -i
+
+
+# ============================================
+# 4. Persistent auditd Rules
+# ============================================
+# Add rules to /etc/audit/rules.d/hardening.rules:
+
+-w /usr/bin -p x -k exec_watch
+-w /etc -p wa -k etc_changes
+-w /etc/shadow -p wa -k shadow_access
+-w /etc/sudoers -p wa -k sudoers_edit
+-w /etc/sudoers.d -p wa -k sudoers_edit
+-w /var/spool/cron -p wa -k cron_mod
+-a always,exit -F arch=b64 -S init_module,finit_module -k module_load
+
+# Reload rules
+augenrules --load
+
+
+# ============================================
+# 5. journald Hardening
+# ============================================
+
+# Make logs persistent
+sed -i 's/^#Storage=.*/Storage=persistent/' /etc/systemd/journald.conf
+
+# Limit log tampering (compression, rotation)
+sed -i 's/^#Compress=.*/Compress=yes/'   /etc/systemd/journald.conf
+sed -i 's/^#SplitMode=.*/SplitMode=uid/' /etc/systemd/journald.conf
+
+# Apply changes
+systemctl restart systemd-journald
+
+
+# ============================================
+# 6. Shell History Protection
+# ============================================
+
+# Force full timestamped history
+echo 'HISTTIMEFORMAT="%F %T "' >> /etc/profile
+echo 'export HISTCONTROL=ignoredups:erasedups' >> /etc/profile
+echo 'export HISTSIZE=50000' >> /etc/profile
+
+# Prevent users from wiping history silently
+echo "readonly HISTFILE" >> /etc/profile
+echo "readonly HISTFILESIZE" >> /etc/profile
+
+# Lock down history file permissions
+chmod 600 ~/.bash_history
+
+
+# ============================================
+# 7. Integrity Checking (AIDE)
+# ============================================
+
+apt install aide -y
+aideinit
+mv /var/lib/aide/aide.db.new /var/lib/aide/aide.db
+
+# Check file integrity periodically
+aide --check
+</pre>
+
+
+<p><b>Why this matters:</b></p>
+<ul>
+    <li>auditd gives you evidence even when an attacker tries to cover their tracks</li>
+    <li>Watching /etc and sudoers instantly reveals privilege tampering</li>
+    <li>Kernel module monitoring catches rootkit loading attempts</li>
+    <li>journald persistence prevents log loss during reboots</li>
+    <li>Shell history hardening keeps user actions traceable</li>
+    <li>AIDE gives you file integrity monitoring without needing a full SIEM</li>
+</ul>
+
+<p>
+Logs alone solve half of incident response. Proper auditing solves the other half.
+Hardening your logging is how you stay in control before, during, and after an incident.
+</p>
+
+    </div>
+</div>
+
+
+<!-- 6. Service Hardening -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('hard-services')">
+        6. Service Hardening (systemd)
+    </div>
+    <div class="tool-details" id="hard-services">
+
+<pre>
+# ============================================
+# 1. Discover what's running
+# ============================================
+
+# List enabled (auto-started) services
+systemctl list-unit-files --state=enabled
+
+# List all active services
+systemctl --type=service --state=running
+
+# Stop and disable unnecessary services
+systemctl disable bluetooth --now
+systemctl disable cups --now
+
+
+# ============================================
+# 2. Sandboxing & Isolation Fields
+# Add these inside a systemd unit under [Service]
+# ============================================
+
+# Make root filesystem read-only for the service
+ProtectSystem=full
+
+# Give the service its own empty /tmp and /var/tmp
+PrivateTmp=true
+
+# Prevent privilege escalation inside the service
+NoNewPrivileges=true
+
+# Restrict the service to its own /home, /tmp, /root
+ProtectHome=true
+
+# Disallow access to kernel logs and proc values
+ProtectKernelTunables=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+
+# Drop Linux capabilities except what's needed
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+# Ensure service cannot write to /usr, /etc, /bin, /sbin
+ReadOnlyPaths=/usr /etc
+
+# Deny access to the network (for offline services)
+PrivateNetwork=true
+
+# Provide a clean mount namespace
+PrivateMounts=true
+
+# Drop access to devices
+PrivateDevices=true
+
+# Enforce strict syscalls (optional, advanced)
+SystemCallFilter=@system-service
+
+
+# ============================================
+# 3. Example Hardened Unit Template
+# ============================================
+# /etc/systemd/system/myapp.service
+
+[Unit]
+Description=Hardened Example Service
+
+[Service]
+ExecStart=/usr/local/bin/myapp
+
+# Core sandboxing
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+PrivateUsers=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+
+# Capabilities (drop all)
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+# Prevent privilege escalation
+NoNewPrivileges=true
+
+# Read-only directories
+ReadOnlyPaths=/usr /etc
+ReadWritePaths=/var/lib/myapp /var/log/myapp
+
+# Restrict networking (optional)
+# PrivateNetwork=true
+
+# Memory + CPU limits
+MemoryMax=200M
+CPUQuota=50%
+
+# Restart behavior
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
+
+
+# ============================================
+# 4. Apply changes
+# ============================================
+systemctl daemon-reload
+systemctl restart myapp.service
+
+# Check sandbox state
+systemd-analyze security myapp.service
+</pre>
+
+<p><b>Why this matters:</b></p>
+<ul>
+    <li><b>ProtectSystem / ProtectHome / PrivateTmp</b> stop services from touching the filesystem outside their sandbox</li>
+    <li><b>NoNewPrivileges</b> prevents any form of privilege escalation inside the service</li>
+    <li><b>CapabilityBoundingSet</b> removes kernel-level privileges by default</li>
+    <li><b>PrivateNetwork</b> prevents lateral movement from compromised services</li>
+    <li><b>systemd-analyze security</b> gives you a real score and recommendations</li>
+</ul>
+
+<p>
+Hardening systemd services closes an entire class of attacks: breaking into a service is
+no longer the same as breaking into the machine. Isolation turns compromise into containment.
+</p>
+
+    </div>
+</div>
+
+
+<!-- 7. Network Hardening -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('hard-network')">
+        7. Network Hardening
+    </div>
+    <div class="tool-details" id="hard-network">
+
+<pre>
+# ============================================
+# 1. Enumerate Your Network Surface
+# ============================================
+
+# Show all listening services (ports + owning process)
+ss -tulpn
+
+# Show all active TCP sessions
+ss -antp
+
+# Show all UDP listeners
+ss -uanp
+
+# Show unexpected services bound to 0.0.0.0 (exposed to world)
+ss -tulpn | grep "0.0.0.0"
+
+
+# ============================================
+# 2. UFW - clean, simple baseline firewall
+# ============================================
+
+# Deny everything inbound by default
+ufw default deny incoming
+ufw default allow outgoing
+
+# Allow SSH (or custom port)
+/usr/sbin/ufw allow 22
+
+# Enable firewall
+ufw enable
+
+# Rate-limit SSH attempts
+ufw limit ssh
+
+
+# ============================================
+# 3. nftables - modern replacement for iptables
+# ============================================
+
+# Basic skeleton
+cat <<'EOF' > /etc/nftables.conf
+table inet filter {
+  chain input {
+    type filter hook input priority 0;
+
+    # Drop invalid packets
+    ct state invalid drop
+
+    # Accept established connections
+    ct state established,related accept
+
+    # Allow SSH
+    tcp dport 22 accept
+
+    # Allow loopback
+    iif lo accept
+
+    # Drop everything else
+    drop
+  }
+}
+EOF
+
+# Enable nftables
+systemctl enable nftables --now
+
+
+# ============================================
+# 4. Fail2ban - block brute-force IPs automatically
+# ============================================
+
+apt install fail2ban -y
+
+# Enable SSH jail
+cat <<'EOF' > /etc/fail2ban/jail.d/ssh-hardening.conf
+[sshd]
+enabled = true
+maxretry = 4
+bantime = 1h
+EOF
+
+systemctl restart fail2ban
+
+
+# ============================================
+# 5. Sysctl Network Defense (anti-spoofing)
+# ============================================
+
+# Drop spoofed traffic
+net.ipv4.conf.all.rp_filter = 1
+
+# Drop redirects
+net.ipv4.conf.all.accept_redirects = 0
+net.ipv4.conf.default.accept_redirects = 0
+
+# Drop source routing
+net.ipv4.conf.all.accept_source_route = 0
+
+# Apply
+sysctl -p
+
+
+# ============================================
+# 6. Detect Unexpected Outbound Connections
+# ============================================
+
+# Processes actively connected outwards
+ss -antp | grep ESTAB
+
+# Real-time connection monitor
+watch -n1 "ss -antp"
+
+
+# ============================================
+# 7. DNS Hardening (prevent hijacks)
+# ============================================
+
+# Use known DNS servers
+cat <<'EOF' > /etc/resolv.conf
+nameserver 1.1.1.1
+nameserver 8.8.8.8
+EOF
+
+# Make immutable (protects against silent tampering)
+# chattr +i /etc/resolv.conf
+
+
+# ============================================
+# 8. Verify What's Exposed to the Internet
+# ============================================
+
+# From inside the server:
+curl ifconfig.me
+
+# From outside (another machine):
+nmap -sV SERVER_IP
+</pre>
+
+
+<p><b>Why this matters:</b></p>
+<ul>
+    <li><b>ss</b> shows live listening ports and active connections - crucial for IR</li>
+    <li><b>UFW</b> gives a clean minimal firewall baseline</li>
+    <li><b>nftables</b> is the modern firewall used in production distros</li>
+    <li><b>fail2ban</b> stops brute-force bots automatically</li>
+    <li><b>sysctl policies</b> block spoofing, redirects, and old traffic tricks</li>
+    <li><b>immutable resolv.conf</b> protects from DNS hijacking</li>
+</ul>
+
+<p>
+Network hardening is the difference between “open machine on the internet” and
+“controlled surface with predictable behavior.” Once capped properly, the entire 
+attack chain shrinks dramatically.
+</p>
+
+    </div>
+</div>
+
+
+<!-- 8. Application Hardening -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('hard-apps')">
+        8. Application Hardening
+    </div>
+    <div class="tool-details" id="hard-apps">
+
+<pre>
+# ==================================================
+# 1. Capabilities - the hidden privilege layer
+# ==================================================
+
+# List all binaries with elevated capabilities
+getcap -r /usr/bin /usr/sbin 2>/dev/null
+
+# Remove ANY capability unless the app truly requires it
+setcap -r /usr/bin/somebinary
+
+# Show effective capabilities of running processes
+grep CapEff /proc/*/status 2>/dev/null
+
+
+# ==================================================
+# 2. Package Integrity (Debian/Ubuntu)
+# ==================================================
+
+# Verify all installed binaries against their checksums
+debsums -s
+
+# Reinstall a compromised package
+apt --reinstall install package-name
+
+
+# ==================================================
+# 3. AppArmor / SELinux (Mandatory Access Control)
+# ==================================================
+
+# List active AppArmor profiles
+aa-status
+
+# Enforce a profile
+aa-enforce /etc/apparmor.d/usr.bin.myapp
+
+# For SELinux:
+sestatus          # check mode
+getenforce        # enforcing | permissive | disabled
+setenforce 1      # switch to enforcing temporarily
+
+
+# ==================================================
+# 4. Restrict Config & Data Permissions
+# ==================================================
+
+# Application private directories
+mkdir -p /var/lib/myapp /var/log/myapp
+chown myapp:myapp /var/lib/myapp /var/log/myapp
+chmod 700 /var/lib/myapp
+
+# Lock down configs
+chmod 600 /etc/myapp/config.yaml
+
+
+# ==================================================
+# 5. Environment Isolation
+# ==================================================
+
+# Drop unnecessary environment variables for a service
+systemctl edit myapp.service
+# Add:
+# Environment=PATH=/usr/bin
+# Environment=MYAPP_MODE=production
+
+
+# ==================================================
+# 6. Minimal Runtime User (best practice)
+# ==================================================
+
+# Create an unprivileged system user
+useradd -r -s /usr/sbin/nologin -d /var/lib/myapp myapp
+
+# Ensure service runs as this user:
+# In myapp.service:
+# User=myapp
+# Group=myapp
+
+
+# ==================================================
+# 7. Web Server Hardening (nginx example)
+# ==================================================
+
+# Disable server tokens (hide version)
+server_tokens off;
+
+# Limit request size
+client_max_body_size 10M;
+
+# Prevent MIME sniffing
+add_header X-Content-Type-Options nosniff;
+
+# Clickjacking protection
+add_header X-Frame-Options DENY;
+
+# Enable strong TLS only
+ssl_protocols TLSv1.2 TLSv1.3;
+
+
+# ==================================================
+# 8. Docker Application Hardening
+# ==================================================
+
+# Run containers as non-root
+docker run --user 1000:1000 ...
+
+# Drop capabilities inside container
+docker run --cap-drop=ALL ...
+
+# Read-only filesystem
+docker run --read-only ...
+
+# Limit CPU & memory
+docker run -m 256m --cpus=0.5 ...
+
+
+# ==================================================
+# 9. Detect Modified Binaries
+# ==================================================
+
+# Check if any system binary has been altered
+for f in /bin/* /usr/bin/*; do
+   debsums -s "$f" 2>/dev/null
+done
+
+
+# ==================================================
+# 10. Remove Development Tools from Production
+# ==================================================
+
+apt remove gcc g++ make cmake git python3-pip -y
+# The fewer compilers/interpreters, the smaller the attack surface.
+</pre>
+
+
+<p><b>Why this matters:</b></p>
+<ul>
+    <li><b>Capabilities</b> are a privilege tier most admins forget about</li>
+    <li><b>Integrity checks</b> catch silent tampering or corrupted packages</li>
+    <li><b>AppArmor/SELinux</b> reduce damage potential of compromised apps</li>
+    <li><b>Running apps as dedicated users</b> isolates blast radius</li>
+    <li><b>Docker hardening</b> stops containers from pivoting into the host</li>
+    <li><b>Locking down configs</b> prevents secret/key leakage</li>
+</ul>
+
+<p>
+Application hardening closes the gap between “a working system” and “a safely deployed system.”
+When apps run with minimal rights and tight boundaries, compromise turns into containment - not disaster.
+</p>
+
+    </div>
+</div>
+
+
+<!-- 9. Hardening Tools -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('hard-tools')">
+        9. Hardening Tools
+    </div>
+    <div class="tool-details" id="hard-tools">
+
+<pre>
+# ==================================================
+# 1. Lynis - the gold-standard hardening auditor
+# ==================================================
+
+# Install
+apt install lynis -y
+
+# Full system audit (safe, read-only)
+lynis audit system
+
+# Export report
+cat /var/log/lynis-report.dat
+
+# Lynis gives:
+# - Hardening suggestions
+# - Weak configuration flags
+# - File permissions to fix
+# - Kernel and sysctl recommendations
+# - Insecure services and daemons
+
+
+# ==================================================
+# 2. chkrootkit - rootkit anomaly scanner
+# ==================================================
+
+apt install chkrootkit -y
+
+chkrootkit
+
+# Detects:
+# - Modified system binaries
+# - Suspicious files in hidden directories
+# - Known signature-based rootkits
+# - Network anomalies
+
+
+# ==================================================
+# 3. rkhunter - integrity + rootkit + baseline checks
+# ==================================================
+
+apt install rkhunter -y
+
+# Update baseline
+rkhunter --propupd
+
+# Run full check
+rkhunter --check --sk
+
+# Typical detections:
+# - File permission anomalies
+# - Suspicious kernel modules
+# - Hidden directory artifacts
+# - Unexpected listening ports
+
+
+# ==================================================
+# 4. File Integrity Monitoring (AIDE)
+# ==================================================
+
+apt install aide -y
+aideinit
+mv /var/lib/aide/aide.db.new /var/lib/aide/aide.db
+
+# Verify system consistency
+aide --check
+
+
+# ==================================================
+# 5. Systemd Security Score (built-in)
+# ==================================================
+
+# Evaluate sandboxing strength of a service
+systemd-analyze security ssh.service
+
+
+# ==================================================
+# 6. OpenSCAP - compliance & vulnerability scanning
+# ==================================================
+
+apt install -y openscap-scanner
+oscap xccdf eval --profile xccdf_org.ssgproject.content_profile_basic \
+    /usr/share/xml/scap/ssg/content/ssg-debian.xml
+
+# Generates a compliance & risk report (HTML)
+
+
+# ==================================================
+# 7. Automating Hardening Checks (cron)
+# ==================================================
+
+# Weekly Lynis scan
+echo "lynis audit system --quiet" > /etc/cron.weekly/lynis-scan
+chmod +x /etc/cron.weekly/lynis-scan
+
+# Weekly AIDE integrity check
+echo "aide --check" > /etc/cron.weekly/aide-check
+chmod +x /etc/cron.weekly/aide-check
+</pre>
+
+
+<p><b>What these tools actually give you:</b></p>
+<ul>
+    <li><b>Lynis:</b> actionable hardening recommendations, not generic checklists</li>
+    <li><b>chkrootkit & rkhunter:</b> early warning for system tampering</li>
+    <li><b>AIDE:</b> baseline verification of core binaries and configs</li>
+    <li><b>Systemd security score:</b> quick view of sandbox strength per service</li>
+    <li><b>OpenSCAP:</b> compliance scanning and vulnerability exposure</li>
+</ul>
+
+<p><b>Operational notes:</b></p>
+<ul>
+    <li>Automate Lynis + AIDE weekly - you get early-warning rather than surprises</li>
+    <li>Do not run these tools as a substitute for proper logs and auditing</li>
+    <li>Use Lynis output as a “to-do list” for tightening the rest of the system</li>
+</ul>
+
+<p>
+These tools aren't magic, but they give you a structured, repeatable way to keep a Linux
+system hardened, monitored, and trustworthy over time.
+</p>
+
+    </div>
+</div>
+
+
+<!-- 10. Quick Hardening Checklist -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('hard-checklist')">
+        10. Quick Hardening Checklist
+    </div>
+    <div class="tool-details" id="hard-checklist">
+
+<pre>
+# ===============================
+# Linux Hardening Quick Checklist
+# ===============================
+
+# --- Access & Authentication ---
+• SSH root login disabled
+• Password authentication disabled (keys only)
+• AllowedUsers restricted
+• Agents & forwarding disabled unless needed
+• fail2ban (or equivalent) active
+• All users reviewed; stale accounts removed
+
+# --- Services & Privileges ---
+• Unnecessary services disabled
+• Each service isolated via systemd sandboxing
+• NoNewPrivileges=true for all custom units
+• CapabilityBoundingSet empty unless required
+• Apps running under dedicated unprivileged users
+
+# --- Filesystem & Integrity ---
+• /tmp, /var/tmp, /dev/shm mounted noexec/nosuid/nodev
+• World-writable directories reviewed; sticky bits set
+• SUID/SGID files audited
+• Critical configs protected with chattr +i
+• AIDE baseline created and monitored
+
+# --- Kernel & Sysctl ---
+• Redirects and source routing disabled
+• rp_filter enabled (anti-spoofing)
+• ASLR enabled (randomize_va_space=2)
+• kptr_restrict=2, dmesg_restrict=1
+• unprivileged_userns_clone=0
+
+# --- Network Exposure ---
+• Firewall active (UFW or nftables)
+• Only required ports exposed
+• DNS config locked (resolv.conf)
+• Outbound connections monitored (ss, logs)
+• No unexpected listeners on 0.0.0.0
+
+# --- Logging & Auditing ---
+• auditd active and persistent
+• Key paths monitored (/etc, sudoers, shadow, cron)
+• journald persistent storage enabled
+• Shell histories timestamped and locked
+• Regular reviews with ausearch + aureport
+
+# --- Application Hardening ---
+• Config files chmod 600 or tighter
+• AppArmor/SELinux enforcing or targeted
+• Minimal environment variables in services
+• Container workloads run as non-root w/ dropped caps
+
+# --- Updates & Patch Hygiene ---
+• Automatic updates or patch pipeline active
+• Packages integrity-checked (debsums)
+• Dev tools removed from production hosts
+• Kernel patches applied regularly
+
+# --- Operational Safety ---
+• Regular snapshots/backups verified
+• Documented recovery path
+• Hardening reviewed quarterly
+</pre>
+
+<p>
+This is the baseline that turns a normal Linux box into a hardened, predictable,
+professionally maintained machine. If this checklist is green, your attack surface is
+small, your blast radius is contained, and your logs actually mean something.
+</p>
+
+    </div>
+</div>

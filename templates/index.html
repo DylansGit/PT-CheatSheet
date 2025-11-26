@@ -50,10 +50,28 @@
 
     <!-- Main Tabs -->
     <div class="tab-container">
+      <div class="tab dropdown-parent" data-menu="linux-menu">
+          Linux ▾
+      </div>
+      <div id="linux-menu" class="dropdown-panel">
+        <div class="dropdown-item" onclick="showTab('linuxprivesc')">PrivEsc</div>
+        <div class="dropdown-item" onclick="showTab('bashing')">Bashing</div>
+        <div class="dropdown-item" onclick="showTab('linuxforensics')">Forensics</div>
+        <div class="dropdown-item" onclick="showTab('linuxhardening')">Hardening</div>
+      </div>
+      <div class="tab dropdown-parent" data-menu="windows-menu">
+          Windows ▾
+      </div>
+
+      <div id="windows-menu" class="dropdown-panel">
+          <div class="dropdown-item" onclick="showTab('windowsprivesc')">PrivEsc</div>
+          <div class="dropdown-item" onclick="showTab('windowsforensics')">Forensics</div>
+          <div class="dropdown-item" onclick="showTab('windowshardening')">Hardening</div>
+          <div class="dropdown-item" onclick="showTab('windowstools')">Tools</div>
+      </div>
+
       <div class="tab active" onclick="showTab('toolscheatsheet')">Tools Cheatsheet</div>
       <div class="tab" onclick="showTab('portswiggercheatsheet')">PortSwigger Cheatsheet</div>
-      <div class="tab" onclick="showTab('windowsprivesc')">Windows PrivEsc</div>
-      <div class="tab" onclick="showTab('linuxprivesc')">Linux PrivEsc</div>
       <div class="tab" onclick="showTab('imagescheatsheet')">Images Cheatsheet</div>
       <div class="tab" onclick="showTab('topics')">Topics</div>
       <div class="tab" onclick="showTab('resources')">Resources</div>

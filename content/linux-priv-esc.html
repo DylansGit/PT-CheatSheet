@@ -1,4 +1,16 @@
+
+
+
 <h1>Linux Privilege Escalation</h1>
+
+<p class="section-intro">
+    Privilege escalation on Linux isn't magic - it's predictable. Every escalation path
+    comes down to a misconfig, a weak permission, a sloppy service, or a user who got a
+    little too comfortable. This section focuses on the real techniques attackers rely on,
+    and the exact checks you run during assessments and incident response to spot them.
+</p>
+
+
             <!-- Enumeration Commands -->
             <div class="tool-row">
                 <div class="tool-name" onclick="toggleDetails('linux-enumeration')">Enumeration</div>
@@ -82,7 +94,7 @@
             <div class="tool-row">
                 <div class="tool-name" onclick="toggleDetails('linux-auto-enum')">Automated Enumeration Scripts</div>
                 <div class="tool-details" id="linux-auto-enum">
-                    <p>In real-life scenarios, we often don’t have much time for manual enumeration. Instead, we can use some powerful automated scripts to streamline the process:</p>
+                    <p>In real-life scenarios, we often don't have much time for manual enumeration. Instead, we can use some powerful automated scripts to streamline the process:</p>
                     <ul id="automated-enum">
                         <li><a href="https://github.com/carlospolop/privilege-escalation-awesome-scripts-suite/tree/master/linPEAS" target="_blank">LinPeas</a></li>
                         <li><a href="https://github.com/rebootuser/LinEnum" target="_blank">LinEnum</a></li>

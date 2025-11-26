@@ -1,4 +1,14 @@
 <h1>Windows Privilege Escalation</h1>
+
+<p class="section-intro">
+    Windows privilege escalation isn't about memorizing every exploit - it's about 
+    knowing where the misconfigurations, weak permissions, and abused features hide. 
+    This page focuses on the real stuff: token abuse, service hijacking, UAC dodges, 
+    DLL hijacks, unquoted paths, vulnerable drivers, credential leaks, and every 
+    Windows quirk attackers routinely climb through. Short, practical, and built for 
+    fast triage or CTF-style escalation.
+</p>
+
             
             <div class="tool-row">
                 <div class="tool-name" onclick="toggleDetails('win-checks')">Check OS, Patch level, Basic</div>
@@ -46,9 +56,9 @@
                     <pre><code>mountvol</code></pre>
         
                     <h2>Drivers - in PowerShell</h2>
-                    <div class="tool-command">driverquery.exe /v /fo csv | ConvertFrom-CSV | Select-Object ‘Display Name’, ‘Start Mode’, Path</div>
+                    <div class="tool-command">driverquery.exe /v /fo csv | ConvertFrom-CSV | Select-Object 'Display Name', 'Start Mode', Path</div>
                     <p>Description: Lists drivers with detailed information.</p>
-                    <pre><code>driverquery.exe /v /fo csv | ConvertFrom-CSV | Select-Object ‘Display Name’, ‘Start Mode’, Path</code></pre>
+                    <pre><code>driverquery.exe /v /fo csv | ConvertFrom-CSV | Select-Object 'Display Name', 'Start Mode', Path</code></pre>
                     <div class="tool-command">Get-WmiObject Win32_PnPSignedDriver | Select-Object DeviceName, DriverVersion, Manufacturer | Where-Object {$_.DeviceName -like "*VMware*"}</div>
                     <p>Description: Retrieves details about signed drivers for VMware devices.</p>
                     <pre><code>Get-WmiObject Win32_PnPSignedDriver | Select-Object DeviceName, DriverVersion, Manufacturer | Where-Object {$_.DeviceName -like "*VMware*"}</code></pre>

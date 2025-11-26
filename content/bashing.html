@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Bashing - PT-CheatSheet</title>
+</head>
+
+<body>
+
+<h1>Bashing</h1>
+<p class="section-intro">
+    This isn't a beginner Bash refresher. This is the practical stuff you actually use
+    when writing scripts that should behave, stay readable, and not blow up because
+    of weird quoting or sloppy variable handling. Solid patterns, real tricks, and
+    the kind of Bash that lets you work fast without fighting the shell.
+</p>
+
+
+<!-- SECTION 1: Variables & Expansions -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('bash-vars')">
+        1. Variables & Expansions
+    </div>
+    <div class="tool-details" id="bash-vars">
+
+<pre>
+# Basic assignment (no spaces)
+v="payload"
+
+# Upper/lower casing
+echo ${v^^}     # PAYLOAD
+echo ${v,,}     # payload
+
+# Substring extraction
+key="abcd1234xyz"
+echo "${key:4:4}"      # 1234
+
+# Strip prefix / suffix
+f="/var/log/auth.log.1"
+echo "${f##*/}"        # auth.log.1
+echo "${f%.log*}"      # /var/log/auth
+
+# Default fallback
+echo "${USER:-unknown}"
+
+# Indirect expansion
+cmd="ls"
+ref="cmd"
+echo "${!ref}"         # expands to ls
+
+# Length of variable
+echo "${#key}"         # 11
+
+# Replace patterns inside variables
+path="/tmp/stuff/drop.sh"
+echo "${path/stuff/safe}"
+</pre>
+
+<p><b>Why this matters:</b></p>
+<ul>
+    <li>Cleaner logic without external tools</li>
+    <li>Less reliance on awk/sed for simple text work</li>
+    <li>Indirect references and slicing solve a lot of “I need part of this string” tasks</li>
+    <li>Default values prevent scripts from breaking on unset variables</li>
+</ul>
+
+<p>Once you get comfortable with expansions, Bash becomes way more expressive and predictable.</p>
+
+    </div>
+</div>
+
+
+<!-- SECTION 2: Quoting & Substitution -->
+
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('bash-quoting')">
+        2. Quoting & Command Substitution
+    </div>
+    <div class="tool-details" id="bash-quoting">
+
+<pre>
+# --- Command substitution (core Bash mechanic) ---
+now=$(date)
+echo "Now: $now"
+
+# Inline, cleaner:
+echo "Uptime: $(awk '{print $1}' /proc/uptime)"
+
+
+# --- Backticks (older syntax) ---
+echo "Home: `echo $HOME`"
+# $(...) is preferred, but knowing backticks helps when reading old scripts
+
+
+# --- Single vs double quotes ---
+var="test"
+echo "$var"       # expands → test
+echo '$var'       # literal → $var
+
+
+# --- Escaping inside quotes ---
+msg="hello world"
+echo "Value: \"$msg\""
+
+
+# --- Command passing safely ---
+cmd="ls -l"
+bash -c "$cmd"
+# Use -- to avoid ambiguity:
+bash -c -- "$cmd"
+
+
+# --- Here-strings (super useful) ---
+cat <<< "line of text"
+grep foo <<< "$big_block_of_text"
+
+
+# --- Here-documents (for multi-line inline blocks) ---
+cat <<EOF
+Line 1
+Line 2
+EOF
+
+# No expansion version (literal mode):
+cat <<'EOF'
+This $(does) not $expand
+EOF
+
+
+# --- Nested substitution (common in compact scripting) ---
+result=$(echo "$(echo inner)")
+echo "$result"
+
+
+# --- Substitution inside arrays/lists ---
+arr=("a$(echo 1)" "b$(echo 2)")
+printf "%s\n" "${arr[@]}"
+
+
+# --- Arithmetic substitution ---
+echo $(( 4 + 9 * 2 ))
+
+
+# --- Parameter expansion inside substitution ---
+name="alex"
+echo "Length: $(echo ${#name})"
+
+
+# --- Combining substitution + pipes ---
+echo "$(ls -1 | head -5)"
+
+
+# --- Indirection with quoting ---
+var="PATH"
+echo "First char: ${!var:0:1}"
+
+
+# --- Avoid word-splitting with proper quoting ---
+output=$(grep foo file.txt)
+echo "$output"
+# NOT: echo $output  (will split on spaces)
+</pre>
+
+<p><b>Why this matters:</b></p>
+<ul>
+    <li>Quoting rules are where most Bash bugs come from</li>
+    <li>Substitution allows dynamic commands without hacks</li>
+    <li>Here-docs and here-strings make inline content painless</li>
+    <li>Nested substitution shows up in compact scripts everywhere</li>
+    <li>Proper quoting avoids accidental word-splitting (classic Bash pitfall)</li>
+</ul>
+
+<p>
+If you get quoting + substitution right, most of Bash suddenly becomes predictable.
+This is the “core mental model” section for writing clean, mature shell code.
+</p>
+
+    </div>
+</div>
+
+
+<!-- SECTION 3: Conditionals -->
+
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('bash-conditionals')">
+        3. Conditionals (if / test)
+    </div>
+    <div class="tool-details" id="bash-conditionals">
+
+<pre>
+# Basic structure
+if [[ -f "/etc/passwd" ]]; then
+    echo "file exists"
+fi
+
+
+# Checking exit codes
+output=$(some_command)
+if [[ $? -ne 0 ]]; then
+    echo "command failed"
+fi
+
+
+# Numeric comparisons
+x=10
+if (( x > 5 )); then
+    echo "x is greater"
+fi
+
+
+# String comparisons
+name="john"
+if [[ "$name" == "john" ]]; then
+    echo "match"
+fi
+
+
+# Compound conditions
+if [[ -d /tmp && -w /tmp ]]; then
+    echo "/tmp is writable"
+fi
+
+
+# Negation
+if [[ ! -s file.txt ]]; then
+    echo "empty or missing"
+fi
+
+
+# Case statement (clean branching)
+case "$1" in
+    start) echo "starting..." ;;
+    stop)  echo "stopping..." ;;
+    *)     echo "usage: start|stop" ;;
+esac
+
+
+# Testing commands directly
+if some_command; then
+    echo "ok"
+else
+    echo "failed"
+fi
+
+
+# Short one-liners
+[[ -z "$var" ]] && echo "empty"
+[[ -n "$var" ]] || echo "still empty"
+</pre>
+
+<p><b>Why this matters:</b></p>
+<ul>
+    <li>Conditionals are the backbone of clean Bash scripting</li>
+    <li>Exit code handling separates “toy scripts” from real ones</li>
+    <li>Case statements keep your logic readable</li>
+    <li>Short-form conditionals speed up quick scripting work</li>
+</ul>
+
+<p>Everything here is idiomatic, predictable Bash - the stuff worth building on.</p>
+
+    </div>
+</div>
+
+
+
+<!-- SECTION 4: Loops -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('bash-loops')">
+        4. Loops (for / while)
+    </div>
+    <div class="tool-details" id="bash-loops">
+
+<pre>
+# Basic for-loop (the one everyone actually uses)
+for f in *.log; do
+    echo "found: $f"
+done
+
+
+# Loop over a list of items
+items=("alpha" "beta" "gamma")
+for i in "${items[@]}"; do
+    echo "$i"
+done
+
+
+# Loop with command substitution (classic pattern)
+for user in $(cut -d: -f1 /etc/passwd); do
+    echo "$user"
+done
+
+
+# C-style loop
+for ((i=0; i<5; i++)); do
+    echo "i = $i"
+done
+
+
+# While loop (stream processing)
+while read line; do
+    echo "line: $line"
+done < file.txt
+
+
+# While true loop (watch / poll something)
+while true; do
+    date
+    sleep 1
+done
+
+
+# Loop over directories safely
+for dir in */; do
+    echo "dir: $dir"
+done
+
+
+# Loop with pattern matching inside
+for f in *.txt; do
+    [[ $f == *report* ]] && echo "report file: $f"
+done
+
+
+# Loop with break / continue
+for x in {1..10}; do
+    [[ $x -eq 5 ]] && continue
+    [[ $x -eq 9 ]] && break
+    echo "$x"
+done
+</pre>
+
+<p><b>Why this matters:</b></p>
+<ul>
+    <li>Loops are the backbone of any real Bash script</li>
+    <li>The patterns above cover 99% of real-world use cases</li>
+    <li>Using arrays + safe quoting prevents weird bugs</li>
+    <li>While-loops are perfect for reading files or streams</li>
+</ul>
+
+<p>Clean, predictable loops = maintainable Bash. This is the style worth sticking to.</p>
+
+    </div>
+</div>
+
+
+
+<!-- SECTION 5: Arrays -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('bash-arrays')">
+        5. Arrays
+    </div>
+    <div class="tool-details" id="bash-arrays">
+
+<pre>
+# Declare an array
+nums=(10 20 30 40)
+
+# Access elements
+echo "${nums[0]}"
+echo "${nums[3]}"
+
+# Length of array
+echo "${#nums[@]}"
+
+# Append items
+nums+=("50" "60")
+
+# Loop through array (the correct way)
+for n in "${nums[@]}"; do
+    echo "value: $n"
+done
+
+# Indexed loop
+for i in "${!nums[@]}"; do
+    echo "index $i -> ${nums[$i]}"
+done
+
+# Split a string into an array
+line="alpha beta gamma"
+read -r -a arr <<< "$line"
+echo "${arr[@]}"
+
+# Copy an array
+copy=("${nums[@]}")
+
+# Slice an array (Bash ≥ 4)
+echo "${nums[@]:1:2}"    # start:1 length:2
+
+# Associative arrays (key-value)
+declare -A colors=(
+    [error]="red"
+    [ok]="green"
+    [warn]="yellow"
+)
+
+echo "${colors[error]}"
+
+# Loop associative array safely
+for key in "${!colors[@]}"; do
+    echo "$key => ${colors[$key]}"
+done
+</pre>
+
+<p><b>Why this matters:</b></p>
+<ul>
+    <li>Arrays make scripts cleaner and easier to extend</li>
+    <li>Associative arrays let you build mini lookup tables</li>
+    <li>Slicing and copying arrays helps with structured data</li>
+    <li>Correct quoting avoids split bugs that plague weak Bash code</li>
+</ul>
+
+<p>This is the level where Bash starts feeling like a real language instead of a mess of one-liners.</p>
+
+    </div>
+</div>
+
+
+<!-- SECTION 6: Redirection & Piping -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('bash-redir')">
+        6. Redirection & Piping
+    </div>
+    <div class="tool-details" id="bash-redir">
+
+<pre>
+# --- Basic redirection ---
+cmd > out.txt          # overwrite
+cmd >> out.txt         # append
+cmd 2> err.txt         # errors only
+cmd &> all.txt         # stdout + stderr (Bash only)
+
+# --- Silence commands completely ---
+cmd >/dev/null 2>&1
+
+# --- Pipe chaining (the real daily stuff) ---
+cat logs.txt | grep "ERROR" | sort | uniq
+ls -l | awk '{print $9, $5}' | column -t
+
+# --- Redirect input ---
+sort < file.txt
+wc -l < file.txt
+
+# --- Combine input + output ---
+grep "foo" < input.txt > matches.txt
+
+# --- Redirect multiple streams ---
+make > build.log 2>&1
+
+# --- Group commands and redirect once ---
+{
+    echo "start"
+    date
+    ls -l
+} > snapshot.txt
+
+# --- Read from a process (process substitution) ---
+diff <(ls /etc) <(ls /usr)
+
+# --- Feed a command into another without tmp files ---
+printf "%s\n" "alpha" "beta" | tee list.txt | wc -l
+
+# --- Use tee to split output (inspect + save) ---
+cmd | tee debug.txt
+cmd | tee -a history.log     # append mode
+
+# --- Redirect in loops without messing them up ---
+while read x; do
+    echo "line: $x"
+done < input.txt
+</pre>
+
+<p><b>Why this matters:</b></p>
+<ul>
+    <li>Pipes let you chain small commands into clean, readable workflows</li>
+    <li>Process substitution removes the need for temp files</li>
+    <li>Grouping avoids ugly redirect repetition</li>
+    <li><code>tee</code> is perfect when you need output both on-screen and saved</li>
+    <li>Proper redirection keeps loops predictable</li>
+</ul>
+
+<p>This is where Bash starts feeling powerful instead of primitive - once you get redirection right, everything else becomes easier.</p>
+
+    </div>
+</div>
+
+
+
+<!-- SECTION 7: Functions -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('bash-functions')">
+        7. Functions
+    </div>
+    <div class="tool-details" id="bash-functions">
+
+<pre>
+# Basic function (modern syntax)
+hello() {
+    echo "hello"
+}
+hello
+
+
+# Function with arguments
+greet() {
+    echo "hi $1"
+}
+greet "world"
+
+
+# Multiple parameters
+sum() {
+    echo $(( $1 + $2 ))
+}
+sum 4 9
+
+
+# Return codes vs returned output
+# (Bash doesn't 'return values', it prints them)
+get_user() {
+    echo "$USER"
+}
+u=$(get_user)
+echo "user = $u"
+
+
+# Named local variables (important for clean scripts)
+calc() {
+    local a=$1
+    local b=$2
+    echo $((a * b))
+}
+
+calc 3 7
+
+
+# Functions calling functions
+log() {
+    echo "[log] $1"
+}
+
+task() {
+    log "running task"
+}
+task
+
+
+# Detect missing arguments (good practice)
+require() {
+    [[ -z "$1" ]] && {
+        echo "missing argument"
+        return 1
+    }
+}
+require foo
+
+
+# Functions as small reusable commands
+exists() {
+    [[ -e "$1" ]]
+}
+
+if exists "/etc/passwd"; then
+    echo "ok"
+fi
+
+
+# Function library style
+timestamp() {
+    date "+%Y-%m-%d %H:%M:%S"
+}
+
+echo "Started: $(timestamp)"
+</pre>
+
+<p><b>Why this matters:</b></p>
+<ul>
+    <li>Functions keep Bash scripts readable instead of a wall of commands</li>
+    <li>Local variables prevent accidental cross-contamination</li>
+    <li>Argument handling makes scripts predictable</li>
+    <li>Chaining functions gives structure to longer scripts</li>
+</ul>
+
+<p>This is the level where Bash stops being a pile of one-liners and becomes an actual tool you can build on.</p>
+
+    </div>
+</div>
+
+
+
+<!-- SECTION 8: Parameter Expansion Tricks -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('bash-param')">
+        8. Parameter Expansion Tricks
+    </div>
+    <div class="tool-details" id="bash-param">
+
+<pre>
+# --- Default values ---
+echo "${var:-default}"      # use default if var is empty or unset
+echo "${var:=default}"      # assign default into var if empty
+echo "${var:+alt}"          # use alt if var is set (rare but useful)
+
+# --- String slicing ---
+text="ABCDEFGHIJ"
+echo "${text:0:3}"           # ABC
+echo "${text:3:4}"           # DEFG
+echo "${text: -2}"           # IJ  (note space before -2)
+
+# --- Strip prefix/suffix ---
+path="/usr/local/bin/script.sh"
+echo "${path##*/}"           # script.sh      (strip longest prefix)
+echo "${path#*/}"            # usr/local/bin/script.sh
+
+echo "${path%.sh}"           # script without .sh
+echo "${path%%/*}"           # empty (first slash removes entire path)
+
+# --- Replace text inside variables ---
+line="error: something happened"
+echo "${line/error/warn}"    # warn: something happened
+echo "${line//e/X}"          # replace ALL e → X
+
+# --- Get length of variable ---
+id="abc123"
+echo "${#id}"                # 6
+
+# --- Indirect reference (lookup by name) ---
+cmd="ls"
+ref="cmd"
+echo "${!ref}"               # expands to ls
+
+# --- Remove chars from both ends ---
+trim="   hello   "
+echo "${trim#"${trim%%[! ]*}"}"   # left trim
+echo "${trim%"${trim##*[! ]}"}"   # right trim
+# (This looks crazy, but it's pure Bash and works everywhere)
+
+# --- Safe parameter expansion in loops ---
+files=(file1 file2 "weird name")
+for f in "${files[@]}"; do
+    echo "$f"
+done
+
+# --- Test if variable is empty/unset ---
+[[ -z "${var:-}" ]] && echo "empty"
+[[ -n "${var:-}" ]] && echo "set"
+
+</pre>
+
+<p><b>Why this matters:</b></p>
+<ul>
+    <li>Default expansions prevent scripts from breaking on missing variables</li>
+    <li>Prefix/suffix removal is cleaner than using <code>cut</code> or <code>awk</code></li>
+    <li>Slicing lets you parse text without external tools</li>
+    <li>Replace operations are faster and cleaner than calling <code>sed</code></li>
+    <li>Indirect expansion gives you dynamic variable names when needed</li>
+</ul>
+
+<p>Once you know this section well, 70% of “awk/sed hacks” become unnecessary.</p>
+
+    </div>
+</div>
+
+
+
+<!-- SECTION 9: Process Control -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('bash-process')">
+        9. Process Control (&, disown, nohup)
+    </div>
+    <div class="tool-details" id="bash-process">
+
+<pre>
+# Run in the background
+command &
+
+# Bring background job back to foreground
+fg
+
+# List background jobs
+jobs
+
+# Detach a job so it keeps running after the terminal closes
+command &
+disown
+
+# Keep a command running even if you log out (no hangup)
+nohup command > out.log 2>&1 &
+
+# Run several commands in the background and wait for them
+task1 &
+task2 &
+wait         # waits for all background tasks to finish
+
+# Run something on an interval
+while true; do
+    echo "tick"
+    sleep 5
+done &
+
+# Limit CPU usage using nice (lower priority)
+nice -n 10 long_task
+
+# Cooperative parallelism using subshells
+(
+    echo "job A start"
+    sleep 2
+    echo "job A done"
+) &
+
+(
+    echo "job B start"
+    sleep 1
+    echo "job B done"
+) &
+
+wait
+
+# Redirect stdout and stderr when running in background
+long_script.sh >logs/out.log 2>logs/err.log &
+
+# Check if a process is running
+if pgrep "myapp" > /dev/null; then
+    echo "running"
+fi
+
+# Stop a background job politely
+pkill -TERM myapp
+</pre>
+
+<p><b>Why this matters:</b></p>
+<ul>
+    <li>Backgrounding tasks lets you run long scripts without blocking the terminal</li>
+    <li><code>nohup</code> is the classic way to keep a job alive after logout</li>
+    <li><code>disown</code> detaches jobs cleanly without affecting the shell session</li>
+    <li><code>wait</code> is essential when running parallel tasks</li>
+    <li>Good process control keeps scripts predictable and prevents runaway tasks</li>
+</ul>
+
+<p>This is the part of Bash people ignore until they actually need reliability.  
+Once you get these patterns down, writing long-running or multi-task scripts becomes easy.</p>
+
+    </div>
+</div>
+
+
+
+<!-- SECTION 10: One-Liners Power Section -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('bash-oneliners')">
+        10. One-Liners (Practical Bash Power Moves)
+    </div>
+    <div class="tool-details" id="bash-oneliners">
+
+<pre>
+# List largest files in current dir
+du -ah . | sort -h | tail
+
+# Find files changed in the last hour
+find . -mmin -60 -type f
+
+# Count lines, words, bytes for every file
+for f in *; do echo "$f: $(wc -l <"$f") lines"; done
+
+# Watch a command run every second
+watch -n1 'date; ls -l'
+
+# Inline JSON pretty-print
+cat data.json | jq .
+
+# Extract only the first column from a file
+awk '{print $1}' file.txt
+
+# Show file tree with sizes
+find . -type f -printf "%10s %p\n" | sort -n
+
+# Rename all .txt → .bak
+for f in *.txt; do mv "$f" "${f%.txt}.bak"; done
+
+# Replace spaces with underscores in all filenames
+for f in *" "*; do mv "$f" "${f// /_}"; done
+
+# Create a timestamped backup of a file
+cp config.yaml config.yaml.$(date +%s)
+
+# Simple progress bar for long loops
+for i in {1..10}; do
+    printf "\rstep %d/10" "$i"
+    sleep 1
+done; echo
+
+# List unique file extensions
+for f in *.*; do echo "${f##*.}"; done | sort -u
+
+# Print only lines that contain numbers
+grep -E '[0-9]' file.txt
+
+# Quick inline sort + unique + count
+sort data.txt | uniq -c | sort -nr
+
+# Show top 10 most common words in a file
+tr -cs 'A-Za-z' '\n' < file.txt | tr 'A-Z' 'a-z' | sort | uniq -c | sort -nr | head
+
+# Remove empty lines from a file
+grep -v '^[[:space:]]*$' file.txt
+
+# Display only lines longer than 60 chars
+awk 'length > 60' file.txt
+</pre>
+
+<p><b>Why these one-liners matter:</b></p>
+<ul>
+    <li>You don't need Python for half your small tasks</li>
+    <li>Chaining commands becomes natural once you see patterns</li>
+    <li>Quick parsing saves time and keeps your workflow tight</li>
+    <li>These cover 90% of “I need to inspect/clean/transform something fast” needs</li>
+</ul>
+
+<p>One-liners are where Bash shines - small, sharp tools chained together to get work done quickly.</p>
+
+    </div>
+</div>
+
+
+
+<!-- SECTION 11: Attacker Obfuscation Techniques -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('bash-obfuscation')">
+        11. Bash Obfuscation Techniques (and How to De-Obfuscate)
+    </div>
+    <div class="tool-details" id="bash-obfuscation">
+
+<pre>
+# --- 1. Base64 wrapping (common pattern in messy scripts) ---
+encoded="SGVsbG8gd29ybGQ="
+echo "$encoded" | base64 -d
+
+# De-obfuscation rule:
+# If you see base64 → decode it. It's usually harmless text or a long command.
+
+
+# --- 2. Overuse of eval (weak code style, hard to read) ---
+cmd="echo hi"
+eval "$cmd"
+
+# De-obfuscation rule:
+# Expand variables manually. Replace eval with direct execution.
+
+
+# --- 3. Indirect references (harder to read than normal vars) ---
+a="world"
+ref="a"
+echo "${!ref}"    # prints "world"
+
+# De-obfuscation rule:
+# Resolve the reference first → then rewrite to normal vars.
+
+
+# --- 4. Hidden whitespace / command folding ---
+cmd=$'ec\x68o "test"'
+$cmd
+
+# De-obfuscation rule:
+# Print using printf %q to reveal escape sequences:
+printf "%q\n" "$cmd"
+
+
+# --- 5. Strange quoting styles ---
+weird='$PATH'
+echo $weird       # literal "$PATH"
+
+# De-obfuscation rule:
+# Identify which quotes allow expansion, and rewrite cleanly.
+
+
+# --- 6. Using brace expansion to hide simple patterns ---
+echo h{e,l,l,o}
+
+# De-obfuscation rule:
+# Expand braces manually, rewrite as plain text.
+
+
+# --- 7. Using parameter expansion in “creative” ways ---
+path="/usr/bin/bash"
+echo "${path##*/}"     # only 'bash'
+
+# De-obfuscation rule:
+# Evaluate expansions step by step to understand what they resolve to.
+
+
+# --- 8. Compressing everything into one unreadable line ---
+for i in *;do echo "$i";done
+
+# De-obfuscation rule:
+# Reformat into clean multi-line Bash using any formatter/editor.
+
+
+# --- 9. Using subshells to hide execution order ---
+result=$( (echo 1; echo 2) | sort )
+
+# De-obfuscation rule:
+# Break subshells into independent commands.
+
+
+# --- 10. Meaningless variable names ---
+x1=$(date)
+x2=$(ls)
+
+# De-obfuscation rule:
+# Rename variables to something sane.
+</pre>
+
+<p><b>What this section is actually about:</b></p>
+<ul>
+    <li>Recognizing when Bash is unnecessarily complicated</li>
+    <li>Understanding weird syntax without guessing</li>
+    <li>Unpacking confusing constructs used in old scripts</li>
+    <li>Learning to rewrite messy code into normal, clean Bash</li>
+</ul>
+
+<p>Obfuscation isn't automatically suspicious - most of the time it's just someone writing sloppy, compressed, or overly clever Bash.  
+This section teaches you how to untangle it and rewrite it into something readable.</p>
+
+    </div>
+</div>
+
+
+
+<!-- SECTION 12: Secure IR Scripting Patterns -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('bash-secure-ir')">
+        12. Secure IR Scripting Patterns
+    </div>
+    <div class="tool-details" id="bash-secure-ir">
+
+<pre>
+# --- 1. Always copy evidence before touching it ---
+src="suspect.bin"
+dst="evidence/suspect.bin.$(date +%s)"
+cp --preserve=all "$src" "$dst"
+
+
+# --- 2. Never loop over unquoted variables ---
+# Safe:
+for f in *.log; do
+    echo "$f"
+done
+
+# Unsafe:
+# for f in $files; do ...
+
+
+# --- 3. Always check exit codes before continuing ---
+if ! output=$(some_command); then
+    echo "failed: some_command"
+    exit 1
+fi
+
+
+# --- 4. Build temporary workspace safely ---
+tmpdir=$(mktemp -d)
+cp "$src" "$tmpdir/"
+# use $tmpdir freely
+rm -rf "$tmpdir"     # cleanup when done
+
+
+# --- 5. Use read -r for reliable line handling ---
+while read -r line; do
+    echo "line: $line"
+done < file.txt
+
+
+# --- 6. Avoid destructive wildcards ---
+rm -- "$file"      # safe
+# NEVER: rm $file  (unquoted expansions = disaster)
+
+
+# --- 7. Use set -euo pipefail for strict mode ---
+set -euo pipefail
+# -e: exit on error
+# -u: fail on undefined variable
+# -o pipefail: catch pipeline failures
+
+
+# --- 8. Log actions with timestamps ---
+log() {
+    printf "[%s] %s\n" "$(date '+%F %T')" "$*"
+}
+
+log "starting analysis"
+log "copying files"
+
+
+# --- 9. Use arrays for structured targets ---
+targets=(/var/log /etc /opt/app)
+for dir in "${targets[@]}"; do
+    echo "checking $dir"
+done
+
+
+# --- 10. Write non-destructive filters first, act second ---
+matches=$(grep -Rl "pattern" /path)
+# only then:
+#    do something with $matches
+
+
+# --- 11. Confirm actions interactively when needed ---
+read -p "Proceed with cleanup? (y/N) " ans
+[[ $ans == y ]] || exit 0
+
+
+# --- 12. Use traps for cleanup on exit ---
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+
+# do work in $tmp
+</pre>
+
+<p><b>Principles behind these patterns:</b></p>
+<ul>
+    <li>Never modify or delete anything without a safe copy</li>
+    <li>Always quote variables - always</li>
+    <li>Fail early instead of running half-broken</li>
+    <li>Use temporary workspaces so you don't trash the system</li>
+    <li>Log everything so you know what the script actually did</li>
+    <li>Strict mode catches subtle bugs before they cause damage</li>
+</ul>
+
+<p>This is the Bash you write when you're being careful, methodical, and want scripts that don't surprise you later.</p>
+
+    </div>
+</div>
+
+</body>
+</html>

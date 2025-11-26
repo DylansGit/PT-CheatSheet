@@ -1,0 +1,1436 @@
+<h1>Linux Forensics & Incident Response</h1>
+
+<p class="section-intro">
+    Linux forensics is mostly about visibility: knowing where the system stores traces of
+    execution, what logs actually matter, and how to pull signal out of an OS that tries
+    hard not to get in your way. This section collects the commands, workflows, and habits
+    you use when a machine starts acting strange, a process doesn't look right, or you need
+    answers fast. Practical triage, artifact hunting, and quick evidence extraction.
+</p>
+
+
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('fs-highvalue')">
+        1.1 High-Value Directories Where Malware Hides
+    </div>
+    <div class="tool-details" id="fs-highvalue">
+<pre>
+/etc/cron.*            
+    └─ Cron jobs run automatically. Malware adds tasks to re-execute itself.
+    Common abuse:
+        - Malicious @reboot jobs
+        - Jobs calling hidden scripts in /tmp
+        - Jobs running encoded or obfuscated bash
+
+/etc/systemd/system    
+    └─ The #1 modern persistence point on Linux.
+    Attackers drop:
+        - Fake service units (myapp.service)
+        - Modified ExecStart= commands
+        - Timers that run payloads hourly
+
+/etc/init.d            
+    └─ Legacy init scripts (SysV-style). Still honored on many servers.
+    Malware inserts:
+        - Start-up scripts named like legitimate services
+        - Scripts calling remote payloads
+
+/etc/profile.d         
+    └─ Automatically sourced for ALL users at login.
+    Abused for:
+        - Exporting malicious PATH entries
+        - Dropping aliases that hide commands (e.g., alias ls="...")
+
+~/.bashrc              
+    └─ Loaded for interactive shells. Perfect user-level persistence.
+    Indicators:
+        - Hidden reverse shells
+        - Curl/wget calls
+        - base64 decode + eval chains
+
+~/.config/autostart    
+    └─ Desktop-based autostarts (GNOME/KDE/XFCE).
+    Abuse:
+        - .desktop files pointing to hidden binaries
+        - Silent startup scripts for RATs/miners
+
+/tmp /var/tmp /dev/shm 
+    └─ World-writable + often RAM-backed. Major malware staging locations.
+    Typical artifacts:
+        - Compiled payloads
+        - Droppers
+        - tmpfs execution (fileless-like behavior)
+
+/usr/local/bin         
+    └─ High-risk for PATH hijacking.
+    Abuse:
+        - Replacing common commands (ssh, sudo)
+        - Typosquatting (sl vs ls)
+        - Fake utilities hiding miners
+
+/etc/ssh/              
+    └─ SSH configs, host keys, authorized_keys.
+    Compromise indicators:
+        - Attackers injecting their public key
+        - Modified sshd_config allowing weak auth
+        - Backdoor binaries replacing sshd
+</pre>
+
+<p>
+Each directory above represents an <b>automatic execution surface</b>.  
+If an attacker gets one write operation inside these paths, they gain <b>persistence, stealth, and control</b> across reboots and user sessions.
+</p>
+
+<p><i>Pro tip:</i> On a live compromise, always diff these directories against a clean baseline or verify integrity using tools mentioned earlier (debsums, rkhunter, auditd).</p>
+    </div>
+</div>
+
+
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('fs-recent')">
+        1.2 Find Recently Modified Files
+    </div>
+    <div class="tool-details" id="fs-recent">
+<pre>
+sudo find / -mtime -1 -type f 2>/dev/null
+</pre>
+
+<p><b>What it does:</b> Lists every file modified in the last 24 hours.  
+In incident response, this is one of the fastest ways to identify:</p>
+
+<ul>
+    <li>Freshly dropped payloads</li>
+    <li>New persistence mechanisms (cron, systemd, bashrc)</li>
+    <li>Tampered binaries under /bin or /usr</li>
+    <li>Log wiping or suspicious log growth</li>
+    <li>Hidden files created by miners or RATs</li>
+</ul>
+
+<p><b>Common attacker activity revealed by this command:</b></p>
+<ul>
+    <li>/tmp or /dev/shm payloads compiled seconds before execution</li>
+    <li>Modified <code>sshd_config</code> or added authorized_keys</li>
+    <li>Systemd service files created to maintain persistence</li>
+    <li>Scripts dropped into /etc/profile.d or ~/.bashrc</li>
+    <li>Trojanized versions of system commands (ls, top, ps)</li>
+</ul>
+
+<p><b>Useful variations:</b></p>
+<pre>
+# Files changed in last 2 hours
+sudo find / -type f -mmin -120 2>/dev/null
+
+# Limit to directories most abused by malware
+sudo find /etc /usr/local/bin /tmp /dev/shm -mtime -1 -type f
+
+# Track permission or ownership changes
+sudo find / -ctime -1 -type f 2>/dev/null
+</pre>
+
+<p>
+IR tip: Run this immediately on a suspected host to build a timeline.  
+Most malware leaves modification footprints even when trying to be stealthy.
+</p>
+    </div>
+</div>
+
+
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('fs-writable')">
+        1.3 Find Writable PATH Directories (Privilege Esc)
+    </div>
+    <div class="tool-details" id="fs-writable">
+<pre>
+find $PATH -type d -perm -002 2>/dev/null
+</pre>
+
+<p><b>What it does:</b>  
+Searches your <code>$PATH</code> for directories that are world-writable.  
+If attackers can write to a PATH directory, they can insert fake binaries that run <b>instead of real commands</b>.</p>
+
+<p><b>Why it's dangerous:</b></p>
+<ul>
+    <li>Attacker creates a fake <code>ssh</code>, <code>sudo</code>, <code>chmod</code>, <code>ls</code>, etc.</li>
+    <li>Because it's in the PATH earlier than the real one, it executes automatically.</li>
+    <li>Used to steal credentials, escalate privileges, or backdoor login attempts.</li>
+    <li>Often paired with cron/systemd to restore itself if deleted.</li>
+</ul>
+
+<p><b>Common indicators of PATH hijacking:</b></p>
+<ul>
+    <li>A directory like <code>/usr/local/bin</code> or <code>/home/user/bin</code> with world-writable perms</li>
+    <li>Unexpected binaries with suspicious names (e.g., <code>sl</code>, <code>ps</code>, <code>ssh</code>)</li>
+    <li>Binaries owned by a normal user inside system-level PATH directories</li>
+    <li>Executable scripts referencing <code>/tmp</code> or encoded payloads</li>
+</ul>
+
+<p><b>Useful follow-ups:</b></p>
+<pre>
+# Show PATH as a list of directories
+echo $PATH | tr ':' '\n'
+
+# Inspect contents of the risky dirs
+ls -l /usr/local/bin
+ls -l /home/*/bin
+
+# Detect files that were recently added
+sudo find /usr/local/bin -type f -mtime -1
+</pre>
+
+<p><b>IR tip:</b>  
+If you find a writable directory in PATH, treat the system as compromised.  
+This is a textbook lateral-movement / persistence foothold used in real intrusions.</p>
+    </div>
+</div>
+
+
+<!-- SEARCHING SECTION -->
+
+<!-- Recursive Search for Suspicious Strings -->
+
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('search-recursive')">
+        2.1 Recursive Search for Suspicious Strings
+    </div>
+    <div class="tool-details" id="search-recursive">
+<pre>
+grep -RinE "curl|wget|base64|chmod|/tmp|/dev/shm" / 2>/dev/null
+</pre>
+
+<p><b>Purpose:</b> Hunt through the entire filesystem for indicators of:</p>
+<ul>
+    <li>Downloaders (curl, wget)</li>
+    <li>Encoded payloads (base64, eval chains)</li>
+    <li>Temp-based execution (/tmp, /dev/shm)</li>
+    <li>Permission changes used by malware (chmod +x)</li>
+</ul>
+
+<p><b>What it reveals in real intrusions:</b></p>
+<ul>
+    <li>Bash scripts hiding curl-downloaded RATs</li>
+    <li>Miners executed from memory-backed filesystems</li>
+    <li>Injected commands in ~/.bashrc or /etc/profile.d</li>
+    <li>Cron jobs referencing obfuscated payloads</li>
+</ul>
+
+<p><b>Useful variants:</b></p>
+<pre>
+# Search only /etc (config tampering)
+grep -RinE "(curl|wget|bash -c|base64)" /etc 2>/dev/null
+
+# Search for encoded commands 40+ chars long
+grep -RinE '[A-Za-z0-9+/]{40,}=' /var 2>/dev/null
+
+# Search for IP addresses (IOC hunting)
+grep -RinE '([0-9]{1,3}\.){3}[0-9]{1,3}' / 2>/dev/null
+</pre>
+
+<p><b>IR tip:</b>  
+If you find <code>curl</code> or <code>wget</code> lines with suspicious URLs or GitHub raw links, you've likely found the initial compromise vector.</p>
+    </div>
+</div>
+
+
+<!-- Find Executable Scripts -->
+
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('search-exec')">
+        2.2 Find Executable Scripts
+    </div>
+    <div class="tool-details" id="search-exec">
+<pre>
+find / -type f -perm /111 2>/dev/null
+</pre>
+
+<p><b>Purpose:</b> Lists every file with the execution bit set - a goldmine when hunting for:</p>
+<ul>
+    <li>Hidden miners</li>
+    <li>Bash/Python reverse shells</li>
+    <li>RAT scripts executing from /tmp</li>
+    <li>Self-extracting droppers</li>
+</ul>
+
+<p><b>What makes this powerful:</b></p>
+<ul>
+    <li>Most malware eventually needs execute permissions</li>
+    <li>Attackers often hide payloads as innocently named scripts</li>
+    <li>Even when obfuscated, execution perms expose them</li>
+</ul>
+
+<p><b>Useful enhancements:</b></p>
+<pre>
+# Filter for scripts (shebang detection)
+/usr/bin/find / -perm /111 -exec file {} \; | grep script
+
+# Find recently added executables
+find / -type f -perm /111 -mtime -1
+
+# Check only high-risk directories
+find /usr/local/bin /tmp /dev/shm -perm /111
+</pre>
+
+<p><b>IR tip:</b>  
+Focus on executable files that don't belong to legitimate packages or that live outside standard paths. 90% of malicious scripts hide in <code>/tmp</code>, <code>/dev/shm</code>, <code>/var/tmp</code>, or under user homes.</p>
+    </div>
+</div>
+
+
+<!-- Find Large or Odd Files -->
+
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('search-large')">
+        2.3 Find Large or Odd Files
+    </div>
+    <div class="tool-details" id="search-large">
+<pre>
+du -ah / | sort -h | tail
+</pre>
+
+<p><b>Purpose:</b> Quickly surfaces suspiciously large files that attackers often hide:</p>
+<ul>
+    <li>Memory dumps</li>
+    <li>Exfiltrated data archives</li>
+    <li>Cryptominer logs</li>
+    <li>Botnet configuration caches</li>
+    <li>Huge debug logs created to hide IOCs</li>
+</ul>
+
+<p><b>Typical findings during IR:</b></p>
+<ul>
+    <li>100MB+ archives in /tmp or /var/tmp</li>
+    <li>Gigantic rotated logs covering attacker activity</li>
+    <li>.core dumps from crashed malware</li>
+    <li>Large base64 blob files used as multi-stage loaders</li>
+</ul>
+
+<p><b>Useful variants:</b></p>
+<pre>
+# Show top 20 largest files
+du -ah / | sort -h | tail -20
+
+# Look only in user home dirs
+du -ah /home | sort -h | tail
+
+# Only search writable temp locations
+du -ah /tmp /var/tmp /dev/shm | sort -h | tail
+</pre>
+
+<p><b>IR tip:</b>  
+Large unexpected files often mean <b>data staging</b> or <b>payload unpacking</b>.  
+If you see compressed files with long random names - treat them as hostile until proven otherwise.</p>
+    </div>
+</div>
+
+
+<!-- PIPELINES -->
+
+<!-- Process Filtering -->
+
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('pipe-process')">
+        3.1 Process Filtering
+    </div>
+    <div class="tool-details" id="pipe-process">
+<pre>
+ps aux | grep -v grep | grep python
+</pre>
+
+<p><b>Purpose:</b> Quickly identify suspicious processes using pipelines.</p>
+
+<p><b>Why Python?</b>  
+Python is the most common language for:</p>
+<ul>
+    <li>RATs (reverse shells)</li>
+    <li>Clipboard stealers</li>
+    <li>Crypto miners</li>
+    <li>Credential harvesters</li>
+    <li>Backdoor scripts</li>
+</ul>
+
+<p><b>Better variants:</b></p>
+<pre>
+# Search for typical reverse shell command patterns
+ps aux | grep -E "bash -i|nc -e|/dev/tcp"
+
+# Find processes running from tmpfs
+ps aux | grep -E "tmp|dev/shm"
+
+# Catch hidden miners
+ps aux | grep -E "python|minerd|cpuminer|xmrig"
+</pre>
+
+<p><b>IR tip:</b>  
+Combine with <code>lsof -p PID</code> to expose open network sockets, files, deleted payloads, etc.</p>
+    </div>
+</div>
+
+<!-- Sort Syslogs by Time -->
+
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('pipe-logsort')">
+        3.2 Sort Syslogs by Time
+    </div>
+    <div class="tool-details" id="pipe-logsort">
+<pre>
+ls -latr /var/log
+</pre>
+
+<p><b>Purpose:</b> Organize logs by timestamp for quick incident timeline review.</p>
+
+<p><b>What this exposes:</b></p>
+<ul>
+    <li>Fresh logs overwritten by attackers</li>
+    <li>Sudden log growth (exfil staging or brute force)</li>
+    <li>Gaps in logs caused by tampering</li>
+    <li>Recently rotated logs hiding attacker activity</li>
+</ul>
+
+<p><b>Useful variants:</b></p>
+<pre>
+# Only check auth logs
+ls -latr /var/log/auth*
+
+# Check systemd journal directory
+ls -latr /var/log/journal
+
+# Investigate logs modified in last 24h
+find /var/log -mtime -1 -type f
+</pre>
+
+<p><b>IR tip:</b>  
+Attackers often modify logs during lateral movement.  
+Logs that are far newer or older than expected are red flags.</p>
+    </div>
+</div>
+
+
+<!-- Extract IP IOCs -->
+
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('pipe-iocs')">
+        3.3 Extract IP IOCs
+    </div>
+    <div class="tool-details" id="pipe-iocs">
+<pre>
+grep -Eo "([0-9]{1,3}\.){3}[0-9]{1,3}" file.log | sort -u
+</pre>
+
+<p><b>Purpose:</b> Extract all IP addresses from logs or text files for IOC analysis.</p>
+
+<p><b>Why it's powerful:</b></p>
+<ul>
+    <li>Extract attacker IPs from SSH brute-force attempts</li>
+    <li>Reveal C2 callback destinations</li>
+    <li>Pull all network artifacts from system logs</li>
+    <li>Feed directly into threat intel tools</li>
+</ul>
+
+<p><b>Extended variants:</b></p>
+<pre>
+# Extract IPs + ports
+grep -Eo "([0-9]{1,3}\.){3}[0-9]{1,3}:[0-9]+" file.log | sort -u
+
+# Extract URLs (IOC mining)
+grep -Eo "(http|https)://[^ ]+" file.log | sort -u
+
+# Extract domain names
+grep -Eo "[A-Za-z0-9._%-]\+\.[A-Za-z]{2,}" file.log | sort -u
+</pre>
+
+<p><b>IR tip:</b>  
+After extracting IPs, enrich them via:</p>
+<ul>
+    <li>VirusTotal</li>
+    <li>AbuseIPDB</li>
+    <li>AlienVault OTX</li>
+</ul>
+    
+<p>Grouping repeated IPs often reveals the attacker's infrastructure.</p>
+    </div>
+</div>
+
+
+<!-- LOGGING -->
+
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('redir')">
+        4. Redirection & Logging
+    </div>
+    <div class="tool-details" id="redir">
+<pre>
+command > out.txt          # overwrite output
+command >> out.txt         # append output
+command 2> err.txt         # only stderr
+command &> all.txt         # stdout + stderr
+command >/dev/null 2>&1    # silent mode
+</pre>
+
+<p><b>Purpose:</b> Understand and leverage shell redirection-critical in forensics, automation, and controlled debugging.</p>
+
+<p><b>Why it matters in IR:</b></p>
+<ul>
+    <li>Capture output of suspicious commands without altering system behavior</li>
+    <li>Preserve forensic artifacts in clean text files</li>
+    <li>Prevent noisy tools from spamming stdout/stderr</li>
+    <li>Reproduce attacker behavior safely and document results</li>
+</ul>
+
+<p><b>Real attack behaviors you can detect:</b></p>
+<ul>
+    <li>Malware silently redirecting errors to <code>/dev/null</code> to hide failures</li>
+    <li>Scripts appending logs to files in <code>/tmp</code> or <code>/var/tmp</code></li>
+    <li>Reverse shells that suppress output entirely</li>
+    <li>Installers that redirect everything into a hidden log</li>
+</ul>
+
+<p><b>Useful IR patterns:</b></p>
+<pre>
+# Collect everything a suspicious binary tries to do
+./suspect.bin &> forensic-log.txt
+
+# Capture only errors (common for failed malware attempts)
+./payload 2> errors.txt
+
+# Run commands quietly during analysis
+some_tool --probe  >/dev/null 2>&1
+</pre>
+
+<p><b>Advanced tricks:</b></p>
+<pre>
+# Log command output with timestamps
+(command; echo "--- $(date)") >> timeline.log
+
+# Capture command + output into a forensic transcript
+script -q forensic-session.log
+</pre>
+
+<p><b>IR tip:</b>  
+Attackers love <code>2>/dev/null</code>.  
+Any script or cronjob using it should be reviewed immediately-it's a strong indicator of malicious intent or stealth behavior.</p>
+    </div>
+</div>
+
+
+<!-- SCRIPTING -->
+
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('scripts-patterns')">
+        5. Practical Bash Scripting Patterns
+    </div>
+    <div class="tool-details" id="scripts-patterns">
+<pre>
+# 5.1 Loop through log files
+for f in *.log; do
+    echo "Scanning $f"
+done
+# Purpose: batch operations during IR (search logs, extract IOCs, summarize activity)
+
+
+
+# 5.2 Hunt for malicious startup/config scripts
+for f in $(find /etc -type f); do
+    grep -qi "curl\|wget\|bash -c" "$f" && echo "Suspicious: $f"
+done
+# Usage: finds scripts that download payloads, spawn shells, or modify system configs.
+
+
+
+# 5.3 Safe batch rename (snapshot before modification)
+for f in *.txt; do
+    mv "$f" "${f%.txt}.bak"
+done
+# Usage: preserve evidence by duplicating originals before analysis.
+
+
+
+# 5.4 Auto-extract archives (incident bundles, exfil archives)
+for z in *.zip; do
+    unzip "$z" -d "${z%.zip}"
+done
+# Usage: expand attacker toolkits, target logs, or exfiltrated data dumps.
+</pre>
+
+<p><b>Why these patterns matter in IR:</b></p>
+<ul>
+    <li>IR often requires touching hundreds of files at once</li>
+    <li>Attackers love scattering IOCs across multiple locations</li>
+    <li>Timelines, hashsets, and IOC extraction all depend on iteration</li>
+    <li>Most Linux compromises revolve around small scripts - looping catches them fast</li>
+</ul>
+
+<p><b>More powerful IR-ready patterns:</b></p>
+
+<pre>
+# Extract suspicious commands from every script on the system
+for f in $(find / -type f -name "*.sh"); do
+    grep -iE "curl|wget|nc -e|bash -i|/dev/tcp" "$f" && echo "[!] $f"
+done
+
+
+# Rebuild a timeline from file modification metadata
+for f in $(find / -type f -mtime -2); do
+    echo "$(stat -c '%y' "$f")  $f"
+done | sort
+
+
+# Hash all files in a directory tree (malware cluster detection)
+for f in $(find /opt/app -type f); do
+    sha256sum "$f"
+done > hashlist.txt
+
+
+# Detect obfuscated payloads in scripts
+for f in $(find / -type f -name "*.sh"); do
+    grep -qiE "[A-Za-z0-9+/]{30,}=" "$f" && echo "[base64 payload] $f"
+done
+
+
+# Report scripts executed recently (mtime-based triage)
+for f in $(find / -type f -mmin -120); do
+    file "$f" | grep -qi "script" && echo "[recent script] $f"
+done
+</pre>
+
+<p><b>IR pro tips:</b></p>
+<ul>
+    <li>Never alter suspected malicious files - copy them first.</li>
+    <li>Use loops to isolate time-bound activity (first compromise → persistence → exfil).</li>
+    <li>Batch hashing and scanning lets you quickly map what's “normal” vs attacker-modified.</li>
+    <li>Bash loops outperform GUIs when you're SSH'd into a compromised box at 3 a.m.</li>
+</ul>
+
+<p>
+These patterns form the backbone of Linux triage workflows used by real IR teams.  
+Mature analysts chain them with grep/awk/sed to create powerful one-liners during live incidents.
+</p>
+    </div>
+</div>
+
+
+<!-- MONITORING -->
+
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('monitoring')">
+        6. Live Monitoring Essentials
+    </div>
+    <div class="tool-details" id="monitoring">
+<pre>
+sudo dmesg -w
+    # Live kernel messages: module loads, hardware events,
+    # suspicious driver injection, OOM killer (miners), filesystem errors.
+
+sudo inotifywait -m /etc
+    # Real-time watch for changes to configuration files.
+    # Detects persistence installation, credential theft,
+    # added systemd/cron jobs, modified sshd_config, etc.
+
+tail -f /var/log/syslog
+    # Follow system logs for auth events, service crashes,
+    # brute-force attempts, privilege escalations, malware activity.
+</pre>
+
+<p><b>Why live monitoring matters in IR:</b></p>
+<ul>
+    <li>It lets you catch malware activity <i>as it happens</i></li>
+    <li>Great for confirming if suspicious processes respawn automatically</li>
+    <li>Useful for watching persistence being installed or triggered</li>
+    <li>Detects real-time network failures or kernel-level abuse</li>
+</ul>
+
+<p><b>What attackers typically reveal in these streams:</b></p>
+<ul>
+    <li>Kernel module injections (rootkits)</li>
+    <li>Repeated segfaults from unstable malware binaries</li>
+    <li>Unauthorized service creation (systemd, cron)</li>
+    <li>SSH brute-force login noise</li>
+    <li>Processes crashing and respawning rapidly (miners / bots)</li>
+</ul>
+
+<p><b>Essential IR expansions:</b></p>
+<pre>
+# Live monitor all auth events (logins, failures, sudo usage)
+sudo journalctl -f -u ssh --no-pager
+
+# Watch network activity in real time
+sudo tcpdump -n -i any port 80 or port 443
+
+# Monitor directory changes across the system
+sudo inotifywait -m -r --exclude ".*\.swp" /
+</pre>
+
+<p><b>Special IR techniques:</b></p>
+<ul>
+    <li><code>dmesg -w</code> shows miners exhausting CPU and triggering OOM</li>
+    <li><code>inotifywait -m /etc</code> catches stealthy config edits instantly</li>
+    <li><code>journalctl -f</code> reveals failed logins, privilege escalations</li>
+    <li><code>tcpdump -w capture.pcap</code> lets you freeze traffic for later analysis</li>
+</ul>
+
+<p>
+Live monitoring is one of the fastest ways to understand if a compromised system is still “moving,”  
+performing callbacks, or actively being controlled by an attacker.
+</p>
+    </div>
+</div>
+
+
+<!-- STATIC ANALYSIS -->
+
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('static-analysis')">
+        7. Static Malware Analysis Commands
+    </div>
+    <div class="tool-details" id="static-analysis">
+<pre>
+file malware.bin
+    # Identifies file type: ELF, script, archive, packed binary, compiler info.
+    # First step in every malware triage. Detects packers (UPX, MPRESS, custom).
+
+strings -n 6 malware | less
+    # Extracts readable strings: URLs, IPs, keys, function names, commands.
+    # Great for IOC extraction and spotting C2 infrastructure.
+
+ldd malware
+    # Shows dynamic libraries required by the binary.
+    # If malware links unusual libs → likely tampering or hidden behavior.
+    # Empty output often means static or packed binary.
+
+objdump -d malware | less
+    # Disassembles binary to x86/x64 instructions.
+    # Perfect for quick inspection without opening full RE tools.
+    # Reveals loops, syscalls, encryption routines, suspicious imports.
+
+sha256sum malware
+    # Create a strong hash before modifying or analyzing.
+    # Used for malware database lookups (VirusTotal / MalwareBazaar).
+</pre>
+
+<p><b>Why static analysis is essential:</b></p>
+<ul>
+    <li>Quickly identifies the general malware family (dropper, miner, RAT, botnet)</li>
+    <li>Extracts IOCs without executing the sample</li>
+    <li>Reveals embedded configuration (C2 URLs, API keys, IPs)</li>
+    <li>Shows evidence of packing or obfuscation</li>
+    <li>Lets IR teams classify severity and required containment steps</li>
+</ul>
+
+<p><b>Common discoveries through static analysis:</b></p>
+<ul>
+    <li>Suspicious network endpoints embedded in strings</li>
+    <li>Base64/ROT13 encoded payloads inside ELF sections</li>
+    <li>Crypto miner pools (stratum+tcp://...)</li>
+    <li>Hardcoded credentials or SSH keys</li>
+    <li>System commands used for living-off-the-land (bash, curl, wget, perl)</li>
+    <li>UPX-packed malware (file output shows “UPX executable”)</li>
+</ul>
+
+<p><b>Useful expansions:</b></p>
+<pre>
+# Extract printable strings from specific sections
+strings -n 6 -t x malware | grep -iE "http|stratum|ssh|key"
+
+# Identify packers and compression
+file malware | grep -i upx
+
+# Dump ELF headers for deeper triage
+readelf -a malware | less
+
+# View imported/exported functions (rare but useful)
+nm -D malware | less
+
+# Extract embedded files / compressed blobs
+binwalk --dd='.*' malware
+</pre>
+
+<p><b>Detecting malicious behavior without executing the binary:</b></p>
+<ul>
+    <li><b>Suspicious imports</b>: system(), execve(), ptrace(), fork(), mmap()</li>
+    <li><b>Network functions</b>: connect(), socket(), sendto(), recvfrom()</li>
+    <li><b>File manipulation</b>: open(), read(), write(), chmod()</li>
+    <li><b>Crypto routines</b>: AES/RC4-like loops, base64 decode loops</li>
+    <li><b>Persistence clues</b>: references to cron, systemd, ~/.bashrc</li>
+</ul>
+
+<p><b>Pro IR workflow:</b></p>
+<pre>
+# 1. Hash the file
+sha256sum malware > hash.txt
+
+# 2. Identify type + packer
+file malware
+
+# 3. Extract strings
+strings -n 6 malware | tee strings.txt
+
+# 4. Look for URLs, IPs, indicators
+grep -Ei "http|\.onion|\.ru|stratum|ssh|key" strings.txt
+
+# 5. Pull imports/libraries
+ldd malware
+
+# 6. Inspect ELF sections for anomalies
+readelf -S malware
+
+# 7. Flag suspicious entropy (likely packed)
+binwalk malware
+</pre>
+
+<p><b>IR tip:</b>  
+If <code>ldd</code> returns <i>“not a dynamic executable”</i> and <code>file</code> reports UPX/packed → treat the sample as heavily obfuscated.  
+Avoid execution until unpacked safely in a VM.</p>
+
+<p>
+Static analysis is how seasoned malware analysts extract 80% of intelligence from a binary before taking the risk of running it in a sandbox.
+</p>
+    </div>
+</div>
+
+
+<!-- Dynamic Analysis -->
+
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('dynamic-analysis')">
+        7.1 Dynamic Analysis (Safe Execution & Observation)
+    </div>
+    <div class="tool-details" id="dynamic-analysis">
+
+<pre>
+# Run the sample in a contained environment
+strace -f -o trace.log ./malware
+    # Logs all syscalls, file access, process creation, network attempts.
+
+ltrace -f -o libs.log ./malware
+    # Tracks dynamic library calls, useful for spotting hidden logic.
+
+# Monitor file system writes
+inotifywait -m /
+    # See which files/directories the binary touches in real time.
+
+# Monitor network behavior
+tcpdump -i any -nn -s0 -w capture.pcap
+    # Capture all outbound connections for actual inspection.
+
+ss -antp
+    # Find new ESTAB connections opened by the process.
+
+# Watch process tree changes
+watch -n1 "ps -ef | grep malware"
+    # Good for catching child processes, respawns, helpers.
+
+# Show file descriptors of the running process
+lsof -p <PID>
+    # Great for spotting deleted-on-disk binaries still executing.
+
+# See environment variables loaded on launch
+cat /proc/<PID>/environ | tr '\\0' '\\n'
+
+# Track memory maps
+cat /proc/<PID>/maps | less
+
+# Track live logs the process generates
+tail -f /var/log/syslog
+
+# See deleted-but-running binaries
+lsof | grep deleted
+</pre>
+
+<p><b>Why dynamic analysis matters:</b></p>
+<ul>
+    <li>You observe the program's real behavior rather than guessing</li>
+    <li>You catch filesystem writes, dropped files, and temp artifacts</li>
+    <li>You see network activity and callbacks</li>
+    <li>You map actual syscalls → reveals intent immediately</li>
+    <li>You expose child processes, hidden helpers, and execution chains</li>
+</ul>
+
+<p><b>Common dynamic indicators:</b></p>
+<ul>
+    <li>Processes spawning shells or unexpected binaries</li>
+    <li>Creation of new files in /tmp, /var/tmp, /dev/shm</li>
+    <li>Outbound connections to unknown remote IPs</li>
+    <li>Repeated open() calls on system configs</li>
+    <li>Attempted writes to cron/systemd paths</li>
+</ul>
+
+<p><b>Recommended safe workflow:</b></p>
+<pre>
+# 1. Snapshot the VM
+# 2. Record hashes + timestamps
+# 3. Run strace + ltrace in parallel
+# 4. Capture all outbound traffic
+# 5. Watch process tree + filesystem
+# 6. Collect all logs and artifacts
+# 7. Revert VM the moment you're done
+</pre>
+
+<p>Dynamic analysis completes the picture - it shows what the sample actually does, not what it claims to do.</p>
+
+    </div>
+</div>
+
+
+<!-- Some usefull tools -->
+ 
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('re-tools')">
+        7.7 Reverse Engineering, Debugging & Advanced Forensics Tools
+    </div>
+    <div class="tool-details" id="re-tools">
+<pre>
+# Reverse Engineering Suites
+Ghidra        - https://ghidra-sre.org             # full RE suite from NSA
+Radare2       - https://rada.re/n                  # CLI + GUI RE framework
+Binary Ninja  - https://binary.ninja               # fast commercial RE tool
+IDA Free      - https://hex-rays.com/ida-free/     # popular disassembler
+
+# Disassemblers / Decompilers
+objdump       - https://man7.org/linux/man-pages/man1/objdump.1.html
+llvm-objdump  - https://llvm.org/docs/CommandGuide/llvm-objdump.html
+cutter        - https://cutter.re                   # GUI for radare2
+
+# .NET / Windows Malware RE (used in your analysis!)
+dnSpy          - https://github.com/dnSpy/dnSpy              # legendary .NET decompiler
+dnSpyEx        - https://github.com/dnspyex/dnspy            # maintained fork
+ILSpy          - https://github.com/icsharpcode/ILSpy        # open-source .NET decompiler
+
+# Packers, Inspectors & Metadata
+Detect It Easy (DIE)    - https://github.com/horsicq/Detect-It-Easy
+PEiD (legacy)           - https://github.com/n0id/PEiD
+readelf                - https://man7.org/linux/man-pages/man1/readelf.1.html
+exiftool               - https://exiftool.org
+
+# Hex Editors & Binary Surgery
+HxD              - https://mh-nexus.de/en/hxd/         # clean, fast hex editor
+hexcurse          - https://github.com/jbruchon/hexcurse
+bless             - https://github.com/afrantzis/bless
+xxd               - preinstalled on most Linux
+
+# Debuggers
+gdb               - https://www.gnu.org/software/gdb/
+edb-debugger      - https://github.com/eteran/edb-debugger
+lldb              - https://lldb.llvm.org/
+strace            - https://strace.io                      # syscall tracer
+ltrace            - https://linux.die.net/man/1/ltrace     # library calls
+
+# Sandboxing, Dynamic Analysis, Behavior
+Firejail          - https://firejail.wordpress.com
+Cuckoo Sandbox    - https://cuckoosandbox.org
+Falcon Sandbox    - https://www.hybrid-analysis.com        # online dynamic analysis
+Detonator (Kaspersky) - https://opentip.kaspersky.com
+Procmon for Linux - https://github.com/Sysinternals/ProcMon-for-Linux
+
+# Kernel-Level Forensics
+KAnalyzer         - https://github.com/pjlantz/KAnsible
+kprobes / bpftrace - https://github.com/iovisor/bpftrace
+Volatility (plugins)  - https://github.com/volatilityfoundation/volatility3
+LiME (live RAM)        - https://github.com/504ensicsLabs/LiME
+
+# Log, Disk & Timeline Forensics
+Autopsy           - https://www.autopsy.com               # full forensic suite
+Sleuth Kit        - https://www.sleuthkit.org/sleuthkit
+plaso/log2timeline- https://github.com/log2timeline/plaso
+Bulk Extractor    - https://github.com/simsong/bulk_extractor
+foremost          - https://github.com/korczis/foremost
+scalpel           - https://github.com/jimmywayne/scalpel
+
+# Cloud & Container Incident Response
+AWS IR Toolkit    - https://github.com/aws-samples/aws-ir-toolkit
+GCP IR Playbooks  - https://cloud.google.com/security-command-center/docs
+Azure IR Guide    - https://learn.microsoft.com/azure/security/fundamentals/ir-guide
+Falco (K8s IR)    - https://falco.org
+Sysdig Inspect    - https://github.com/sysdiglabs/sysdig-inspect
+Kubectl tools     - https://kubernetes.io/docs/reference/kubectl/
+
+# Threat Intel & Malware Repositories
+Malshare          - https://malshare.com
+MalwareBazaar     - https://bazaar.abuse.ch
+ANY.RUN           - https://any.run
+VirusTotal        - https://www.virustotal.com
+HybridAnalysis    - https://www.hybrid-analysis.com
+
+# YARA Rule Development
+YARA              - https://virustotal.github.io/yara/
+yarGen            - https://github.com/Neo23x0/yarGen
+FENRIR            - https://github.com/KerberosHQ/fenrir    # IOC hunting
+
+</pre>
+<p>These are the industry-standard tools used by malware analysts, DFIR responders and SOC blue teams for deep investigation, reversing, and behavioral analysis.</p>
+    </div>
+</div>
+
+<!-- PERMISSIONS -->
+
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('permissions')">
+        8. Permissions Mastery
+    </div>
+    <div class="tool-details" id="permissions">
+<pre>
+stat -c "%n %a" *
+    # Show filename + octal permissions.
+    # Great for spotting insecure files, tampered configs, or overly-permissive scripts.
+
+chmod 600 id_rsa
+    # Secure private keys (no group/world access).
+    # Attackers LOVE harvesting SSH keys if perms are weak.
+
+chmod -R o-rwx .
+    # Strip all 'other' permissions from current directory.
+    # Useful for hardening sensitive folders or containing analysis artifacts.
+
+find / -perm -4000 -type f 2>/dev/null
+    # List all SUID binaries.
+    # SUID = executes as owner (usually root).
+    # Critical for detecting privilege escalation opportunities & backdoors.
+</pre>
+
+<p><b>Why permissions matter in forensics:</b></p>
+<ul>
+    <li>Misconfigurations often become initial access or privilege escalation</li>
+    <li>Attackers frequently relax permissions to run or persist malicious payloads</li>
+    <li>Weak SSH key permissions leak access to threat actors</li>
+    <li>SUID binaries are one of the most common escalation vectors</li>
+    <li>Malware may alter perms on logs, binaries, or scripts to hide activity</li>
+</ul>
+
+<p><b>Typical attacker behavior related to file permissions:</b></p>
+<ul>
+    <li>Setting a malicious script SUID root to gain instant elevation</li>
+    <li>Injecting writable directories into PATH to hijack binaries</li>
+    <li>Making ~/.ssh or authorized_keys world-writable</li>
+    <li>Opening up <code>/tmp</code> or other dirs for arbitrary code execution</li>
+    <li>Changing perms on their payloads to +x (+111) right before execution</li>
+</ul>
+
+<p><b>Useful IR & hardening commands:</b></p>
+<pre>
+# Show only world-writable files (potential attacker playground)
+find / -type f -perm -0002 2>/dev/null
+
+# Show insecure SSH folders
+find /home -name ".ssh" -type d -perm -not -700
+
+# Detect unauthorized SUID binaries (compare to baseline)
+comm -13 <(sort suid_baseline.txt) <(sort <(find / -perm -4000))
+
+# Show files WITHOUT expected permissions (e.g., config tampering)
+find /etc -maxdepth 2 -type f ! -perm 644
+</pre>
+
+<p><b>SUID deep-dive:</b></p>
+<ul>
+    <li>Legitimate SUID binaries: <i>passwd, sudo, su, mount, umount, ping</i></li>
+    <li>Suspicious SUID binaries: anything unfamiliar, located in:</li>
+    <ul>
+        <li>/usr/local/bin</li>
+        <li>/opt</li>
+        <li>/tmp or /var/tmp</li>
+        <li>/home/<user>/bin</li>
+    </ul>
+    <li>Malware sometimes sets its own binary SUID → instant root on execution</li>
+</ul>
+
+<p><b>Permission recovery patterns:</b></p>
+<pre>
+# Harden .ssh directory
+chmod 700 ~/.ssh
+chmod 600 ~/.ssh/*
+
+# Reset common system permissions (safely)
+chmod 644 /etc/*.conf
+chmod 755 /usr/local/bin
+</pre>
+
+<p><b>IR tip:</b>  
+Any previously unseen SUID binary is a **critical severity** finding.  
+Treat it as a privilege escalation backdoor until proven otherwise.</p>
+
+<p>Permissions form the backbone of Linux security - once an attacker alters them, they can escalate, hide, persist, or destroy evidence.</p>
+    </div>
+</div>
+
+
+<!-- NETWORKING -->
+
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('network')">
+        9. Networking Investigation
+    </div>
+    <div class="tool-details" id="network">
+<pre>
+ss -tulpn
+    # List all listening ports + owning processes.
+    # Reveals rogue services, backdoors, and malware-hosted webservers.
+
+ss -antp | grep ESTAB
+    # Show active established TCP connections.
+    # Finds reverse shells, C2 callbacks, miners, botnet traffic.
+
+sudo tcpdump -i any -nn -s0 port 443
+    # Capture encrypted outgoing traffic.
+    # Critical for detecting data exfiltration or TLS-wrapped C2.
+</pre>
+
+<p><b>What this section exposes during IR:</b></p>
+<ul>
+    <li>Malware listening on high ports (often 8000–9001, 1337, 5555)</li>
+    <li>Backdoor SSH servers running under random names</li>
+    <li>Unauthorized internal port scanning</li>
+    <li>Reverse shells connecting out to attacker IPs</li>
+    <li>Miners calling out to pool servers</li>
+    <li>Suspicious TLS traffic that shouldn't exist on a server</li>
+</ul>
+
+<p><b>Deep-dive into each command:</b></p>
+
+<p><b>1. ss -tulpn</b> (open ports)</p>
+<ul>
+    <li>Shows PID → lets you link network activity to a binary</li>
+    <li>Detects malware disguising itself as legit daemons</li>
+    <li>Reveals hidden web panels, IRC clients, TCP listeners</li>
+    <li>Attackers often bind Python RATs on random ports</li>
+</ul>
+
+<p><b>2. ss -antp | grep ESTAB</b> (active connections)</p>
+<ul>
+    <li>Shows outgoing persistence calls (C2 beaconing)</li>
+    <li>Instant way to detect reverse shells</li>
+    <li>Miner pools appear clearly (stratum protocol)</li>
+    <li>Exposes unauthorized outbound SSH</li>
+</ul>
+
+<p><b>3. tcpdump</b> (packet capture)</p>
+<ul>
+    <li>Identify periodic beaconing intervals</li>
+    <li>Spot large data transfers → exfil attempts</li>
+    <li>Reveal suspicious SNI, TLS client hellos, DNS tunnels</li>
+</ul>
+
+<p><b>High-value tcpdump variants:</b></p>
+<pre>
+# Capture ALL traffic to file (analyze later in Wireshark)
+sudo tcpdump -i any -nn -s0 -w capture.pcap
+
+# Investigate DNS exfiltration
+sudo tcpdump -i any -nn -s0 port 53
+
+# Inspect outgoing only
+sudo tcpdump -i any -nn -s0 'dst net 0.0.0.0/0'
+
+# Watch connections to a specific IP
+sudo tcpdump -i any host 192.168.1.50
+</pre>
+
+<p><b>Correlate with process activity:</b></p>
+<pre>
+# Match listening ports with running processes
+ss -tulpn | awk '{print $5, $7}'   # split port + PID
+
+# Inspect files opened by a suspicious PID
+sudo lsof -p <PID>
+
+# Check deleted-but-running malware
+sudo lsof -p <PID> | grep deleted
+</pre>
+
+<p><b>IR tip:</b>  
+If you see an <code>ESTAB</code> connection with a foreign address you don't control, immediately:</p>
+<ul>
+    <li>collect packet capture</li>
+    <li>hash the binary owning the socket</li>
+    <li>block the connection upstream</li>
+</ul>
+
+<p>
+Network artifacts don't lie - they reveal malware behavior even when binaries are hidden or deleted.
+</p>
+    </div>
+</div>
+
+
+<!-- POWER TOOLS -->
+
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('power-tools')">
+        10. Power Tools (jq / awk / sed / xargs)
+    </div>
+    <div class="tool-details" id="power-tools">
+<pre>
+jq '.data | keys'
+    # JSON parser for APIs, logs, forensic outputs.
+    # Perfect for cloud IR, container metadata, threat intel feeds.
+
+awk '{print $1, $5, $9}' /var/log/auth.log
+    # Extract specific columns from log files.
+    # Great for summarizing SSH attempts, failures, usernames, IPs.
+
+sed -i 's/yes/no/' /etc/ssh/sshd_config
+    # Stream editor: find/replace in files.
+    # Powerful for config auditing or detecting tampering.
+
+grep -Rl "malware" . | xargs rm
+    # Search for strings recursively + apply action to results.
+    # Useful for IOC sweeps, triage, or mass cleanups.
+</pre>
+
+<p><b>Why these tools matter for IR:</b></p>
+<ul>
+    <li>Most logs are too big to read manually - awk/sed slice them instantly</li>
+    <li>JSON-based APIs (cloud logs, container logs) require jq</li>
+    <li>Threat intel & SIEM export JSON → jq is mandatory</li>
+    <li>xargs is essential for mass processing of suspicious files</li>
+    <li>All IR automation scripts rely on these tools</li>
+</ul>
+
+<p><b>High-value IR use cases:</b></p>
+
+<pre>
+# Extract attacker IPs from auth logs
+awk '/Failed password/ {print $11}' /var/log/auth.log | sort -u
+
+# Find every modified SSH directive
+grep -nE "Permit|Password|AllowUsers" /etc/ssh/sshd_config
+
+# Format JSON from AWS/GCP cloud logs
+jq '.events[] | {user, srcIp, eventName}' cloudlogs.json
+
+# Find all scripts containing suspicious commands
+grep -RliE "curl|wget|bash -i|/dev/tcp" / | xargs -I {} echo "[!] {}"
+</pre>
+
+<p><b>Advanced IR pipelines:</b></p>
+<pre>
+# Combine jq + grep: find all IPs inside JSON logs
+jq -r '.. | strings?' logs.json | grep -Eo "([0-9]{1,3}\.){3}[0-9]{1,3}" | sort -u
+
+# Investigate sudo abuse timeline
+grep 'sudo:' /var/log/auth.log | awk '{print $1, $2, $3, $9, $11}'
+
+# Delete only files containing suspicious content (carefully!)
+grep -Rl "eval(" /home | xargs rm -f
+</pre>
+
+<p><b>IR tip:</b>  
+Understanding <code>jq</code>, <code>awk</code>, <code>sed</code>, and <code>xargs</code> makes you 10× faster than analysts who rely only on GUI tools.  
+These commands are the backbone of logs → indicators → actions.</p>
+    </div>
+</div>
+
+
+<!-- ANALYST TRICKS -->
+
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('analyst-tricks')">
+        11. Analyst Tricks
+    </div>
+    <div class="tool-details" id="analyst-tricks">
+<pre>
+for f in /bin/*; do debsums -s "$f" 2>/dev/null; done
+    # Integrity check for system binaries (Debian-based).
+    # Flags ANY modification to /bin tools (ls, ps, top → common trojan targets).
+
+ps ax | grep -E "bash -i|nc -e|python -c|/dev/tcp/"
+    # Detect reverse shells, in-memory payloads, netcat backdoors, Python RATs.
+
+grep -R "[A-Za-z0-9+/]\{30,99\}=" /var/log
+    # Extract long base64 blobs hidden inside logs.
+    # Often used for staged payloads, obfuscated commands, data exfil.
+
+for u in $(cut -f1 -d: /etc/passwd); do crontab -u "$u" -l 2>/dev/null; done
+    # List ALL user cronjobs.
+    # Attackers hide persistence under low-priv users.
+</pre>
+
+<p><b>Why these one-liners matter:</b></p>
+<ul>
+    <li>They uncover stealthy attacker behavior instantly</li>
+    <li>They work on every compromised Linux server (no tools needed)</li>
+    <li>They reveal persistence, backdoors, and staged payloads</li>
+    <li>They catch “deleted-but-running” malware hiding in memory</li>
+</ul>
+
+<p><b>Deeper meaning of each trick:</b></p>
+
+<p><b>1. debsums check</b></p>
+<ul>
+    <li>Attackers often trojanize <code>ls</code>, <code>ps</code>, <code>top</code>, <code>ssh</code></li>
+    <li>This silently detects ANY file mismatch from the original package</li>
+    <li>Must-run if rootkits or stealth tampering is suspected</li>
+</ul>
+
+<p><b>2. Reverse shell detection</b></p>
+<ul>
+    <li>Reverse shells leave classic fingerprint patterns</li>
+    <li>“bash -i”, “nc -e”, and “/dev/tcp/” are industry-signature commands</li>
+    <li>Python-based reverse shells are extremely common and easy to hide</li>
+</ul>
+
+<p><b>3. Base64 detection</b></p>
+<ul>
+    <li>Attackers hide encoded payloads inside logs to avoid file-based detection</li>
+    <li>Long base64 strings often decode to malware, keys, C2 URLs, commands</li>
+    <li>Spotting them in /var/log is a dead giveaway of tampering</li>
+</ul>
+
+<p><b>4. Enumerating all cronjobs</b></p>
+<ul>
+    <li>Persistence often hides under low-privileged users</li>
+    <li>Attackers schedule periodic execution of miners, scripts, and droppers</li>
+    <li>This reveals every cron entry on the box in under a second</li>
+</ul>
+
+<p><b>Further high-value IR tricks:</b></p>
+<pre>
+# Find deleted-but-running binaries (fileless persistence)
+sudo lsof | grep deleted
+
+# Track which processes spawn suspicious children
+ps -eo ppid,pid,cmd --sort ppid | grep ssh
+
+# Detect binary injection through LD_PRELOAD
+grep -R "LD_PRELOAD" /etc /usr /home
+
+# Detect mass SSH auth failures quickly
+grep "Failed password" /var/log/auth.log | awk '{print $11}' | sort -u
+
+# Find scripts executed in the last hour
+find / -type f -mmin -60 -exec file {} \; | grep script
+</pre>
+
+<p><b>IR tip:</b>  
+These little commands often discover more in 30 seconds than an entire SIEM dashboard.  
+They're the “street-smart” toolkit every real SOC/IR analyst keeps in their head.</p>
+
+    </div>
+</div>
+
+
+<!-- SHORTCUTS -->
+
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('shortcuts')">
+        12. Bash Shortcuts
+    </div>
+    <div class="tool-details" id="shortcuts">
+<pre>
+Ctrl+r       # Reverse search through command history
+Ctrl+a       # Jump to start of line
+Ctrl+e       # Jump to end of line
+Ctrl+u       # Delete entire line before cursor
+Ctrl+w       # Delete previous word
+Ctrl+l       # Clear screen (same as 'clear')
+Alt+f        # Move forward one word
+Alt+b        # Move back one word
+Alt+d        # Delete word forward
+Ctrl+k       # Delete from cursor to end of line
+Ctrl+Shift+c # Copy (terminal-friendly)
+Ctrl+Shift+v # Paste (terminal-friendly)
+</pre>
+
+<p><b>Why shortcuts matter in IR:</b></p>
+<ul>
+    <li>You work under time pressure - shortcuts make you 2–3× faster</li>
+    <li>Large incident triage is basically constant terminal interaction</li>
+    <li>Reverse-search (<code>Ctrl+r</code>) lets you instantly recall complex one-liners</li>
+    <li>Fast editing helps when chaining grep/awk/sed commands</li>
+</ul>
+
+<p><b>Real-world uses:</b></p>
+<ul>
+    <li>Recall that long reverse-shell detector command → <code>Ctrl+r</code> → “bash -i”</li>
+    <li>Edit a tcpdump filter mid-capture → <code>Ctrl+a</code> + <code>Ctrl+k</code></li>
+    <li>Fix mis-typed paths quickly → <code>Alt+b</code> to jump back over directories</li>
+</ul>
+
+<p><b>Pro tips:</b></p>
+<ul>
+    <li>Use <code>history | grep keyword</code> to combine with Ctrl+r</li>
+    <li>Pair these with tmux to become truly unstoppable</li>
+</ul>
+
+<p>Mastering shortcuts is part of becoming a fast, efficient IR analyst - this stuff adds up.</p>
+    </div>
+</div>
+
+
+<!-- INVESTIGATION FLOW -->
+
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('investigation-flow')">
+        13. Investigate a Suspicious Machine
+    </div>
+    <div class="tool-details" id="investigation-flow">
+<pre>
+# 1. Look for recent file modifications (2 days)
+sudo find / -mtime -2 -type f
+    # Reveals newly dropped payloads, modified configs, tampered binaries.
+
+# 2. Check persistence mechanisms
+ls /etc/cron.* /etc/systemd/system
+    # Cron + systemd = the two most abused persistence layers.
+
+# 3. Inspect active listening services
+ss -tulpn
+    # Detect backdoors, rogue web servers, unknown daemons.
+
+# 4. Hunt rogue executables
+find / -type f -perm /111
+    # Finds anything with +x - miners, droppers, scripts, tools.
+
+# 5. Detect encoded payloads (long base64 blobs)
+grep -R "[A-Za-z0-9+/]\{40\}==" /
+    # Staged payloads, exfil blocks, config blobs.
+
+# 6. Scan for suspicious startup / shell injections
+grep -R "curl\|wget" ~/.bashrc /etc/profile.d
+    # Catch malicious startup commands pulling payloads.
+
+# 7. Extract strings from suspect binaries
+strings -n 8 suspect.bin
+    # Extract indicators, URLs, keys, C2 addresses, commands.
+</pre>
+
+<p><b>High-level incident flow:</b></p>
+<ol>
+    <li><b>Check timeline</b> → find what changed recently</li>
+    <li><b>Check persistence</b> → cron, systemd, profile scripts</li>
+    <li><b>Check networking</b> → backdoors, callbacks, miners</li>
+    <li><b>Check binaries</b> → strange executables, deleted-but-running</li>
+    <li><b>Check logs</b> → auth failures, sudo abuse, service crashes</li>
+    <li><b>Extract IOCs</b> → strings, URLs, IPs, keys, entropy</li>
+    <li><b>Isolate the host</b> if active compromise is suspected</li>
+</ol>
+
+<p><b>Expanded commands for real IR:</b></p>
+<pre>
+# See deleted-but-running malware
+sudo lsof | grep deleted
+
+# View suspicious systemd units
+systemctl list-units --type=service | grep -v systemd
+
+# Timeline of /etc modifications
+find /etc -type f -printf "%TY-%Tm-%Td %TH:%TM %p\n" | sort
+
+# Review auth activity
+grep -Ei "Failed|Accepted|sudo" /var/log/auth.log
+
+# Detect suspicious environment variable injections
+grep -R "LD_PRELOAD" /etc /usr /home
+</pre>
+
+<p><b>What this flow gives you:</b></p>
+<ul>
+    <li>A fast map of “what changed”</li>
+    <li>Immediate exposure of persistence</li>
+    <li>Clear visibility into active malicious processes</li>
+    <li>Early extraction of IOCs for containment</li>
+</ul>
+
+<p>
+This is the minimal yet complete IR flow used on compromised Linux hosts: timeline → persistence → processes → networking → logs → artifacts.
+</p>
+
+    </div>
+</div>
+

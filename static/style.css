@@ -651,3 +651,48 @@ html, body {
 }
 
 
+/* --- Modern dropdown panel --- */
+.dropdown-panel {
+  position: absolute;
+  background: #1a1a1a;
+  border: 1px solid #660000;
+  border-radius: 8px;
+  padding: 8px 0;
+  min-width: 180px;
+  opacity: 0;
+  transform: translateY(10px) scale(0.98);
+  pointer-events: none;
+  transition: opacity .22s ease, transform .22s ease;
+  z-index: 99999;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.45);
+}
+
+/* visible */
+.dropdown-panel.open {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+.dropdown-item {
+  padding: 10px 16px;
+  cursor: pointer;
+  color: #eee;
+  transition: background .18s, padding-left .18s;
+}
+
+.dropdown-item:hover {
+  background: #990000;
+  padding-left: 22px;
+}
+
+/* hover effect for ALL tabs */
+.tab {
+  transition: background .25s, box-shadow .25s, transform .2s;
+}
+
+.tab:hover {
+  background: #550000;
+  box-shadow: 0 0 12px rgba(255,0,0,0.35);
+  transform: translateY(-2px);
+}

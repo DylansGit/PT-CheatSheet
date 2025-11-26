@@ -41,16 +41,34 @@
   // -------------------------
   const FILE_MAP = {
     'home': { filename: 'home.html', divId: 'home' },
+
+    // Tools
     'toolscheatsheet': { filename: 'tools-cheat-sheet.html', divId: 'toolscheatsheet' },
     'portswiggercheatsheet': { filename: 'portswigger-cheat-sheet.html', divId: 'portswigger' },
-    'windowsprivesc': { filename: 'windows-priv-esc.html', divId: 'windowsprivesc' },
-    'linuxprivesc': { filename: 'linux-priv-esc.html', divId: 'linuxprivesc' },
     'imagescheatsheet': { filename: 'images-cheat-sheet.html', divId: 'imagescheatsheet' },
+
+    // Windows
+    'windowsprivesc':   { filename: 'windows-priv-esc.html',   divId: 'windowsprivesc' },
+    'windowsforensics': { filename: 'windows-forensics.html',   divId: 'windowsforensics' },
+    'windowshardening': { filename: 'windows-hardening.html',   divId: 'windowshardening' },
+    'windowstools':     { filename: 'windows-tools.html',       divId: 'windowstools' },
+    'windowspowershell':   { filename: 'windows-powershell.html',     divId: 'windowspowershell' },
+    'windowsinternals':    { filename: 'windows-internals.html',      divId: 'windowsinternals' },
+    'windowsactivedir':    { filename: 'windows-active-directory.html', divId: 'windowsactivedir' },
+    'windowstools': { filename: 'windows-tools.html', divId: 'windowstools' },
+
+    // Linux
+    'linuxprivesc':     { filename: 'linux-priv-esc.html', divId: 'linuxprivesc' },
+    'linuxforensics':   { filename: 'linux-forensics.html', divId: 'linuxforensics' },
+    'linuxhardening':   { filename: 'linux-hardening.html', divId: 'linuxhardening' },
+    'bashing':          { filename: 'bashing.html', divId: 'bashing' },
+
+    // Misc
     'topics': { filename: 'topics.html', divId: 'topics' },
     'resources': { filename: 'resources-links.html', divId: 'resources' },
     'aiseccheatsheet': { filename: 'ai-sec-cheat-sheet.html', divId: 'aiseccheatsheet' },
-
   };
+
 
   async function loadContentIntoTab(path, preserveTabActive = true) {
     // path is either 'content/<file>' or 'markdown/<file>'
@@ -155,11 +173,12 @@
       .then(r => r.json()).then(d => { if (d.success) loadNotes(); });
   }
 
-  // wire view-notes click if exists
+  /* wire view-notes click if exists
   document.addEventListener('DOMContentLoaded', () => {
     const btn = document.querySelector('.sub-tab[onclick="showSubTab(event, \'view-notes\')"]');
     if (btn) btn.addEventListener('click', loadNotes);
   });
+  */
 
   // -------------------------
   // SEARCH — index internal elements (tool-row, portsWigger links, markdown)
@@ -393,12 +412,45 @@
       if (!e.target.closest('#search-wrapper') && !e.target.closest('#search-results')) resultsBox.style.display = 'none';
     });
   }); // end DOMContentLoaded (search)
-  
+
+
   // initialize home on load
   document.addEventListener('DOMContentLoaded', () => {
   showHomePage();
   buildIndex().catch(console.warn);
   });
+
+  document.addEventListener('DOMContentLoaded', () => {
+  const tabs = document.querySelectorAll('.dropdown-parent');
+
+  tabs.forEach(tab => {
+    const panelId = tab.getAttribute('data-menu');
+    const panel = document.getElementById(panelId);
+
+    // Position panel under tab
+    function positionPanel() {
+      const rect = tab.getBoundingClientRect();
+      panel.style.top = (rect.bottom + window.scrollY + 4) + 'px';
+      panel.style.left = rect.left + 'px';
+    }
+
+    tab.addEventListener('mouseenter', () => {
+      positionPanel();
+      panel.classList.add('open');
+    });
+
+    tab.addEventListener('mouseleave', () => {
+      setTimeout(() => {
+        if (!panel.matches(':hover')) panel.classList.remove('open');
+      }, 120);
+    });
+
+    panel.addEventListener('mouseleave', () => {
+      panel.classList.remove('open');
+    });
+  });
+});
+
 })();
 
 

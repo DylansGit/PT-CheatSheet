@@ -1,0 +1,672 @@
+<h1>Windows Forensics</h1>
+
+<p class="section-intro">
+    Windows is noisy, complicated, and full of artifacts. This tab focuses on what 
+    actually matters during triage: logs, memory, registry, processes, persistence, 
+    and lateral movement traces. No filler - just the workflows that catch malware 
+    fast.
+</p>
+
+<!-- SECTION 1: Process & Memory Forensics -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('wf-proc')">
+        1. Processes & Memory
+    </div>
+    <div class="tool-details" id="wf-proc">
+
+<pre>
+# --- Basic process triage ---
+tasklist
+tasklist /v
+tasklist /svc
+    # /svc shows which services are hosted inside svchost.exe
+    # /v shows CPU time, window titles → great for spotting fake processes
+
+# PowerShell view (cleaner)
+Get-Process | Sort-Object CPU -Descending
+Get-Process -Module
+    # Lists loaded DLLs - perfect for spotting injected modules
+
+# Find unsigned processes (very useful)
+Get-Process | Where-Object {
+    $_.Path -and !(Get-AuthenticodeSignature $_.Path).Status -eq 'Valid'
+}
+
+# Check parent/child relationships (attackers hide here)
+Get-CimInstance Win32_Process | 
+    Select-Object ProcessId, ParentProcessId, Name | 
+    Sort-Object ParentProcessId
+
+# --- Memory inspection (quick + dirty) ---
+Get-Process -Id <PID> | Format-List *
+    # Dumps everything including path, handles count, start time
+
+# Dump suspicious process for offline analysis
+procdump -ma <PID> suspect.dmp
+    # Use in VM. Dumps full memory space.
+
+# Quick handle/dll investigation
+handle.exe -p <PID>
+listdlls.exe <PID>
+
+# Identify processes with network activity
+Get-NetTCPConnection | Select-Object LocalPort, RemoteAddress, OwningProcess
+tasklist /fi "PID eq <PID>"
+
+# Check for LOLBins running suspiciously
+wmic process where "name='powershell.exe'" get ProcessId,CommandLine
+wmic process where "name='mshta.exe'"      get ProcessId,CommandLine
+wmic process where "name='wscript.exe'"    get ProcessId,CommandLine
+wmic process where "name='cmd.exe'"        get ProcessId,CommandLine
+</pre>
+
+<p><b>What this section is about:</b></p>
+<ul>
+    <li>Spotting fake or injected processes quickly.</li>
+    <li>Finding unsigned binaries or unsigned DLLs.</li>
+    <li>Dumping suspicious processes safely.</li>
+    <li>Checking parent-child chains (so many attacks hide here).</li>
+    <li>Finding LOLBins like powershell.exe running with weird args.</li>
+</ul>
+
+<p>
+This is the Windows equivalent of “ps aux + lsof + top” for Linux - but with the depth needed for real malware triage.
+</p>
+
+    </div>
+</div>
+
+
+<!-- SECTION 2: Logs (Windows Event Logs) -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('wf-logs')">
+        2. Event Logs
+    </div>
+    <div class="tool-details" id="wf-logs">
+        <!-- TODO: Security, Sysmon, PowerShell, WMI, RDP, Defender logs -->
+        <pre>
+# placeholder:
+Get-WinEvent -LogName Security -MaxEvents 20
+        </pre>
+        <p>Windows logging is where 90% of truth hides. We’ll expand it heavily.</p>
+    </div>
+</div>
+
+<!-- SECTION 3: Registry Forensics -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('wf-logs')">
+        2. Event Logs
+    </div>
+    <div class="tool-details" id="wf-logs">
+
+<pre>
+# --- Quick triage: recent Security log noise ---
+Get-WinEvent -LogName Security -MaxEvents 50 |
+    Select TimeCreated, Id, Message
+
+# --- Authentication events (local + domain) ---
+# 4624 = successful logon
+# 4625 = failed logon
+# 4648 = logon with explicit credentials (attackers love this)
+Get-WinEvent -FilterHashtable @{LogName='Security'; Id=4624 } -MaxEvents 20 |
+    Select TimeCreated, Message
+
+# --- RDP activity ---
+# 1149 = RDP authentication attempt
+# 21, 22 = logon / logoff via RDP
+Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-TerminalServices-LocalSessionManager/Operational'} |
+    Select TimeCreated, Id, Message
+
+# --- PowerShell ops (big red flag area) ---
+# 4103 = pipeline execution
+# 4104 = script block logging
+# 4105, 4106 = module loading
+Get-WinEvent -LogName "Microsoft-Windows-PowerShell/Operational" -MaxEvents 20 |
+    Select TimeCreated, Id, Message
+
+# --- Sysmon logs (goldmine) ---
+# 1 = process creation
+# 3 = network connection
+# 7 = image loaded (DLL drop/injection detection)
+# 11 = file created
+Get-WinEvent -LogName "Microsoft-Windows-Sysmon/Operational" -MaxEvents 30 |
+    Select TimeCreated, Id, Message
+
+# --- Defender alerts ---
+Get-WinEvent -LogName "Microsoft-Windows-Windows Defender/Operational" -MaxEvents 20 |
+    Select TimeCreated, Id, Message
+
+# --- WMI persistence / abuse ---
+# 5861 = WMI event consumer
+Get-WinEvent -FilterHashtable @{Id=5861} -MaxEvents 20 |
+    Select TimeCreated, Message
+
+# --- DNS queries (payload C2 detection) ---
+Get-WinEvent -LogName "Microsoft-Windows-DNS-Client/Operational" -MaxEvents 30 |
+    Select TimeCreated, Message
+
+# --- Filter logs by keyword (quick IOC hunting) ---
+Get-WinEvent -LogName Security -MaxEvents 200 |
+    Where-Object { $_.Message -match "192\.168\.1\.50" }
+</pre>
+
+<p><b>Why event logs matter:</b></p>
+<ul>
+    <li>90% of lateral movement shows up in Security + Sysmon first.</li>
+    <li>PowerShell logs = dead giveaway for most modern intrusions.</li>
+    <li>RDP events tell you instantly if someone brute-forced or logged in remotely.</li>
+    <li>Defender logs expose quarantined samples and partially blocked malware.</li>
+    <li>DNS logs reveal C2 callouts even when network tools miss them.</li>
+</ul>
+
+<p>
+A Windows box never keeps quiet - once you know which events matter, you see the entire attack storyline without guessing.
+</p>
+
+    </div>
+</div>
+
+
+<!-- SECTION 4: Persistence Techniques -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('wf-persist')">
+        4. Persistence
+    </div>
+    <div class="tool-details" id="wf-persist">
+
+<pre>
+# --- Scheduled Tasks (top persistence vector on Windows) ---
+schtasks /query /fo LIST /v
+    # Look for:
+    #  - weird user accounts
+    #  - tasks running PowerShell / WScript
+    #  - tasks pointing to TEMP, APPDATA, ProgramData
+    #  - hidden triggers
+
+# PowerShell view (cleaner)
+Get-ScheduledTask | Select TaskName, TaskPath, State
+Get-ScheduledTask | Get-ScheduledTaskInfo | Select LastRunTime, NextRunTime
+
+
+# --- Startup folders (classic malware spot) ---
+dir "C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup"
+dir "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup"
+
+
+# --- Services (another common persistence vector) ---
+Get-Service | Where-Object { $_.StartType -eq "Automatic" -and !($_.Name -match "Microsoft") }
+
+# Show service binary path
+Get-WmiObject Win32_Service | Select Name, State, StartMode, PathName
+
+# Detect fake services pointing to APPDATA/TEMP
+Get-WmiObject Win32_Service | Where-Object { $_.PathName -match "AppData|Temp|ProgramData" }
+
+
+# --- WMI persistence (very common in fileless malware) ---
+# Event Filters
+Get-WmiObject -Namespace root\subscription -Class __EventFilter
+
+# Event Consumers
+Get-WmiObject -Namespace root\subscription -Class CommandLineEventConsumer
+
+# Bindings between them
+Get-WmiObject -Namespace root\subscription -Class __FilterToConsumerBinding
+
+
+# --- Run keys (registry-based persistence) ---
+reg query HKCU\Software\Microsoft\Windows\CurrentVersion\Run
+reg query HKLM\Software\Microsoft\Windows\CurrentVersion\Run
+
+# WOW6432Node paths also used by attackers
+reg query HKLM\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Run
+
+
+# --- Scheduled Task backdoor detection (quick pattern) ---
+schtasks /query /fo LIST /v | findstr /i "powershell.exe wscript.exe mshta.exe cmd.exe"
+
+
+# --- Explorer shell hijacking ---
+reg query "HKLM\Software\Microsoft\Windows NT\CurrentVersion\Winlogon" /v Userinit
+reg query "HKLM\Software\Microsoft\Windows NT\CurrentVersion\Winlogon" /v Shell
+
+
+# --- DLL hijacking persistence (search for writable paths) ---
+icacls.exe C:\Windows\System32 | findstr /i "Users"
+</pre>
+
+<p><b>Why this matters:</b></p>
+<ul>
+    <li>Scheduled Tasks and Services are the #1 persistence techniques for Windows malware.</li>
+    <li>WMI Event Consumers = extremely stealthy, fileless backdoors.</li>
+    <li>Run keys remain one of the oldest but most reliable attacker footholds.</li>
+    <li>Startup folders are abused by droppers and initial-access malware.</li>
+    <li>Service binary hijacks and DLL hijacks often survive reboots unnoticed.</li>
+</ul>
+
+<p>
+If persistence exists, it will show up in one of these places. This section gives you the exact commands that close those blind spots.
+</p>
+
+    </div>
+</div>
+
+
+<!-- SECTION 5: Network Forensics -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('wf-net')">
+        5. Network Indicators
+    </div>
+    <div class="tool-details" id="wf-net">
+
+<pre>
+# --- Core triage: what's talking right now? ---
+netstat -ano
+    # -a  all connections
+    # -n  numeric (no DNS)
+    # -o  show PID
+    # Look for:
+    #   - ESTABLISHED to weird IPs
+    #   - LISTENING on unexpected ports
+    #   - PID reused across suspicious ports
+
+Get-NetTCPConnection |
+    Select LocalAddress,LocalPort,RemoteAddress,RemotePort,State,OwningProcess
+
+
+# --- Map network activity back to processes ---
+$cons = Get-NetTCPConnection
+foreach ($c in $cons) {
+    $p = Get-Process -Id $c.OwningProcess -ErrorAction SilentlyContinue
+    [PSCustomObject]@{
+        Process = $p.Name
+        PID     = $c.OwningProcess
+        LAddr   = $c.LocalAddress
+        LPort   = $c.LocalPort
+        RAddr   = $c.RemoteAddress
+        RPort   = $c.RemotePort
+        State   = $c.State
+    }
+} | Sort-Object Process
+
+
+# --- DNS cache (C2 domains often hide here) ---
+ipconfig /displaydns | findstr /i "com net org ru cn onion"
+
+
+# --- Firewall connection logs (excellent source) ---
+Get-WinEvent -LogName "Microsoft-Windows-Windows Firewall With Advanced Security/Firewall" -MaxEvents 50 |
+    Select TimeCreated, Message
+
+
+# --- Detect beacons (periodic callbacks) ---
+Get-NetTCPConnection |
+    Group-Object RemoteAddress |
+    Where-Object { $_.Count -gt 10 }   # suspicious repeated connections
+
+
+# --- SMB / Lateral Movement traces ---
+# Check open SMB sessions:
+net session
+
+# Check who is connected to admin shares
+net share | findstr /i "IPC C$ ADMIN$"
+
+
+# --- ARP table (quick internal network mapping) ---
+arp -a
+
+
+# --- Find processes with remote threads (common injector behavior) ---
+Get-CimInstance Win32_Process |
+    Where-Object { $_.CommandLine -match "tcp" -or $_.CommandLine -match "http" }
+
+
+# --- Quick IOC hunting: known bad IPs/domains ---
+netstat -ano | findstr /i "443 8080 9001 9050"   # common C2 ports
+</pre>
+
+<p><b>Why this matters:</b></p>
+<ul>
+    <li>Most RATs keep an ESTABLISHED connection alive for command polling.</li>
+    <li>Miners and botnets talk frequently to known pool/command servers.</li>
+    <li>DNS cache often exposes domains the malware contacted.</li>
+    <li>Firewall logs reveal blocked outbound attempts that netstat misses.</li>
+    <li>SMB/IPC sessions instantly reveal lateral movement attempts.</li>
+</ul>
+
+<p>
+If something is talking over the network, Windows is terrible at hiding it - you just need the right commands to see it.
+</p>
+
+    </div>
+</div>
+
+<!-- SECTION 6: File & Timeline Forensics -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('wf-files')">
+        6. File Activity & Timeline
+    </div>
+    <div class="tool-details" id="wf-files">
+
+<pre>
+# --- Alternate Data Streams (ADS) ---
+# Malware hides payloads in ADS all the time.
+dir /r
+    # Look for things like:  file.txt:payload.exe:$DATA
+
+# Inspect ADS on a specific file
+more < file.txt:secret
+
+# Remove an ADS
+type nul > file.txt:payload.exe
+
+
+# --- Recent file activity (quick triage) ---
+Get-ChildItem -Recurse C:\Users |
+    Where-Object { $_.LastWriteTime -gt (Get-Date).AddDays(-2) }
+
+
+# --- Prefetch analysis (process execution history) ---
+# Shows what programs actually ran.
+dir C:\Windows\Prefetch
+
+# Parse prefetch with hash + run count
+Get-ChildItem C:\Windows\Prefetch |
+    Select Name, LastWriteTime, Length
+
+
+# --- Master File Table (MFT) triage ---
+# Requires an external tool but this is core Windows DFIR
+# (placeholder for real tool usage)
+#   MFTECmd.exe -f $MFT --csv out.csv
+#   Analyze timestamps for timestomping
+
+# --- USN Journal (records every file change) ---
+fsutil usn readjournal C: | more
+    # Extremely noisy but incredibly valuable for intrusion timelines
+
+
+# --- Detect timestomping (attacker modifies timestamps) ---
+# Compare CreationTime, LastWriteTime, LastAccessTime
+Get-ChildItem -Recurse C:\path |
+    Select Name, CreationTime, LastWriteTime, LastAccessTime |
+    Sort-Object LastWriteTime
+
+
+# --- Find recently dropped executables ---
+Get-ChildItem -Recurse C:\ -Include *.exe,*.dll -ErrorAction SilentlyContinue |
+    Where-Object { $_.LastWriteTime -gt (Get-Date).AddHours(-24) }
+
+
+# --- Look for suspicious paths attackers love ---
+Get-ChildItem -Recurse "$env:APPDATA","$env:LOCALAPPDATA","C:\ProgramData" |
+    Where-Object { $_.Extension -in ".exe",".dll",".ps1",".vbs",".js" }
+</pre>
+
+<p><b>Why this matters:</b></p>
+<ul>
+    <li>ADS is a classic hideout for droppers and staged payloads.</li>
+    <li>Prefetch instantly reveals what executed on the machine.</li>
+    <li>USN Journal provides an unfiltered timeline - malware hates this.</li>
+    <li>Timestomping is easy to catch if you know what normal looks like.</li>
+    <li>Attackers almost always drop files into AppData, ProgramData, or TEMP.</li>
+</ul>
+
+<p>
+Windows is a forensic goldmine - the problem isn’t lack of evidence, it’s knowing where to look.  
+This section gives you the exact levers DFIR people pull first.
+</p>
+
+    </div>
+</div>
+
+
+<!-- SECTION 7: Memory Dumping & Triage -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('wf-dumps')">
+        7. Memory Dumps
+    </div>
+    <div class="tool-details" id="wf-dumps">
+
+<pre>
+# --- Dump a specific suspicious process (Sysinternals Procdump) ---
+procdump -ma <PID> proc_<PID>.dmp
+    # -ma = full memory dump (heap, stack, loaded DLLs, creds)
+    # safest and most common DFIR method
+
+
+# --- Dump process on exception (great for malware that crashes/fails) ---
+procdump -e 1 -f "" <PID>
+
+
+# --- Task Manager manual dump (quick + GUI) ---
+# Open Task Manager → right click process → "Create dump file"
+# Saves to:
+#   C:\Users\<user>\AppData\Local\Temp
+
+
+# --- Dump LSASS (credential extraction / Mimikatz detection) ---
+# Only in a secure offline VM - never on prod
+procdump -ma lsass.exe lsass.dmp
+
+
+# --- Using comsvcs.dll (native Windows dump method) ---
+rundll32.exe C:\Windows\System32\comsvcs.dll, MiniDump <PID> dumpfile.dmp full
+    # Built-in tool, no external binaries → attackers & DFIR both use this
+
+
+# --- Capture a full system memory image (for Volatility) ---
+# LiveKD (Sysinternals)
+livekd -u -o full-system.dmp
+
+# Or use winpmem (open-source)
+winpmem.exe --format raw --output mem.raw
+
+
+# --- Check dump integrity ---
+Get-FileHash proc_<PID>.dmp -Algorithm SHA256
+
+
+# --- Quick Volatility triage examples (placeholder for full section) ---
+volatility.exe -f mem.raw windows.pslist
+volatility.exe -f mem.raw windows.netscan
+volatility.exe -f mem.raw windows.malfind
+</pre>
+
+<p><b>Why this matters:</b></p>
+<ul>
+    <li>Memory dumps reveal injected code that never touches disk.</li>
+    <li>LSASS dumps expose credential theft attempts or Mimikatz residue.</li>
+    <li>Volatility is the truth: processes, injected threads, hooks, C2 beacons.</li>
+    <li>Attackers love fileless malware - dumping memory is the only way to see it.</li>
+    <li>comsvcs.dll dump method is stealthy and widely used by adversaries.</li>
+</ul>
+
+<p>
+Memory is where malware lives its real life.  
+If disk artifacts lie, memory won’t.
+</p>
+
+    </div>
+</div>
+
+
+<!-- SECTION 8: Lateral Movement Evidence -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('wf-lm')">
+        8. Lateral Movement Traces
+    </div>
+    <div class="tool-details" id="wf-lm">
+
+<pre>
+# --- RDP Activity (most common LM method) ---
+# 1149 = authentication attempt
+# 4624 = successful logon
+# 4625 = failed logon
+Get-WinEvent -LogName Security |
+    Where-Object { $_.Id -in 4624,4625 } |
+    Select TimeCreated, Id, Message
+
+Get-WinEvent -LogName "Microsoft-Windows-TerminalServices-RemoteConnectionManager/Operational" |
+    Select TimeCreated, Id, Message
+
+
+# --- Identify logon types (VERY important)
+# Logon Type 10 = RDP
+# Logon Type 3  = Network (SMB)
+# Logon Type 2  = Interactive (console)
+wevtutil qe Security /q:"*[System[(EventID=4624)]]" /f:text |
+    findstr /i "Logon Type"
+
+
+# --- Admin shares used (C$, ADMIN$, IPC$) ---
+net share | findstr /i "C$ ADMIN$ IPC$"
+net session   # shows who is connected to the machine
+
+
+# --- SMB connections (lateral movement through file shares) ---
+Get-SmbSession | Select ClientComputerName,UserName,NumOpens
+Get-SmbOpenFile
+
+
+# --- Remote PowerShell executions (Remoting / WinRM) ---
+Get-WinEvent -FilterHashtable @{
+    LogName='Microsoft-Windows-PowerShell/Operational';
+    Id=4104
+} | Select TimeCreated,Message |
+    findstr /i "Invoke-Command Enter-PSSession"
+
+
+# --- WMI execution (common stealth LM technique) ---
+Get-WinEvent -LogName "Microsoft-Windows-WMI-Activity/Operational" -MaxEvents 50 |
+    Select TimeCreated, Id, Message |
+    findstr /i "Execute Method"
+
+
+# --- Token Impersonation / Logon anomalies ---
+# 4624 with high-privileged accounts at weird times = red flag
+Get-WinEvent -FilterHashtable @{LogName='Security'; Id=4624} |
+    Select TimeCreated, Message |
+    findstr /i "Administrator SYSTEM"
+
+
+# --- PSExec / remote service creation ---
+# PSExec leaves event 7045 (service created)
+Get-WinEvent -FilterHashtable @{LogName='System'; Id=7045} |
+    Select TimeCreated, Message |
+    findstr /i "psexec"
+
+
+# --- Check known LM tools by command line pattern ---
+Get-CimInstance Win32_Process |
+    Where-Object { $_.CommandLine -match "psexec|wmic|winrs|mstsc|smbexec|at.exe" } |
+    Select Name,ProcessId,CommandLine,ParentProcessId
+</pre>
+
+<p><b>Why this matters:</b></p>
+<ul>
+    <li>Most Windows breaches escalate through RDP, SMB, PSExec, or WMI.</li>
+    <li>Logon types immediately reveal how access was obtained.</li>
+    <li>Admin share usage (C$, ADMIN$) = classic lateral movement fingerprint.</li>
+    <li>Remote PowerShell is practically a spotlight on attacker activity.</li>
+    <li>Service creation (7045) is the backbone of PSExec-style movement.</li>
+</ul>
+
+<p>
+Lateral movement is the line between “infected workstation” and “full environment compromise.”  
+This section gives you the exact fingerprints that decide which one you're dealing with.
+</p>
+
+    </div>
+</div>
+
+
+<!-- SECTION 9: Quick Triage Checklist -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('wf-check')">
+        9. Quick Triage Flow
+    </div>
+    <div class="tool-details" id="wf-check">
+
+<pre>
+# --- 1. Process Triage (what's running right now?) ---
+tasklist /v
+Get-Process | Sort-Object CPU -Descending
+wmic process list full | findstr /i "powershell.exe wscript.exe mshta.exe cmd.exe"
+# Look for unsigned binaries, weird parent/child chains, LOLBins with long args.
+
+
+# --- 2. Network Triage (who is talking?) ---
+netstat -ano
+Get-NetTCPConnection
+ipconfig /displaydns | findstr /i "com net org ru cn"
+# Identify C2 channels, beacons, suspicious remote IPs.
+
+
+# --- 3. Persistence Check ---
+schtasks /query /fo LIST /v
+Get-WmiObject Win32_Service | Select Name,State,StartMode,PathName
+reg query HKCU\Software\Microsoft\Windows\CurrentVersion\Run
+# Scheduled tasks, services, WMI, registry Run keys - the classics.
+
+
+# --- 4. Event Logs (the real story) ---
+Get-WinEvent -LogName Security -MaxEvents 200
+Get-WinEvent -LogName "Microsoft-Windows-PowerShell/Operational"
+Get-WinEvent -LogName "Microsoft-Windows-Sysmon/Operational"
+# Check logon types, PowerShell script blocks, process creation, network events.
+
+
+# --- 5. File/Timeline Forensics ---
+dir /r                         # ADS
+Get-ChildItem -Recurse C:\Users -ErrorAction SilentlyContinue |
+    Where-Object { $_.LastWriteTime -gt (Get-Date).AddDays(-2) }
+# Look for recent drops, timestomping, suspicious paths.
+
+
+# --- 6. Dump Suspicious Processes ---
+procdump -ma <PID> suspect_<PID>.dmp
+rundll32.exe comsvcs.dll, MiniDump <PID> dump.dmp full
+# Analyze offline with Volatility → safest workflow.
+
+
+# --- 7. Check for Lateral Movement ---
+net session
+Get-WinEvent -FilterHashtable @{LogName='Security'; Id=4624}
+Get-WinEvent -LogName "Microsoft-Windows-TerminalServices-LocalSessionManager/Operational"
+# RDP attempts, PSExec events (7045), WMI execution, SMB sessions.
+
+
+# --- 8. Collect IOCs (grab all indicators while you're here) ---
+Get-Process | Select Name,Path
+netstat -ano
+Get-WinEvent -MaxEvents 300
+strings.exe suspect.exe > strings.txt
+# Build the compromise map while the machine is still intact.
+
+
+# --- 9. Contain ---
+# (Done only after collection)
+Stop-Service <malicious service>
+Disable-ScheduledTask -TaskName "<suspect>"
+Remove-Item <payload paths>
+# Containment AFTER evidence collection.
+</pre>
+
+<p><b>Purpose of this flow:</b></p>
+<ul>
+    <li>Gives you a complete picture of the host in under ~10 minutes.</li>
+    <li>Ensures you don’t destroy evidence while responding.</li>
+    <li>Highlights the difference between “local infection” and “network breach.”</li>
+    <li>Collects processes, persistence, logs, and IOCs in a single sweep.</li>
+    <li>Sets you up for safe containment and deep offline analysis.</li>
+</ul>
+
+<p>
+This is the real-world order analysts follow when responding to suspected malware on Windows.
+</p>
+
+    </div>
+</div>
+
