@@ -62,6 +62,7 @@
     'bashing':        { filename: 'bashing.html',          divId: 'bashing' },
 
     // Misc
+    'scripts':          { filename: 'scripts-cheat-sheet.html',            divId: 'scripts' },
     'topics':          { filename: 'topics.html',            divId: 'topics' },
     'resources':       { filename: 'resources-links.html',   divId: 'resources' },
     'aiseccheatsheet': { filename: 'ai-sec-cheat-sheet.html', divId: 'aiseccheatsheet' }
