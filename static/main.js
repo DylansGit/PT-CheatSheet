@@ -43,30 +43,28 @@
     'home': { filename: 'home.html', divId: 'home' },
 
     // Tools
-    'toolscheatsheet': { filename: 'tools-cheat-sheet.html', divId: 'toolscheatsheet' },
+    'toolscheatsheet':       { filename: 'tools-cheat-sheet.html', divId: 'toolscheatsheet' },
     'portswiggercheatsheet': { filename: 'portswigger-cheat-sheet.html', divId: 'portswigger' },
-    'imagescheatsheet': { filename: 'images-cheat-sheet.html', divId: 'imagescheatsheet' },
+    'imagescheatsheet':      { filename: 'images-cheat-sheet.html', divId: 'imagescheatsheet' },
 
     // Windows
-    'windowsprivesc':   { filename: 'windows-priv-esc.html',   divId: 'windowsprivesc' },
-    'windowsforensics': { filename: 'windows-forensics.html',   divId: 'windowsforensics' },
-    'windowshardening': { filename: 'windows-hardening.html',   divId: 'windowshardening' },
-    'windowstools':     { filename: 'windows-tools.html',       divId: 'windowstools' },
-    'windowspowershell':   { filename: 'windows-powershell.html',     divId: 'windowspowershell' },
-    'windowsinternals':    { filename: 'windows-internals.html',      divId: 'windowsinternals' },
-    'windowsactivedir':    { filename: 'windows-active-directory.html', divId: 'windowsactivedir' },
-    'windowstools': { filename: 'windows-tools.html', divId: 'windowstools' },
+    'windowsprivesc':     { filename: 'windows-priv-esc.html',        divId: 'windowsprivesc' },
+    'windowsforensics':   { filename: 'windows-forensics.html',       divId: 'windowsforensics' },
+    'windowshardening':   { filename: 'windows-hardening.html',       divId: 'windowshardening' },
+    'windowstools':       { filename: 'windows-tools.html',           divId: 'windowstools' },
+    'windowspowershell':  { filename: 'windows-powershell.html',      divId: 'windowspowershell' },
+    'windowsactivedir':   { filename: 'windows-active-directory.html', divId: 'windowsactivedir' },
 
     // Linux
-    'linuxprivesc':     { filename: 'linux-priv-esc.html', divId: 'linuxprivesc' },
-    'linuxforensics':   { filename: 'linux-forensics.html', divId: 'linuxforensics' },
-    'linuxhardening':   { filename: 'linux-hardening.html', divId: 'linuxhardening' },
-    'bashing':          { filename: 'bashing.html', divId: 'bashing' },
+    'linuxprivesc':   { filename: 'linux-priv-esc.html', divId: 'linuxprivesc' },
+    'linuxforensics': { filename: 'linux-forensics.html', divId: 'linuxforensics' },
+    'linuxhardening': { filename: 'linux-hardening.html', divId: 'linuxhardening' },
+    'bashing':        { filename: 'bashing.html',          divId: 'bashing' },
 
     // Misc
-    'topics': { filename: 'topics.html', divId: 'topics' },
-    'resources': { filename: 'resources-links.html', divId: 'resources' },
-    'aiseccheatsheet': { filename: 'ai-sec-cheat-sheet.html', divId: 'aiseccheatsheet' },
+    'topics':          { filename: 'topics.html',            divId: 'topics' },
+    'resources':       { filename: 'resources-links.html',   divId: 'resources' },
+    'aiseccheatsheet': { filename: 'ai-sec-cheat-sheet.html', divId: 'aiseccheatsheet' }
   };
 
 
@@ -106,6 +104,7 @@
     const tabInfo = FILE_MAP[tabId];
     if (!tabInfo) { console.error('Invalid tab ID', tabId); return; }
     await loadContentIntoTab('content/' + tabInfo.filename);
+    stylePreComments();
   }
 
   async function showHomePage() { await showTab('home'); }
@@ -502,3 +501,33 @@
   };
 })();
 
+document.addEventListener("DOMContentLoaded", () => {
+    document.querySelectorAll("pre").forEach(pre => {
+        const lines = pre.innerHTML.split("\n").map(line => {
+            if (line.trim().startsWith("#")) {
+                return `<span class="comment-line">${line}</span>`;
+            }
+            return line;
+        });
+        pre.innerHTML = lines.join("\n");
+    });
+});
+
+
+function stylePreComments() {
+    document.querySelectorAll("pre").forEach(pre => {
+        let html = pre.innerHTML;
+
+        // only transform fresh content once
+        if (html.includes('comment-line')) return;
+
+        const lines = html.split("\n").map(line => {
+            if (line.trim().startsWith("#")) {
+                return `<span class="comment-line">${line}</span>`;
+            }
+            return line;
+        });
+
+        pre.innerHTML = lines.join("\n");
+    });
+}

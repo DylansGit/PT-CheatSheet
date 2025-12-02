@@ -1,0 +1,996 @@
+<h1>Windows Hardening</h1>
+
+<p class="section-intro">
+    This section is about locking down Windows so it's harder to break into,
+    harder to persist on, and easier to trust under pressure. No enterprise fluff -
+    just the configs, commands, and behaviors that actually raise the bar.
+</p>
+
+<!-- 1. Local Security Policies -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('wh-lsapol')">
+        1. Local Security Policies
+    </div>
+    <div class="tool-details" id="wh-lsapol">
+
+<pre>
+# --- Open Local Security Policy console ---
+secpol.msc
+
+
+# --- Enforce strong password & lockout policies ---
+# These reduce brute-force and credential stuffing.
+Account Policies →
+    Password Policy:
+        - Minimum length: 14+
+        - Maximum age: 60 days
+        - Complexity: Enabled
+    Account Lockout Policy:
+        - Lockout threshold: 5 attempts
+        - Duration: 30 min
+        - Reset counter: 30 min
+
+
+# --- Disable anonymous access (Guest, null sessions) ---
+Local Policies → Security Options →
+    - Accounts: Guest account → Disabled
+    - Network access: Do not allow anonymous enumeration of SAM accounts → Enabled
+    - Network access: Do not allow anonymous enumeration of shares → Enabled
+
+
+# --- Harden NTLM (reduce credential relay attacks) ---
+Local Policies → Security Options →
+    - Network security: LAN Manager authentication level → Send NTLMv2 only
+    - Network security: Restrict NTLM → Deny all except domain allowlist
+    - Network security: Minimum session security for NTLM SSP → Require 128-bit encryption
+
+
+# --- Enable LSA Protection (blocks credential dumping) ---
+# Protect LSASS from tools like Mimikatz.
+reg add HKLM\\SYSTEM\\CurrentControlSet\\Control\\LSA /v RunAsPPL /t REG_DWORD /d 1 /f
+
+
+# --- Enforce Audit Policy (required for DFIR visibility) ---
+Advanced Audit Policy Configuration →
+    Account Logon:
+        - Audit Credential Validation: Success, Failure
+    Logon/Logoff:
+        - Audit Logon: Success, Failure
+    Detailed Tracking:
+        - Audit Process Creation: Success
+    Object Access:
+        - Audit File System: Success, Failure
+Security Options:
+    - Audit: Force audit policy subcategory settings → Enabled
+
+
+# --- Disable insecure remote paths ---
+Local Policies → Security Options →
+    - Network security: Allow LocalSystem NULL session fallback → Disabled
+    - Microsoft network client: Send unencrypted password → Disabled
+
+
+# --- Block unsigned or legacy drivers ---
+Local Policies → Security Options →
+    - Code signing for device drivers: Enabled
+
+
+# --- Secure interactive logon ---
+Local Policies → Security Options →
+    - Interactive logon: Do not display last username → Enabled
+    - Interactive logon: Smart card required (optional)
+    - Interactive logon: Machine inactivity limit: 900 seconds
+
+
+# --- Protect service accounts ---
+Local Policies → User Rights Assignment →
+    - Deny logon locally → service accounts
+    - Deny logon through RDP → service accounts
+</pre>
+
+<p><b>Why this matters:</b></p>
+<ul>
+    <li>Windows is full of legacy defaults - these tighten the entry points significantly.</li>
+    <li>LSA protection is one of the strongest anti-Mimikatz settings you can enable.</li>
+    <li>Audit policy is crucial: without it, your logs are useless in an incident.</li>
+    <li>NTLM restrictions remove entire categories of lateral-movement attacks.</li>
+    <li>Proper user-rights policy prevents service accounts from being misused.</li>
+</ul>
+
+<p>This section gives you the minimum “don't get owned instantly” baseline every Windows host should have.</p>
+
+    </div>
+</div>
+
+
+<!-- 2. Firewall & Network Hardening -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('wh-network')">
+        2. Firewall & Network Hardening
+    </div>
+    <div class="tool-details" id="wh-network">
+
+<pre>
+# --- Open Windows Firewall GUI ---
+wf.msc
+
+
+# --- Default-deny inbound policy (the sane baseline) ---
+# Allows ONLY what you explicitly open.
+Set-NetFirewallProfile -Profile Domain,Public,Private -DefaultInboundAction Block
+Set-NetFirewallProfile -Profile Domain,Public,Private -DefaultOutboundAction Allow
+
+
+# --- Block high-risk inbound services ---
+# Almost nobody needs these open.
+Set-NetFirewallRule -DisplayGroup "Remote Desktop" -Enabled False
+Set-NetFirewallRule -DisplayGroup "File and Printer Sharing" -Enabled False
+Set-NetFirewallRule -DisplayGroup "Windows Remote Management" -Enabled False
+
+
+# --- Allow only the essentials ---
+New-NetFirewallRule -DisplayName "Allow SSH" -Direction Inbound -Protocol TCP -LocalPort 22 -Action Allow
+New-NetFirewallRule -DisplayName "Allow RDP (restricted)" -Direction Inbound -Protocol TCP -LocalPort 3389 -Action Allow `
+    -RemoteAddress <your-admin-ip>      # Always restrict by IP
+
+
+# --- Detect listening services (attack surface scan) ---
+Get-NetTCPConnection -State Listen |
+    Select LocalAddress,LocalPort,OwningProcess |
+    Sort LocalPort
+
+
+# --- Remove legacy network protocols ---
+Disable-WindowsOptionalFeature -Online -FeatureName SMB1Protocol -NoRestart
+    # SMBv1 is one of the most exploited components ever shipped.
+
+
+# --- Disable LLMNR & NetBIOS (prevents credential spraying/poisoning) ---
+reg add "HKLM\\Software\\Policies\\Microsoft\\Windows NT\\DNSClient" /v EnableMulticast /t REG_DWORD /d 0 /f
+wmic nicconfig where IPEnabled=true call SetTcpipNetbios 2
+
+
+# --- Enable firewall logging (critical DFIR visibility) ---
+Set-NetFirewallProfile -Profile Domain,Public,Private `
+    -LogAllowed True `
+    -LogBlocked True `
+    -LogFileName "%systemroot%\\system32\\LogFiles\\Firewall\\pfirewall.log" `
+    -LogMaxSizeKilobytes 32768
+
+
+# --- DNS Hardening ---
+# Point to trusted resolvers only:
+Set-DnsClientServerAddress -InterfaceAlias "Ethernet" -ServerAddresses ("1.1.1.1","8.8.8.8")
+
+# Inspect DNS cache (great for malware C2 discovery):
+ipconfig /displaydns
+
+
+# --- Disable IPv6 if not used ---
+# Optional, depends on environment:
+Disable-NetAdapterBinding -Name "*" -ComponentID ms_tcpip6
+
+
+# --- Quick “surface audit” of all inbound rules ---
+Get-NetFirewallRule -Direction Inbound |
+    Select DisplayName, Enabled, Action, Profile |
+    Sort DisplayName
+</pre>
+
+<p><b>Why this matters:</b></p>
+<ul>
+    <li>Most Windows machines run with unnecessary services listening openly.</li>
+    <li>LLMNR/NetBIOS poisoning is still a top internal-network attack vector.</li>
+    <li>Firewall logs are priceless during IR - they expose hidden malware beacons.</li>
+    <li>Restricting RDP by IP kills a massive chunk of brute-force attempts instantly.</li>
+    <li>SMBv1 is “EternalBlue country” - disabling it is mandatory in 2025.</li>
+</ul>
+
+<p>
+This setup gives you a Windows host that's actually defensive instead of “wide open with a firewall sticker on it.”
+</p>
+
+    </div>
+</div>
+
+<!-- 3. Services & Startup -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('wh-services')">
+        3. Service & Startup Security
+    </div>
+    <div class="tool-details" id="wh-services">
+
+<pre>
+# --- List all services and their status ---
+Get-Service | Sort-Object Status, Name
+
+# Show detailed service configuration
+Get-CimInstance Win32_Service |
+    Select-Object Name,State,StartMode,PathName |
+    Sort-Object Name
+
+
+# --- Disable legacy + high-risk services ---
+# These almost never need to run on modern endpoints.
+Set-Service -Name "Fax" -StartupType Disabled
+Set-Service -Name "RemoteRegistry" -StartupType Disabled
+Set-Service -Name "Spooler" -StartupType Disabled       # PrintNightmare class
+Set-Service -Name "WerSvc" -StartupType Disabled        # Error reporting
+Set-Service -Name "TlntSvr" -StartupType Disabled       # Telnet (ancient)
+Set-Service -Name "SNMP" -StartupType Disabled          # SNMP abuse is common
+Set-Service -Name "TermService" -StartupType Manual     # RDP locked down manually
+
+# Disable Windows Script Host if not needed (kills VBS-based malware)
+reg add "HKLM\\Software\\Microsoft\\Windows Script Host\\Settings" /v Enabled /t REG_DWORD /d 0 /f
+
+
+# --- Harden service permissions (stops privilege escalation) ---
+# Weak service permissions allow attackers to replace the binary.
+# This checks ACLs for dangerous misconfigurations:
+Get-Acl HKLM:\\SYSTEM\\CurrentControlSet\\Services\\* |
+    Where-Object { $_.AccessToString -match "Everyone Allow" }
+
+
+# --- Check startup folders ---
+Get-ChildItem "C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\StartUp"
+Get-ChildItem "$env:APPDATA\\Microsoft\\Windows\\Start Menu\\Programs\\Startup"
+
+# Remove unwanted autoruns (harmless sample)
+# Remove-Item "C:\\ProgramData\\...\\evil.lnk"
+
+
+# --- Autoruns (Sysinternals - the GOAT tool) ---
+# GUI: best full visibility of persistence locations
+autoruns.exe
+
+# CLI version:
+autorunsc.exe -accepteula -a * | more
+
+
+# --- Scheduled Tasks (common persistence) ---
+Get-ScheduledTask |
+    Select TaskName,TaskPath,State
+
+# Full detail including actions + triggers
+schtasks /query /fo LIST /v
+
+
+# --- Windows Services integrity check ---
+# Compare service exes with known-good hashes
+Get-CimInstance Win32_Service |
+    ForEach-Object {
+        if (Test-Path $_.PathName) {
+            $hash = (Get-FileHash $_.PathName -Algorithm SHA256).Hash
+            [PSCustomObject]@{
+                Service = $_.Name
+                Path    = $_.PathName
+                Hash    = $hash
+            }
+        }
+    }
+
+
+# --- Disable Run / RunOnce autoruns (optional hardening) ---
+reg add "HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer" /v DisableRun /t REG_DWORD /d 1 /f
+
+
+# --- Inspect WMI persistence (stealthy technique) ---
+Get-WmiObject -Namespace root\\subscription -Class __EventFilter
+Get-WmiObject -Namespace root\\subscription -Class CommandLineEventConsumer
+Get-WmiObject -Namespace root\\subscription -Class __FilterToConsumerBinding
+</pre>
+
+<p><b>Why this matters:</b></p>
+<ul>
+    <li>Services with weak permissions are one of the most common Windows privilege-escalation paths.</li>
+    <li>Most persistence sits in startup folders, scheduled tasks, or WMI - these checks expose all of it.</li>
+    <li>Autoruns (Sysinternals) is essentially “God Mode” for Windows startup security.</li>
+    <li>Disabling Telnet, SMBv1, RemoteRegistry, Print Spooler removes ancient attack surface.</li>
+    <li>WMI persistence bypasses almost all amateur IR workflows - you catch it here.</li>
+</ul>
+
+<p>
+Service hardening is the backbone of Windows security.  
+If services and startup locations are clean, malware has a much harder time sticking around.
+</p>
+
+    </div>
+</div>
+
+
+<!-- 4. User Accounts & Credentials -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('wh-creds')">
+        4. Credential & Authentication Hardening
+    </div>
+    <div class="tool-details" id="wh-creds">
+
+<pre>
+# --- Enable LSA Protection (anti-Mimikatz) ---
+# Makes LSASS run as a Protected Process Light (PPL).
+reg add "HKLM\\SYSTEM\\CurrentControlSet\\Control\\LSA" /v RunAsPPL /t REG_DWORD /d 1 /f
+
+# Optional: Also force LSA plugins to be signed
+reg add "HKLM\\SYSTEM\\CurrentControlSet\\Control\\LSA" /v RunAsPPLBoot /t REG_DWORD /d 1 /f
+
+
+# --- Enable Credential Guard (highest-tier protection) ---
+# Protects cached Kerberos tickets & NTLM hashes.
+bcdedit /set hypervisorlaunchtype auto
+Enable-WindowsOptionalFeature -Online -FeatureName Windows-Defender-DeviceGuard -NoRestart
+# Then enable via Group Policy:
+#  Computer Configuration → Administrative Templates → System → Device Guard →
+#      Turn On Virtualization Based Security → Enabled
+#      Credential Guard Configuration → Enabled with UEFI lock
+
+
+# --- Disable WDigest (stops cleartext credential storage) ---
+reg add "HKLM\\SYSTEM\\CurrentControlSet\\Control\\SecurityProviders\\WDigest" `
+    /v UseLogonCredential /t REG_DWORD /d 0 /f
+
+
+# --- Enforce “Protected Users” group (no cached creds, no NTLM, no delegation) ---
+# Ideal for admins.
+net localgroup "Protected Users" /add youradminuser
+
+
+# --- Disable NTLM fallback paths (relay protection) ---
+# Restrict NTLM only to approved servers.
+reg add "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Lsa\\MSV1_0" `
+    /v RestrictReceivingNTLMTraffic /t REG_DWORD /d 2 /f
+
+# Disable anonymous SAM access
+reg add "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Lsa" `
+    /v RestrictAnonymousSAM /t REG_DWORD /d 1 /f
+
+
+# --- Kerberos Hardening ---
+# Force AES only (stop RC4 ticket attacks)
+reg add "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Lsa\\Kerberos\\Parameters" `
+    /v SupportedEncryptionTypes /t REG_DWORD /d 0x7ffffff8 /f
+
+# Reduce ticket lifetime (lower replay risk)
+#  Default: 10 hours → drop to 4 or 6 in secure environments.
+
+
+# --- Disable plaintext password caching ---
+reg add "HKLM\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon" `
+    /v CachedLogonsCount /t REG_SZ /d 0 /f
+
+
+# --- SMB signing (kills man-in-the-middle attacks) ---
+# Requires both client + server configuration:
+reg add "HKLM\\SYSTEM\\CurrentControlSet\\Services\\LanmanServer\\Parameters" `
+    /v RequireSecuritySignature /t REG_DWORD /d 1 /f
+
+reg add "HKLM\\SYSTEM\\CurrentControlSet\\Services\\LanmanWorkstation\\Parameters" `
+    /v RequireSecuritySignature /t REG_DWORD /d 1 /f
+
+
+# --- Force strong RDP authentication ---
+reg add "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Terminal Server\\WinStations\\RDP-Tcp" `
+    /v UserAuthentication /t REG_DWORD /d 1 /f
+
+# Network Level Authentication must be ON
+SystemPropertiesRemote.exe
+#  → “Allow connections only from computers running Remote Desktop with NLA”
+
+
+# --- Disable “password in memory” features ---
+reg add "HKLM\\SYSTEM\\CurrentControlSet\\Control\\SecurityProviders\\CredProv" `
+    /v EnumerateProviders /t REG_DWORD /d 0 /f
+</pre>
+
+<p><b>Why this matters:</b></p>
+<ul>
+    <li>LSA Protection + Credential Guard is the modern defense against Mimikatz-level attacks.</li>
+    <li>WDigest off = no more cleartext creds in RAM, period.</li>
+    <li>Protected Users group hardens admin accounts dramatically.</li>
+    <li>Kerberos hardening blocks ticket replay and RC4-based attacks.</li>
+    <li>Restricting NTLM kills the entire class of NTLM relay attacks (very common).</li>
+    <li>Forced SMB signing prevents man-in-the-middle interception used in internal breaches.</li>
+</ul>
+
+<p>
+Windows credential theft is the <em>center</em> of most compromises.  
+These settings make stealing credentials significantly harder on any Windows machine.
+</p>
+
+    </div>
+</div>
+
+
+<!-- 5. AppLocker / WDAC -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('wh-ps')">
+        5. PowerShell Hardening & Constrained Language Mode
+    </div>
+    <div class="tool-details" id="wh-ps">
+
+<pre>
+# --- Force PowerShell v5+ (includes logging + AMSI) ---
+# Older versions (v2) have ZERO logging and bypass all security.
+Disable-WindowsOptionalFeature -Online -FeatureName MicrosoftWindowsPowerShellV2 -NoRestart
+
+
+# --- Enable ALL PowerShell logging ---
+# Group Policy:
+#  Computer Configuration →
+#    Administrative Templates →
+#      Windows Components → Windows PowerShell →
+
+# Script Block Logging
+Set-ItemProperty HKLM:\\SOFTWARE\\Microsoft\\PowerShell\\1\\ShellIds\\Microsoft.PowerShell `
+    -Name ScriptBlockLogging -Value @{EnableScriptBlockLogging=1} -Force
+
+# Module Logging
+Set-ItemProperty HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\PowerShell\\ModuleLogging `
+    -Name EnableModuleLogging -Value 1 -Force
+
+# Transcription (records full console sessions)
+New-Item -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\PowerShell\\Transcription" -Force
+Set-ItemProperty HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\PowerShell\\Transcription `
+    -Name EnableTranscripting -Value 1
+Set-ItemProperty HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\PowerShell\\Transcription `
+    -Name OutputDirectory -Value "C:\\PS-Logs"
+
+
+# --- AMSI (Anti-Malware Scan Interface) should be ON ---
+# Modern malware tries to patch or disable this.
+# Verify:
+(Get-Process -Name powershell).Modules | Select ModuleName |
+    Where-Object { $_ -match "amsi" }
+
+
+# --- Constrained Language Mode (CLM) ---
+# Makes PowerShell extremely restrictive unless you're admin.
+# Blocks .NET calls, COM objects, reflection, and most offensive tooling.
+
+# Enable via Device Guard / WDAC:
+#  Turn on Virtualization-Based Security
+#  Enable Code Integrity policies
+#  → CLM activates for non-admin users.
+
+# Check current mode:
+$ExecutionContext.SessionState.LanguageMode
+
+# Manual forcing via AppLocker (simplest method):
+# In AppLocker:
+#   Allow signed Microsoft scripts only → Everyone
+#   Allow full unrestricted → Administrators
+# Non-admin users automatically fall into CLM.
+
+
+# --- Execution Policy (weak alone, strong combined with CLM) ---
+Set-ExecutionPolicy RemoteSigned -Scope LocalMachine -Force
+
+
+# --- Block PowerShell Web Access (extremely risky feature) ---
+Disable-WindowsOptionalFeature -Online -FeatureName WindowsPowerShellWebAccess -NoRestart
+
+
+# --- Detect tampering / bypass attempts ---
+# ScriptBlock logs:
+Get-WinEvent -LogName "Microsoft-Windows-PowerShell/Operational" |
+    Select TimeCreated,Id,Message |
+    Sort TimeCreated -Descending
+
+# Look specifically for:
+#   4104 → ScriptBlock logging
+#   4103 → Command invocation
+#   4105 → Start of new command
+#   4106 → Completed command
+</pre>
+
+<p><b>Why this matters:</b></p>
+<ul>
+    <li>PowerShell v2 disablement kills dozens of old attack techniques instantly.</li>
+    <li>ScriptBlock + Module Logging gives IR full visibility into attacker commands.</li>
+    <li>Transcription logs create a tamper-resistant forensic record.</li>
+    <li>Constrained Language Mode cripples most offensive PowerShell frameworks.</li>
+    <li>AppLocker + CLM together make PowerShell as locked-down as Linux AppArmor.</li>
+    <li>AMSI is the frontline detector for PowerShell malware - attackers try to disable it first.</li>
+</ul>
+
+<p>
+When hardened correctly, PowerShell becomes a defensive asset instead of an attacker playground.  
+CLM + AMSI + logging = elite defensive posture.
+</p>
+
+    </div>
+</div>
+
+
+<!-- 6. Patching & Updates -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('wh-appcontrol')">
+        6. Application Control (AppLocker / WDAC)
+    </div>
+    <div class="tool-details" id="wh-appcontrol">
+
+<pre>
+# --- AppLocker: simplest app control approach ---
+# Open Local Security Policy → AppLocker
+#  Location:
+#    Computer Configuration →
+#      Windows Settings →
+#        Security Settings →
+#          Application Control Policies → AppLocker
+
+
+# --- Enable AppId service ---
+sc config AppIDSvc start=auto
+sc start AppIDSvc
+
+
+# --- Basic recommended AppLocker policy (the golden model) ---
+# 1. Allow Microsoft-signed binaries → Everyone
+# 2. Allow Program Files → Everyone
+# 3. Allow Windows directory → Everyone
+# 4. Deny EVERYTHING else → Everyone
+# 5. Allow full access → Administrators only
+
+# Export current policy:
+Get-AppLockerPolicy -Effective | Out-File "C:\\appLocker-export.xml"
+
+# Import policy:
+Set-AppLockerPolicy -XMLPolicy "C:\\appLocker-export.xml" -Merge
+
+
+# --- Verify what would run BEFORE enforcing (safe mode) ---
+Get-AppLockerFileInformation -Directory "C:\\Users" |
+    Test-AppLockerPolicy -XMLPolicy "C:\\appLocker-export.xml" -User Everyone
+
+
+# --- Block script execution for non-admins ---
+# Prevents most .ps1 / .vbs / .js malware.
+Set-AppLockerPolicy -XMLPolicy "C:\\policies\\scripts-only-ms-signed.xml" -Merge
+
+
+# --- WDAC: stronger, kernel-level application control ---
+# WDAC is the modern successor. Uses Code Integrity Policies.
+# Minimum steps:
+
+# Create base policy (audit mode)
+New-CIPolicy -Level Publisher -FilePath "C:\\WDAC\\Base.xml" -UserPEs 1
+
+# Convert to binary
+ConvertFrom-CIPolicy -XmlFilePath "C:\\WDAC\\Base.xml" -BinaryFilePath "C:\\WDAC\\Base.cip"
+
+# Deploy policy
+cp C:\\WDAC\\Base.cip "C:\\Windows\\System32\\CodeIntegrity\\SiPolicy.p7b"
+
+
+# --- WDAC enforcement modes ---
+# Audit (log-only):
+Set-RuleOption -FilePath "Base.xml" -Option 3
+
+# Enforced (allows only signed/known binaries):
+Set-RuleOption -FilePath "Base.xml" -Delete -Option 3
+
+
+# --- Check WDAC logs ---
+Get-WinEvent -LogName "Microsoft-Windows-CodeIntegrity/Operational" |
+    Select TimeCreated,Id,Message
+
+
+# --- Typical WDAC rules that shut down malware ---
+# - Block unsigned drivers
+# - Block PowerShell in Full Language Mode
+# - Allow only Microsoft + Enterprise-signed code
+# - Disable legacy script hosts
+</pre>
+
+<p><b>Why this matters:</b></p>
+<ul>
+    <li>AppLocker stops ransomware and unknown EXEs from running - immediately.</li>
+    <li>WDAC elevates enforcement to the kernel, beyond user tampering.</li>
+    <li>Allow-listing is infinitely more secure than block-listing.</li>
+    <li>Most modern malware completely fails to execute under strict WDAC/AppLocker.</li>
+    <li>A simple policy allowing only Microsoft-signed binaries already defeats:
+        <ul>
+            <li>Living-off-the-land malware</li>
+            <li>Downloaded malware EXEs</li>
+            <li>Script-based droppers</li>
+            <li>Unknown DLL sideloaders</li>
+        </ul>
+    </li>
+</ul>
+
+<p>
+Application control is the **highest ROI hardening layer** on Windows.  
+If an attacker can't execute, they can't do anything - period.
+</p>
+
+    </div>
+</div>
+
+
+<!-- 7. Defender & ASR Rules -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('wh-isolation')">
+        7. System Isolation (Exploit Guard, ASR Rules, Sandboxing)
+    </div>
+    <div class="tool-details" id="wh-isolation">
+
+<pre>
+# --- Enable Windows Defender Exploit Guard (EDR-lite for everyone) ---
+# GUI: Windows Security → App & Browser Control → Exploit protection
+
+
+# --- Export system-wide mitigations ---
+# Useful for templating hardened configs across machines
+Get-ProcessMitigation | Export-Clixml -Path "C:\\mitigations.xml"
+
+
+# --- Import hardened mitigations ---
+# After editing the XML (optional)
+Set-ProcessMitigation -PolicyFilePath "C:\\mitigations.xml"
+
+
+# --- Enable Attack Surface Reduction (ASR) rules ---
+# These shut down entire malware categories instantly.
+# Requires Defender (built-in on Win10+)
+
+# Example: Block Office child processes (macro malware killer)
+Add-MpPreference -AttackSurfaceReductionRules_Ids 3B576869-A4EC-4529-8536-B80A7769E899 `
+                 -AttackSurfaceReductionRules_Actions Enabled
+
+# Block executable content from email/web downloads
+Add-MpPreference -AttackSurfaceReductionRules_Ids BE9BA2D9-53EA-4CDC-84E5-9B1EEEE46550 `
+                 -AttackSurfaceReductionRules_Actions Enabled
+
+# Block credential theft from LSASS
+Add-MpPreference -AttackSurfaceReductionRules_Ids D4F940AB-401B-4EFC-AADC-AD5F3C50688A `
+                 -AttackSurfaceReductionRules_Actions Enabled
+
+# Block untrusted USB-based executables
+Add-MpPreference -AttackSurfaceReductionRules_Ids 56A863A9-875E-4185-98A7-B882C64B5CE5 `
+                 -AttackSurfaceReductionRules_Actions Enabled
+
+
+# --- Windows Sandbox (safe detonation environment) ---
+# Enable sandbox feature
+Enable-WindowsOptionalFeature -Online -FeatureName "Containers-DisposableClientVM" -All -NoRestart
+
+# Launch sandbox
+WindowsSandbox.exe
+
+
+# --- Configure sandbox startup (isolated environment config) ---
+# Optional: create .WSB file to auto-run tools inside the sandbox
+# Example:
+# <Configuration>
+#   <MappedFolders>
+#     <MappedFolder>
+#       <HostFolder>C:\\Tools</HostFolder>
+#       <SandboxFolder>C:\\Tools</SandboxFolder>
+#     </MappedFolder>
+#   </MappedFolders>
+# </Configuration>
+
+
+# --- AppContainer Sandboxing (for custom apps/scripts) ---
+# Run scripts in a restricted sandbox using WDAC:
+powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command {
+    Add-AppxPackage -Path .\AppXFramework.msix
+}
+
+
+# --- Network isolation via Firewall + ASR synergy ---
+# Restrict outbound traffic per application:
+New-NetFirewallRule -DisplayName "Restrict App" -Program "C:\\app.exe" -Action Allow -Direction Outbound `
+    -RemoteAddress <trusted-ip-range>
+
+
+# --- Isolate risky processes with memory mitigations ---
+# Harden browsers, Office, scripting engines:
+Set-ProcessMitigation -Name excel.exe -Enable ForceRelocateImages,BottomUpRandomization
+Set-ProcessMitigation -Name powershell.exe -Enable CFG,StrictCFG
+Set-ProcessMitigation -Name chrome.exe -Enable DEP,SEHOP
+</pre>
+
+<p><b>Why this matters:</b></p>
+<ul>
+    <li>ASR rules eliminate macro malware, LOLBins, and credential theft instantly.</li>
+    <li>Exploit Guard mitigations reduce successful exploit chains dramatically.</li>
+    <li>Sandbox gives you a safe detonation box *built into Windows* - no VM required.</li>
+    <li>Outbound isolation limits what compromised processes can talk to.</li>
+    <li>Process mitigations cripple ROP chains, memory corruption exploits, and injection attempts.</li>
+</ul>
+
+<p>
+This section is about **containment** - even if something runs, it can't spread, persist, steal credentials, or beacon out.
+</p>
+
+    </div>
+</div>
+
+
+<!-- 8. PowerShell Constrained Language Mode -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('wh-disk')">
+        8. Disk, Encryption & File-System Security
+    </div>
+    <div class="tool-details" id="wh-disk">
+
+<pre>
+# --- Enable BitLocker (full-disk encryption) ---
+# GUI: Control Panel → BitLocker Drive Encryption
+# PowerShell:
+Enable-BitLocker -MountPoint "C:" -EncryptionMethod XtsAes256 `
+    -UsedSpaceOnly -PasswordProtector
+
+# Add recovery key (essential)
+Add-BitLockerKeyProtector -MountPoint "C:" -RecoveryPasswordProtector
+
+
+# --- Verify BitLocker status ---
+Get-BitLockerVolume | Select VolumeType, MountPoint, ProtectionStatus, EncryptionMethod
+
+
+# --- Encrypt removable drives automatically ---
+# Prevents data theft via USB drives
+reg add "HKLM\\Software\\Policies\\Microsoft\\FVE" /v RDVConfigureBDE /t REG_DWORD /d 1 /f
+reg add "HKLM\\Software\\Policies\\Microsoft\\FVE" /v RDVAllowBDE /t REG_DWORD /d 1 /f
+
+
+# --- Disable write access to unencrypted USB devices ---
+reg add "HKLM\\Software\\Policies\\Microsoft\\FVE" /v RDVDenyWriteAccess /t REG_DWORD /d 1 /f
+
+
+# --- NTFS Permissions Audit ---
+# Find directories writable by non-admins (big security issue)
+icacls C:\\ /findsid Everyone | findstr "(F) (M)"
+icacls C:\\ /findsid Users | findstr "(F) (M)"
+
+# Check integrity of system folders
+sfc /scannow
+DISM /Online /Cleanup-Image /RestoreHealth
+
+
+# --- Enable Windows “Controlled Folder Access” (anti-ransomware) ---
+Set-MpPreference -EnableControlledFolderAccess Enabled
+
+# Add protected folders (blocks unauthorized writes)
+Set-MpPreference -ControlledFolderAccessProtectedFolders "C:\\Users\\User\\Documents","C:\\Data"
+
+
+# --- Enable file integrity monitoring (FIM-lite) ---
+# Track changes to sensitive directories
+auditpol /set /subcategory:"File System" /success:enable /failure:enable
+
+# Set SACLs to audit writes
+icacls "C:\\Sensitive" /setaudit "(OI)(CI)(WD,WDAC,WA)"
+
+
+# --- Block legacy compression formats used by malware ---
+# Prevents auto-execution from .zip/.cab/.iso mounts
+reg add "HKLM\\Software\\Policies\\Microsoft\\Windows\\Explorer" `
+    /v NoAutoMount /t REG_DWORD /d 1 /f
+
+
+# --- Check for alternate data streams (common hiding trick) ---
+Get-ChildItem -Recurse | ForEach-Object {
+    $streams = Get-Item -Path $_.FullName -Stream * -ErrorAction SilentlyContinue
+    if ($streams) { $streams }
+}
+
+# ADS example:
+#   notepad.exe:hiddenPayload
+</pre>
+
+<p><b>Why this matters:</b></p>
+<ul>
+    <li>Full-disk encryption is the difference between a breach and a “nothing leaked.”</li>
+    <li>Unencrypted USB devices are a massive data-loss vector.</li>
+    <li>NTFS permission audits expose privilege-escalation and persistence paths.</li>
+    <li>Controlled Folder Access kills most ransomware behavior.</li>
+    <li>Integrity monitoring gives you early signals of tampering before it becomes a disaster.</li>
+    <li>Alternate Data Streams are still used by malware to hide payloads - this catches them.</li>
+</ul>
+
+<p>
+Disk & file-system hardening massively reduces data theft, ransomware impact, and stealthy persistence.
+</p>
+
+    </div>
+</div>
+
+
+<!-- 9. SMB & Remote Protocol Hardening -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('wh-updates')">
+        9. Patch Management & Attack Surface Review
+    </div>
+    <div class="tool-details" id="wh-updates">
+
+<pre>
+# --- Check Windows Update status ---
+Get-WindowsUpdateLog
+Get-WmiObject -Class Win32_QuickFixEngineering |
+    Select HotFixID, InstalledOn | Sort InstalledOn -Descending
+
+
+# --- Install all pending updates ---
+Install-WindowsUpdate -MicrosoftUpdate -AcceptAll -AutoReboot
+# (Requires PSWindowsUpdate module)
+
+
+# --- Check security baselines (CIS / MS) ---
+# Microsoft Security Baseline Analyzer (deprecated GUI)
+# New approach: use LGPO + Group Policy templates
+lgpo.exe /b "C:\\baseline-backup"
+lgpo.exe /v "C:\\baseline-templates\\Windows 11 Security Baseline"
+
+
+# --- Analyze attack surface with built-in tools ---
+# 1. Installed drivers (common exploit surface)
+Get-WmiObject Win32_SystemDriver |
+    Select Name, State, PathName | Sort Name
+
+# 2. Installed software
+Get-WmiObject Win32_Product | Select Name, Version
+
+# 3. Services with binary paths
+Get-CimInstance Win32_Service |
+    Select Name, StartMode, PathName | Sort Name
+
+
+# --- Find outdated/known-vulnerable software ---
+Get-WmiObject Win32_Product | 
+    Where-Object { $_.Version -lt "2.0" } |
+    Select Name, Version
+# (Primitive but catches obvious issues - better to use PDQ or enterprise scanners)
+
+
+# --- Attack Surface Reduction: review and enforce ---
+Get-MpPreference | Select AttackSurfaceReductionRules_Ids, AttackSurfaceReductionRules_Actions
+
+# Example: re-apply baseline rules
+Set-MpPreference -AttackSurfaceReductionRules_Actions Enabled `
+    -AttackSurfaceReductionRules_Ids (
+        "3B576869-A4EC-4529-8536-B80A7769E899",  # block office child
+        "D4F940AB-401B-4EFC-AADC-AD5F3C50688A",  # block LSASS dump
+        "BE9BA2D9-53EA-4CDC-84E5-9B1EEEE46550"   # block email/web downloads
+    )
+
+
+# --- Defender signature + engine updates ---
+Update-MpSignature
+
+# Quick health status:
+Get-MpComputerStatus | Select AMServiceEnabled, AntispywareEnabled, AntivirusEnabled, IoavProtectionEnabled
+
+
+# --- Remove unwanted Windows features (reduces attack surface) ---
+Disable-WindowsOptionalFeature -Online -FeatureName TelnetClient -NoRestart
+Disable-WindowsOptionalFeature -Online -FeatureName SMB1Protocol -NoRestart
+Disable-WindowsOptionalFeature -Online -FeatureName FaxServicesClientPackage -NoRestart
+Disable-WindowsOptionalFeature -Online -FeatureName Xps-Foundation-Xps-Viewer -NoRestart
+
+# Enumerate optional features
+Get-WindowsOptionalFeature -Online | Sort State
+
+
+# --- Audit running processes for version mismatch (exploit risk) ---
+Get-Process | ForEach-Object {
+    $ver = (Get-Item $_.Path).VersionInfo.FileVersion
+    [PSCustomObject]@{ Process=$_.Name; Version=$ver }
+} | Sort Version
+
+
+# --- Scheduled Security Reviews ---
+# Monthly security scan of system config
+secedit /export /cfg C:\\security-baseline.ini
+# Compare to previous baseline
+
+
+# --- Driver vulnerability check (common attack path) ---
+Get-WmiObject Win32_PnPSignedDriver |
+    Select DeviceName, DriverVersion, Manufacturer |
+    Sort DeviceName
+</pre>
+
+<p><b>Why this matters:</b></p>
+<ul>
+    <li>Unpatched Windows machines get compromised faster than any other platform.</li>
+    <li>Drivers and old software are silent privilege-escalation vectors.</li>
+    <li>ASR rules need periodic review to stay strong.</li>
+    <li>Removing unused Windows features cuts the attack surface by hundreds of components.</li>
+    <li>Security baselines ensure the configuration stays hardened over time.</li>
+    <li>Comparing baselines helps catch silent tampering (common in long-running infections).</li>
+</ul>
+
+<p>
+Patch management isn't sexy, but it directly prevents exploits, ransomware, and credential theft.  
+This is your “silent shield” layer of Windows security.
+</p>
+
+    </div>
+</div>
+
+
+<!-- 10. Hardening Checklist -->
+<div class="tool-row">
+    <div class="tool-name" onclick="toggleDetails('wh-checklist')">
+        10. Secure Defaults Checklist
+    </div>
+    <div class="tool-details" id="wh-checklist">
+
+<pre>
+# --- Authentication & Credentials ---
+[✔] LSA Protection enabled (RunAsPPL=1)
+[✔] Credential Guard enabled
+[✔] NTLM restrictions applied
+[✔] WDigest disabled (no cleartext creds)
+[✔] Protected Users group used for admins
+[✔] Kerberos hardened (AES only)
+
+# --- PowerShell ---
+[✔] PowerShell v2 disabled entirely
+[✔] ScriptBlock Logging ON
+[✔] Module Logging ON
+[✔] Transcription ON
+[✔] AMSI functioning
+[✔] Constrained Language Mode active for non-admins
+
+# --- Network & Firewall ---
+[✔] Default inbound → Block
+[✔] RDP restricted by IP or disabled
+[✔] SMBv1 disabled
+[✔] LLMNR disabled
+[✔] NetBIOS disabled
+[✔] Firewall logging enabled (allowed + blocked)
+
+# --- Services & Startup ---
+[✔] RemoteRegistry disabled
+[✔] Print Spooler disabled (if not needed)
+[✔] Autoruns reviewed (Autoruns)
+[✔] Startup folders cleaned
+[✔] WMI persistence audited
+[✔] Legacy services disabled (Fax, SNMP, Telnet)
+
+# --- Application Control ---
+[✔] AppLocker allowing only Microsoft + Program Files
+[✔] WDAC in audit or enforced mode
+[✔] Script execution restricted for non-admins
+
+# --- Disk & FS Security ---
+[✔] BitLocker enabled (AES-256)
+[✔] Recovery key stored safely
+[✔] Controlled Folder Access enabled
+[✔] USB write access blocked unless encrypted
+[✔] NTFS permission audit performed
+[✔] ADS streams checked
+
+# --- Exploit Protection / Isolation ---
+[✔] ASR rules enabled (Office, LSASS, email/web payloads)
+[✔] Exploit Guard system mitigations applied
+[✔] Browser & Office hardened with CFG / DEP / ROP mitigations
+[✔] Windows Sandbox enabled for safe detonation
+
+# --- Patch & Attack Surface Review ---
+[✔] Windows fully updated
+[✔] Installed software reviewed (no outdated junk)
+[✔] Optional features trimmed (SMB1, XPS, Fax, Telnet)
+[✔] Drivers reviewed (old driver exploits)
+[✔] Monthly baseline scanning (secedit / LGPO)
+</pre>
+
+<p><b>Why this list matters:</b></p>
+<ul>
+    <li>It condenses everything into one “am I secure?” checklist.</li>
+    <li>Every item directly blocks a real-world attack path.</li>
+    <li>Most machines fail half of this list - that's why compromises happen.</li>
+    <li>This is the baseline you'd expect from a well-maintained, hardened Windows system.</li>
+</ul>
+
+<p>
+If a Windows host checks every box here, it jumps from “easy win” to “actually painful for an attacker.”  
+This is your final, high-level validation layer.
+</p>
+
+    </div>
+</div>
+

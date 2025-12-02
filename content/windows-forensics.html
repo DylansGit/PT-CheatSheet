@@ -83,14 +83,90 @@ This is the Windows equivalent of “ps aux + lsof + top” for Linux - but with
         2. Event Logs
     </div>
     <div class="tool-details" id="wf-logs">
-        <!-- TODO: Security, Sysmon, PowerShell, WMI, RDP, Defender logs -->
-        <pre>
-# placeholder:
-Get-WinEvent -LogName Security -MaxEvents 20
-        </pre>
-        <p>Windows logging is where 90% of truth hides. We’ll expand it heavily.</p>
+
+<pre>
+# --- Security Log (authentication, privilege use) ---
+Get-WinEvent -LogName Security -MaxEvents 50 |
+    Select TimeCreated, Id, Message
+
+# Relevant Event IDs:
+# 4624  - Logon success
+# 4625  - Logon failure
+# 4672  - Admin privilege assigned
+# 4688  - New process creation (critical)
+# 4697  - Service installation
+# 4720  - User account created
+# 4732  - User added to privileged group
+# 4768-4771 - Kerberos activity
+
+
+# --- Sysmon (the goldmine) ---
+Get-WinEvent -LogName "Microsoft-Windows-Sysmon/Operational" -MaxEvents 50 |
+    Select TimeCreated, Id, Message
+
+# Key Sysmon events:
+# 1   - Process creation
+# 3   - Network connection
+# 7   - Image loaded
+# 11  - File create
+# 13  - Registry modification
+# 22  - DNS query
+
+
+# --- PowerShell logs (attackers always touch these) ---
+Get-WinEvent -LogName "Windows PowerShell" -MaxEvents 20
+Get-WinEvent -LogName "Microsoft-Windows-PowerShell/Operational" -MaxEvents 20
+
+# Look for:
+# ScriptBlockText =
+# CommandInvocation =
+# Base64 commands =
+# AMSI bypass attempts =
+
+
+# --- WMI logs (common for fileless persistence) ---
+Get-WinEvent -LogName "Microsoft-Windows-WMI-Activity/Operational" -MaxEvents 30 |
+    Select TimeCreated, Id, Message
+
+# Watch for: EventID 5857, 5858, 5860
+# Indicates consumer binding, suspicious activity.
+
+
+# --- RDP logs ---
+Get-WinEvent -LogName "Microsoft-Windows-TerminalServices-LocalSessionManager/Operational" -MaxEvents 30
+
+# Useful IDs:
+# 21   - Login
+# 23   - Logout
+# 24   - Disconnected
+# 25   - Reconnected
+
+
+# --- Defender logs (malware attempts caught/blocked) ---
+Get-WinEvent -LogName "Microsoft-Windows-Windows Defender/Operational" -MaxEvents 20 |
+    Select TimeCreated, Id, Message
+
+
+# --- Filter log entries for keywords (IOC hunting) ---
+Get-WinEvent -LogName Security -MaxEvents 200 |
+    Where-Object { $_.Message -match "cmd.exe|powershell|lsass|failed|denied" } |
+    Select TimeCreated, Id, Message
+</pre>
+
+<p><b>Why logs matter:</b></p>
+<ul>
+    <li>Logs are the timeline - they connect processes, persistence, and network actions.</li>
+    <li>Sysmon gives you the deepest visibility Windows offers.</li>
+    <li>PowerShell logs expose encoded commands attackers try to hide.</li>
+    <li>WMI logs show fileless persistence nearly every IR misses.</li>
+    <li>Defender logs show blocked attempts even if malware “worked.”</li>
+</ul>
+
+<p>Most intrusions can be reconstructed nearly 100% from Event Logs alone if you know where to look.</p>
+
     </div>
 </div>
+
 
 <!-- SECTION 3: Registry Forensics -->
 <div class="tool-row">
