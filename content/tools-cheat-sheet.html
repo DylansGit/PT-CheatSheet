@@ -3314,6 +3314,173 @@ cme winrm host -u admin -H HASH -x "powershell -ep bypass ..."
 </div>
 
 
+<div class="tool-row">
+  <div class="tool-name" onclick="toggleDetails('enum4linux')">Enum4linux / Enum4linux-ng</div>
+  <div class="tool-details" id="enum4linux">
+
+    <h2>Enum4linux / Enum4linux-ng — AD & SMB Enumeration</h2>
+    <p>
+      Enum4linux is a classic SMB/NetBIOS domain enumeration tool, now replaced by 
+      <strong>enum4linux-ng</strong> for modern Windows versions.  
+      It extracts users, groups, shares, password policies, OS info, RPC data, and domain details 
+      without needing domain privileges.  
+    </p>
+
+    <h3>When to use</h3>
+    <ul>
+      <li>Early-stage enumeration of a Windows host</li>
+      <li>Discovering domain users & groups from Linux</li>
+      <li>Checking SMB share access (anonymous or authenticated)</li>
+      <li>Extracting password policy & lockout policy</li>
+      <li>Pulling NetBIOS info, OS version, and domain name</li>
+      <li>Looking for accounts with RID cycling</li>
+      <li>Fast recon when rpcclient/ldapsearch are too manual</li>
+    </ul>
+
+    <!-- ============================== -->
+    <!-- BASIC USAGE                    -->
+    <!-- ============================== -->
+
+    <h2>1. Basic scan (anonymous)</h2>
+    <pre><code>
+enum4linux-ng -A target
+    </code></pre>
+
+    <p><strong>-A</strong> = run all standard enumerations.</p>
+
+    <h2>2. Authenticated scan</h2>
+    <pre><code>
+enum4linux-ng -A target -u user -p password
+    </code></pre>
+
+    <p>Much more data if low-priv credentials work.</p>
+
+    <!-- ============================== -->
+    <!-- OUTPUT SNAPSHOT                -->
+    <!-- ============================== -->
+
+    <h2>3. What -A gives you</h2>
+    <ul>
+      <li>SMB shares (read/write state)</li>
+      <li>Domain SID</li>
+      <li>RID cycling → enumerate all users</li>
+      <li>Password policy (min length, lockout threshold)</li>
+      <li>Group memberships</li>
+      <li>Local users</li>
+      <li>NetBIOS names, domain, OS version</li>
+      <li>Printer shares, null sessions</li>
+      <li>RPC data: LSA, SAMR responses</li>
+    </ul>
+
+    <!-- ============================== -->
+    <!-- RID CYCLING                    -->
+    <!-- ============================== -->
+
+    <h2>4. RID cycling (user enumeration)</h2>
+    <pre><code>
+enum4linux-ng target -R
+    </code></pre>
+
+    <p>Finds domain accounts like:</p>
+    <ul>
+      <li>Administrator</li>
+      <li>Guest</li>
+      <li>BackupOps</li>
+      <li>svc-accounts</li>
+    </ul>
+
+    <!-- ============================== -->
+    <!-- SHARE ENUMERATION              -->
+    <!-- ============================== -->
+
+    <h2>5. Enumerate SMB shares</h2>
+    <pre><code>
+enum4linux-ng target -S
+    </code></pre>
+
+    <h3>Equivalent to smbclient -L but cleaner output.</h3>
+
+    <!-- ============================== -->
+    <!-- USERS / GROUPS                 -->
+    <!-- ============================== -->
+
+    <h2>6. Extract users and groups</h2>
+    <pre><code>
+enum4linux-ng target -U     # users
+enum4linux-ng target -G     # groups
+    </code></pre>
+
+    <!-- ============================== -->
+    <!-- PASSWORD POLICY                -->
+    <!-- ============================== -->
+
+    <h2>7. Show password policy</h2>
+    <pre><code>
+enum4linux-ng target -P
+    </code></pre>
+
+    <p>Useful before doing password spraying.</p>
+
+    <!-- ============================== -->
+    <!-- NETBIOS / RPC / WKS            -->
+    <!-- ============================== -->
+
+    <h2>8. Other useful modes</h2>
+
+    <h3>OS / NetBIOS info</h3>
+    <pre><code>
+enum4linux-ng target -n
+    </code></pre>
+
+    <h3>RPC checks</h3>
+    <pre><code>
+enum4linux-ng target -r
+    </code></pre>
+
+    <h3>List workstations & servers</h3>
+    <pre><code>
+enum4linux-ng target -k
+    </code></pre>
+
+    <!-- ============================== -->
+    <!-- WORKFLOW                       -->
+    <!-- ============================== -->
+
+    <h2>9. Practical workflow</h2>
+    <pre><code>
+# Step 1 — Try anonymous enumeration
+enum4linux-ng -A target
+
+# Step 2 — If creds found, do authenticated run
+enum4linux-ng -A target -u user -p pass
+
+# Step 3 — Extract users for spraying
+enum4linux-ng target -U > users.txt
+
+# Step 4 — Enumerate shares
+enum4linux-ng target -S
+
+# Step 5 — Move to SMBClient / CME / LDAPSearch for deeper enumeration
+smbclient -L //target -U user%pass
+cme smb target -u user -p pass
+ldapsearch ...
+    </code></pre>
+
+    <!-- ============================== -->
+    <!-- TROUBLESHOOTING                -->
+    <!-- ============================== -->
+
+    <h2>10. Troubleshooting</h2>
+    <ul>
+      <li><strong>“Access denied” everywhere:</strong> try legitimate low-priv creds</li>
+      <li><strong>No output:</strong> SMBv1 disabled → use enum4linux-ng (supports SMB2/3)</li>
+      <li><strong>RID cycling blocked:</strong> domain hardened; use Kerbrute instead</li>
+      <li><strong>Connection timeout:</strong> firewall filtering 445/139</li>
+    </ul>
+
+  </div>
+</div>
+
 
 <div class="tool-row">
   <div class="tool-name" onclick="toggleDetails('bloodhound')">Bloodhound + SharpHound</div>
