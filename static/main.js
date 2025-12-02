@@ -588,15 +588,35 @@ function scrollToSection(id) {
 }
 
 
-document.querySelectorAll('.dropdown-parent').forEach(parent => {
-  const menuId = parent.getAttribute('data-menu');
-  const panel = document.getElementById(menuId);
+document.addEventListener("DOMContentLoaded", () => {
+    document.querySelectorAll('.dropdown-parent').forEach(parent => {
+        const menuId = parent.getAttribute('data-menu');
+        const panel = document.getElementById(menuId);
 
-  if (!panel) return;
+        if (!panel) return;
 
-  parent.addEventListener('mouseenter', () => {
-    const rect = parent.getBoundingClientRect();
-    panel.style.left = rect.left + "px";
-    panel.style.top = (rect.bottom + 6) + "px";
-  });
+        parent.addEventListener('mouseenter', () => {
+            const rect = parent.getBoundingClientRect();
+            panel.style.left = rect.left + "px";
+            panel.style.top = (rect.bottom + 6) + "px";
+        });
+    });
+});
+
+
+// --- RE-INJECT INLINE COPY BUTTONS AFTER TAB LOAD ---
+const _originalShowTab = window.showTab;
+
+window.showTab = async function(id) {
+    await _originalShowTab(id);
+    setTimeout(() => {
+        stylePreComments();
+        addInlineCopyButtons();
+    }, 30);
+};
+
+// Also run on first page load
+document.addEventListener("DOMContentLoaded", () => {
+    stylePreComments();
+    addInlineCopyButtons();
 });

