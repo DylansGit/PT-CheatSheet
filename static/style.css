@@ -717,12 +717,12 @@ pre span.comment-line {
 
 /* Enhanced list styling */
 li {
+    list-style: none;
     margin: 4px 0;
     padding-left: 10px;
     font-size: 1.05em;       /* one step bigger */
     font-weight: 500;        /* slight bold */
     color: #d8e2ff;          /* soft bright color */
-    list-style-type: "▸ ";   /* modern arrow bullet */
 }
 
 /* Inline code wrapper (non-intrusive) */
