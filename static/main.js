@@ -586,3 +586,17 @@ function scrollToSection(id) {
         if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 150);
 }
+
+
+document.querySelectorAll('.dropdown-parent').forEach(parent => {
+  const menuId = parent.getAttribute('data-menu');
+  const panel = document.getElementById(menuId);
+
+  if (!panel) return;
+
+  parent.addEventListener('mouseenter', () => {
+    const rect = parent.getBoundingClientRect();
+    panel.style.left = rect.left + "px";
+    panel.style.top = (rect.bottom + 6) + "px";
+  });
+});

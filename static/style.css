@@ -655,7 +655,7 @@ html, body {
 
 /* --- Modern dropdown panel --- */
 .dropdown-panel {
-  position: absolute;
+  position: fixed;
   background: #1a1a1a;
   border: 1px solid #660000;
   border-radius: 8px;
@@ -687,6 +687,11 @@ html, body {
   background: #990000;
   padding-left: 22px;
 }
+
+.dropdown-parent {
+  position: relative;
+}
+
 
 /* hover effect for ALL tabs */
 .tab {
@@ -749,4 +754,80 @@ li {
     color: #6aff89;
     border-color: #6aff89;
     opacity: 1;
+}
+
+
+/* unify width */
+#tab-content > * {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px 26px !important;
+}
+
+/* optional but recommended */
+#tab-content > * {
+    background: rgba(0,0,0,0.25);
+    border-radius: 8px;
+    box-shadow: 0 0 12px rgba(0,0,0,0.35);
+}
+
+/* neutralize old container */
+.container {
+    max-width: 100%;
+    padding: 20px 0 !important;
+}
+
+
+/* --- Vertical Cyber Streams FIXED VERSION --- */
+
+.side-streams {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  z-index: 1; /* BELOW container */
+}
+
+.stream {
+  position: absolute;
+  width: 3px;               /* thicker so it shows */
+  height: 150vh;            /* full coverage */
+  background: rgba(255, 0, 0, 0.4); /* stronger */
+  box-shadow: 0 0 18px rgba(255, 0, 0, 0.6); /* glow */
+  filter: blur(0.5px);
+  animation: streamFall 8s linear infinite;
+  opacity: 0.65;            /* visible */
+}
+
+/* left side streams */
+.stream.left.s1 { left: 3%; animation-duration: 7s; }
+.stream.left.s2 { left: 6%; animation-duration: 11s; }
+
+/* right side streams */
+.stream.right.s1 { right: 3%; animation-duration: 8s; }
+.stream.right.s2 { right: 6%; animation-duration: 12s; }
+
+@keyframes streamFall {
+  0%   { transform: translateY(-150%); }
+  100% { transform: translateY(100%); }
+}
+
+.container {
+    max-width: 1500px !important;
+    margin: 0 auto;
+    background: rgba(255,255,255,0.07);
+    border-radius: 10px;
+    padding: 40px;
+    position: relative;
+    z-index: 10;
+}
+
+.side-streams {
+    z-index: 5 !important;  /* ABOVE body gradient */
+}
+
+.stream {
+    opacity: 0.45;
 }
