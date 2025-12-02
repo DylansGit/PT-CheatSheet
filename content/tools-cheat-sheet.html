@@ -3138,7 +3138,7 @@ psexec.py DOMAIN\Administrator@TARGET -hashes :NTHASH
   <div class="tool-name" onclick="toggleDetails('crackmapexec')">CrackMapExec</div>
   <div class="tool-details" id="crackmapexec">
 
-    <h2>CrackMapExec (CME) — Lateral Movement & AD Post-Exploitation Swiss Army Knife</h2>
+    <h2>CrackMapExec (CME) - Lateral Movement & AD Post-Exploitation Swiss Army Knife</h2>
     <p>
       CrackMapExec is used for credential spraying, hash/auth testing, user enumeration,
       command execution, session discovery, LSASS dumping, and lateral movement across
@@ -3318,7 +3318,7 @@ cme winrm host -u admin -H HASH -x "powershell -ep bypass ..."
   <div class="tool-name" onclick="toggleDetails('enum4linux')">Enum4linux / Enum4linux-ng</div>
   <div class="tool-details" id="enum4linux">
 
-    <h2>Enum4linux / Enum4linux-ng — AD & SMB Enumeration</h2>
+    <h2>Enum4linux / Enum4linux-ng - AD & SMB Enumeration</h2>
     <p>
       Enum4linux is a classic SMB/NetBIOS domain enumeration tool, now replaced by 
       <strong>enum4linux-ng</strong> for modern Windows versions.  
@@ -3448,19 +3448,19 @@ enum4linux-ng target -k
 
     <h2>9. Practical workflow</h2>
     <pre><code>
-# Step 1 — Try anonymous enumeration
+# Step 1 - Try anonymous enumeration
 enum4linux-ng -A target
 
-# Step 2 — If creds found, do authenticated run
+# Step 2 - If creds found, do authenticated run
 enum4linux-ng -A target -u user -p pass
 
-# Step 3 — Extract users for spraying
+# Step 3 - Extract users for spraying
 enum4linux-ng target -U > users.txt
 
-# Step 4 — Enumerate shares
+# Step 4 - Enumerate shares
 enum4linux-ng target -S
 
-# Step 5 — Move to SMBClient / CME / LDAPSearch for deeper enumeration
+# Step 5 - Move to SMBClient / CME / LDAPSearch for deeper enumeration
 smbclient -L //target -U user%pass
 cme smb target -u user -p pass
 ldapsearch ...
@@ -3486,7 +3486,7 @@ ldapsearch ...
   <div class="tool-name" onclick="toggleDetails('bloodhound')">Bloodhound + SharpHound</div>
   <div class="tool-details" id="bloodhound">
 
-    <h2>BloodHound + SharpHound — AD Attack Path Mapping</h2>
+    <h2>BloodHound + SharpHound - AD Attack Path Mapping</h2>
     <p>
       BloodHound visualizes Active Directory privilege relationships, lateral movement paths,
       ACL abuses, delegation issues, and misconfigurations.  
@@ -3647,7 +3647,7 @@ Query → Objects Where You Can Write SPN / KeyCredentials
 
     <h2>7. SharpHound Collection Tips</h2>
     <ul>
-      <li>Use <strong>-c All</strong> only when needed — it’s noisy</li>
+      <li>Use <strong>-c All</strong> only when needed - it’s noisy</li>
       <li>Minimal fast set: <strong>Session, LocalAdmin, ACL</strong></li>
       <li>Run from a domain-joined machine for full data</li>
       <li>Use <strong>bloodhound-python</strong> from Linux footholds</li>
@@ -3673,7 +3673,7 @@ Query → Objects Where You Can Write SPN / KeyCredentials
   <div class="tool-name" onclick="toggleDetails('smbclient')">SMBClient</div>
   <div class="tool-details" id="smbclient">
 
-    <h2>SMBClient — Interacting with SMB Shares from Linux</h2>
+    <h2>SMBClient - Interacting with SMB Shares from Linux</h2>
     <p>
       smbclient is a Linux SMB tool allowing authentication, share enumeration,
       file downloads, uploads, and interaction with Windows shares.
@@ -3798,22 +3798,22 @@ sudo mount -t cifs //target/SHARE /mnt/smb \
 
     <h2>7. Practical workflow</h2>
     <pre><code>
-# Step 1 — List shares
+# Step 1 - List shares
 smbclient -L //target -U 'user%pass'
 
-# Step 2 — Access share
+# Step 2 - Access share
 smbclient //target/shared -U 'user%pass'
 
-# Step 3 — Search for creds
+# Step 3 - Search for creds
 ls
 recurse on
 prompt off
 mget *
 
-# Step 4 — Dump SYSVOL
+# Step 4 - Dump SYSVOL
 smbclient //dc/SYSVOL -U 'domain\\user%pass'
 
-# Step 5 — Check for writable shares → upload payload
+# Step 5 - Check for writable shares → upload payload
 put payload.exe
     </code></pre>
 
@@ -3837,7 +3837,7 @@ put payload.exe
   <div class="tool-name" onclick="toggleDetails('ldapsearch')">LDAPSearch</div>
   <div class="tool-details" id="ldapsearch">
 
-    <h2>LDAPSearch — Active Directory Enumeration via LDAP</h2>
+    <h2>LDAPSearch - Active Directory Enumeration via LDAP</h2>
     <p>
       ldapsearch is used during AD assessments to query LDAP directly and extract information
       about users, groups, computers, SPNs, policies, and domain configuration.  
