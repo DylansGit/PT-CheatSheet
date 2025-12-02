@@ -708,3 +708,45 @@ pre span.comment-line {
     opacity: 1;
     display: block;
 }
+
+
+/* Enhanced list styling */
+li {
+    margin: 4px 0;
+    padding-left: 10px;
+    font-size: 1.05em;       /* one step bigger */
+    font-weight: 500;        /* slight bold */
+    color: #d8e2ff;          /* soft bright color */
+    list-style-type: "▸ ";   /* modern arrow bullet */
+}
+
+/* Inline code wrapper (non-intrusive) */
+.inline-copy-container {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;                  /* tiny spacing */
+}
+
+/* Inline Copy Button */
+.inline-copy-btn {
+    font-size: 10px;
+    padding: 1px 4px;
+    background: #2c2f40;
+    border: 1px solid #3a3f55;
+    border-radius: 3px;
+    color: #cfd9ff;
+    cursor: pointer;
+    opacity: 0;               /* hidden until hover */
+    transition: 0.15s;
+}
+
+/* Only show button when hovering wrapper */
+.inline-copy-container:hover .inline-copy-btn {
+    opacity: 0.8;
+}
+
+.inline-copy-btn.copied {
+    color: #6aff89;
+    border-color: #6aff89;
+    opacity: 1;
+}

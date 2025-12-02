@@ -84,8 +84,23 @@
           <div class="dropdown-item" onclick="showTab('topics')">Topics</div>
       </div>
 
-      <!-- Standalone Tabs -->
-      <div class="tab active" onclick="showTab('toolscheatsheet')">Tools Cheatsheet</div>
+      <!-- Tools -->
+      <div class="tab dropdown-parent" data-menu="tools-menu" onclick="showTab('toolscheatsheet')">
+          Tools ▾
+      </div>
+
+      <div id="tools-menu" class="dropdown-panel">
+          <div class="dropdown-item" onclick="showTab('toolscheatsheet')">Full Tools Cheatsheet</div>
+          <div class="dropdown-item" onclick="showTab('toolscheatsheet'); scrollToSection('tools-recon')">Recon & Enumeration</div>
+          <div class="dropdown-item" onclick="showTab('toolscheatsheet'); scrollToSection('tools-web')">Web Exploitation</div>
+          <div class="dropdown-item" onclick="showTab('toolscheatsheet'); scrollToSection('tools-creds')">Credential Attacks</div>
+          <div class="dropdown-item" onclick="showTab('toolscheatsheet'); scrollToSection('tools-ad')">Infrastructure / AD</div>
+          <div class="dropdown-item" onclick="showTab('toolscheatsheet'); scrollToSection('tools-postlinux')">Post-Exploitation - Linux</div>
+          <div class="dropdown-item" onclick="showTab('toolscheatsheet'); scrollToSection('tools-postwindows')">Post-Exploitation - Windows</div>
+          <div class="dropdown-item" onclick="showTab('toolscheatsheet'); scrollToSection('tools-network')">Network / Packet Capture</div>
+          <div class="dropdown-item" onclick="showTab('toolscheatsheet'); scrollToSection('tools-cloud')">Cloud & Containers</div>
+          <div class="dropdown-item" onclick="showTab('toolscheatsheet'); scrollToSection('tools-wireless')">Wireless / MITM</div>
+      </div>
 
       <!-- Commented out the Images Cheatsheet tab -->
       <!-- <div class="tab" onclick="showTab('imagescheatsheet')">Images Cheatsheet</div> -->

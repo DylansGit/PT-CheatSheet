@@ -531,3 +531,58 @@ function stylePreComments() {
         pre.innerHTML = lines.join("\n");
     });
 }
+
+
+function addInlineCopyButtons() {
+    document.querySelectorAll("code").forEach(code => {
+
+        // Skip if already wrapped
+        if (code.parentElement.classList.contains("inline-copy-container")) return;
+
+        // Create container
+        const container = document.createElement("span");
+        container.className = "inline-copy-container";
+
+        // Insert wrapper before code
+        code.parentNode.insertBefore(container, code);
+        container.appendChild(code);
+
+        // Create button
+        const btn = document.createElement("button");
+        btn.className = "inline-copy-btn";
+        btn.textContent = "Copy";
+
+        btn.onclick = (e) => {
+            e.stopPropagation();
+            const text = code.innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                btn.textContent = "✔";
+                btn.classList.add("copied");
+                setTimeout(() => {
+                    btn.textContent = "Copy";
+                    btn.classList.remove("copied");
+                }, 1000);
+            });
+        };
+
+        container.appendChild(btn);
+    });
+}
+
+// Hook into dynamic tab loading
+const _showTab = window.showTab;
+window.showTab = function(id) {
+    _showTab(id);
+    setTimeout(addInlineCopyButtons, 50);
+};
+
+// First load
+document.addEventListener("DOMContentLoaded", addInlineCopyButtons);
+
+
+function scrollToSection(id) {
+    setTimeout(() => {
+        const el = document.getElementById(id);
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 150);
+}
