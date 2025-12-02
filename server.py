@@ -74,5 +74,14 @@ def edit_note(index):
         return jsonify(success=True)
     return jsonify(success=False), 400
 
+
+@app.after_request
+def add_headers(response):
+    response.headers['Permissions-Policy'] = "clipboard-write=(self), clipboard-read=(self)"
+    return response
+
+
+
+
 if __name__ == '__main__':
     app.run(debug=True)
