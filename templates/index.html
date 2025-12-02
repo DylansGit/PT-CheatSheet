@@ -50,6 +50,8 @@
 
     <!-- Main Tabs -->
     <div class="tab-container">
+
+      <!-- Linux -->
       <div class="tab dropdown-parent" data-menu="linux-menu">
           Linux ▾
       </div>
@@ -60,10 +62,10 @@
         <div class="dropdown-item" onclick="showTab('linuxhardening')">Hardening</div>
       </div>
 
+      <!-- Windows -->
       <div class="tab dropdown-parent" data-menu="windows-menu">
           Windows ▾
       </div>
-
       <div id="windows-menu" class="dropdown-panel">
           <div class="dropdown-item" onclick="showTab('windowsprivesc')">PrivEsc</div>
           <div class="dropdown-item" onclick="showTab('windowsforensics')">Forensics</div>
@@ -73,12 +75,24 @@
           <div class="dropdown-item" onclick="showTab('windowsactivedir')">Active Directory</div>
       </div>
 
+      <!-- Web -->
+      <div class="tab dropdown-parent" data-menu="web-menu">
+          Web ▾
+      </div>
+      <div id="web-menu" class="dropdown-panel">
+          <div class="dropdown-item" onclick="showTab('portswiggercheatsheet')">PortSwigger</div>
+          <div class="dropdown-item" onclick="showTab('topics')">Topics</div>
+      </div>
+
+      <!-- Standalone Tabs -->
       <div class="tab active" onclick="showTab('toolscheatsheet')">Tools Cheatsheet</div>
-      <div class="tab" onclick="showTab('portswiggercheatsheet')">PortSwigger Cheatsheet</div>
-      <div class="tab" onclick="showTab('imagescheatsheet')">Images Cheatsheet</div>
-      <div class="tab" onclick="showTab('topics')">Topics</div>
+
+      <!-- Commented out the Images Cheatsheet tab -->
+      <!-- <div class="tab" onclick="showTab('imagescheatsheet')">Images Cheatsheet</div> -->
+
       <div class="tab" onclick="showTab('resources')">Resources</div>
       <!-- <div class="tab" onclick="showTab('aiseccheatsheet')">AI & Model Exploitation</div> -->
+
     </div>
 
 
