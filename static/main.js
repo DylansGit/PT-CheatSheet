@@ -463,7 +463,7 @@
     const link = document.createElement('link');
     link.id = 'portswigger-css';
     link.rel = 'stylesheet';
-    link.href = '/static/style.css';  // <-- add this line
+    link.href = '/static/main.css?v=2';  // <-- add this line
     document.head.appendChild(link);
   }
 
