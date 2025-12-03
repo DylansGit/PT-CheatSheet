@@ -82,6 +82,10 @@
         contentDiv.innerHTML = `<div class="tab-content active"><div class="markdown-body">${html}</div></div>`;
       } else {
         contentDiv.innerHTML = `<div class="tab-content active">${html}</div>`;
+
+        applyGlobalCopyButtons();
+        ensurePortSwiggerCSS(); 
+
       }
       // optional: remove "active" from other tabs UI (not removing content)
       if (preserveTabActive === false) return;
@@ -97,7 +101,6 @@
       }
     } catch (err) {
       console.warn('loadContentIntoTab failed for', path, err);
-      alert('Could not load content: ' + path);
     }
   }
 
