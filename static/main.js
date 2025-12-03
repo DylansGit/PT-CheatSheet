@@ -654,3 +654,15 @@ function applyGlobalCopyButtons() {
         wrap.appendChild(btn);
     });
 }
+
+
+// --- Mobile: auto-close dropdown panels after tapping an item ---
+document.addEventListener('click', (e) => {
+  if (window.innerWidth > 900) return; // only mobile
+
+  const item = e.target.closest('.dropdown-item');
+  if (!item) return;
+
+  const panel = item.closest('.dropdown-panel');
+  if (panel) panel.classList.remove('open');
+});
