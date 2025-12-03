@@ -612,6 +612,8 @@ window.showTab = function(id) {
         addInlineCopyButtons();
         addPreCopyButtons();
         stylePreComments();
+
+        if (id === "linuxprivesc") enhanceLinuxPrivEsc();
     }, 50);
 };
 
@@ -685,3 +687,49 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }, 30);
 })();
+
+
+
+function enhanceLinuxPrivEsc() {
+
+    // 🔥 1. Remove global copy wrappers/buttons inside this tab
+    document.querySelectorAll(".inline-copy-container").forEach(el => {
+        const code = el.querySelector("code");
+        if (code) el.replaceWith(code); // unwrap
+    });
+    document.querySelectorAll(".inline-copy-btn").forEach(el => el.remove());
+
+    // 🔥 2. Apply custom Linux-Priv-Esc copy system
+    document.querySelectorAll(".tool-command").forEach(cmd => {
+
+        if (cmd.classList.contains("copy-ready")) return;
+        cmd.classList.add("copy-ready");
+
+        const code = cmd.querySelector("code");
+        if (!code) return;
+
+        const wrap = document.createElement("span");
+        wrap.className = "inline-copy-container";
+
+        code.parentNode.insertBefore(wrap, code);
+        wrap.appendChild(code);
+
+        const btn = document.createElement("button");
+        btn.className = "inline-copy-btn";
+        btn.textContent = "Copy";
+
+        btn.onclick = e => {
+            e.stopPropagation();
+            navigator.clipboard.writeText(code.innerText).then(() => {
+                btn.textContent = "✔";
+                btn.classList.add("copied");
+                setTimeout(() => {
+                    btn.textContent = "Copy";
+                    btn.classList.remove("copied");
+                }, 900);
+            });
+        };
+
+        wrap.appendChild(btn);
+    });
+}
