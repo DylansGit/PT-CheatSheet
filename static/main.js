@@ -366,7 +366,7 @@
     async function showResults(query) {
       resultsList.innerHTML = '';
       if (!query) { resultsBox.style.display = 'none'; return; }
-      if (!built) await buildIndex();
+      // if (!built) await buildIndex();
 
       const q = query.toLowerCase().trim();
       if (!q) { resultsBox.style.display = 'none'; return; }
@@ -417,7 +417,6 @@
   // initialize home on load
   document.addEventListener('DOMContentLoaded', () => {
   showHomePage();
-  buildIndex().catch(console.warn);
   });
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -570,13 +569,6 @@ function addInlineCopyButtons() {
     });
 }
 
-// Hook into dynamic tab loading
-const _showTab = window.showTab;
-window.showTab = function(id) {
-    _showTab(id);
-    setTimeout(addInlineCopyButtons, 50);
-};
-
 // First load
 document.addEventListener("DOMContentLoaded", addInlineCopyButtons);
 
@@ -605,19 +597,44 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 
-// --- RE-INJECT INLINE COPY BUTTONS AFTER TAB LOAD ---
-const _originalShowTab = window.showTab;
-
-window.showTab = async function(id) {
-    await _originalShowTab(id);
-    setTimeout(() => {
-        stylePreComments();
-        addInlineCopyButtons();
-    }, 30);
-};
 
 // Also run on first page load
 document.addEventListener("DOMContentLoaded", () => {
     stylePreComments();
     addInlineCopyButtons();
 });
+
+
+// --- SAFE showTab WRAPPER ---
+(function() {
+    const handle = setInterval(() => {
+        if (typeof window.showTab === "function") {
+            clearInterval(handle);
+
+            const orig = window.showTab;
+
+            window.showTab = function(id) {
+                orig(id);
+                setTimeout(() => {
+                    stylePreComments();
+                    addInlineCopyButtons();
+                }, 50);
+            };
+
+            // first load
+            stylePreComments();
+            addInlineCopyButtons();
+        }
+    }, 50);
+})();
+
+
+// --- SAFE INDEX BUILDER ---
+(function() {
+    const t = setInterval(() => {
+        if (typeof buildIndex === "function") {
+            clearInterval(t);
+            buildIndex();
+        }
+    }, 30);
+})();
