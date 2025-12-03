@@ -831,3 +831,28 @@ li {
 .stream {
     opacity: 0.45;
 }
+
+
+.pre-copy-container {
+    position: relative;
+}
+
+.pre-copy-btn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    font-size: 11px;
+    padding: 2px 6px;
+    background: #2c2f40;
+    color: #cfd9ff;
+    border: 1px solid #3a3f55;
+    border-radius: 4px;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity .15s;
+    z-index: 50;
+}
+
+.pre-copy-container:hover .pre-copy-btn {
+    opacity: 1;
+}

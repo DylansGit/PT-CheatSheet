@@ -168,75 +168,138 @@ Get-WinEvent -LogName Security -MaxEvents 200 |
 </div>
 
 
-<!-- SECTION 3: Registry Forensics -->
+<!-- SECTION 3: Registry Artifacts -->
 <div class="tool-row">
-    <div class="tool-name" onclick="toggleDetails('wf-logs')">
-        2. Event Logs
+    <div class="tool-name" onclick="toggleDetails('wf-reg')">
+        3. Registry Artifacts (Persistence, Execution, History)
     </div>
-    <div class="tool-details" id="wf-logs">
+    <div class="tool-details" id="wf-reg">
 
 <pre>
-# --- Quick triage: recent Security log noise ---
-Get-WinEvent -LogName Security -MaxEvents 50 |
-    Select TimeCreated, Id, Message
+# --- CORE PERSISTENCE LOCATIONS (USER + SYSTEM) ---
 
-# --- Authentication events (local + domain) ---
-# 4624 = successful logon
-# 4625 = failed logon
-# 4648 = logon with explicit credentials (attackers love this)
-Get-WinEvent -FilterHashtable @{LogName='Security'; Id=4624 } -MaxEvents 20 |
-    Select TimeCreated, Message
+# User persistence (runs every login)
+reg query "HKCU\Software\Microsoft\Windows\CurrentVersion\Run"
+reg query "HKCU\Software\Microsoft\Windows\CurrentVersion\RunOnce"
 
-# --- RDP activity ---
-# 1149 = RDP authentication attempt
-# 21, 22 = logon / logoff via RDP
-Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-TerminalServices-LocalSessionManager/Operational'} |
-    Select TimeCreated, Id, Message
+# System-wide persistence
+reg query "HKLM\Software\Microsoft\Windows\CurrentVersion\Run"
+reg query "HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce"
 
-# --- PowerShell ops (big red flag area) ---
-# 4103 = pipeline execution
-# 4104 = script block logging
-# 4105, 4106 = module loading
-Get-WinEvent -LogName "Microsoft-Windows-PowerShell/Operational" -MaxEvents 20 |
-    Select TimeCreated, Id, Message
+# Startup folders (mapped via registry)
+reg query "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" /v Startup
+reg query "HKLM\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" /v Common Startup
 
-# --- Sysmon logs (goldmine) ---
-# 1 = process creation
-# 3 = network connection
-# 7 = image loaded (DLL drop/injection detection)
-# 11 = file created
-Get-WinEvent -LogName "Microsoft-Windows-Sysmon/Operational" -MaxEvents 30 |
-    Select TimeCreated, Id, Message
+# Services (malware hides here with random names)
+reg query "HKLM\SYSTEM\CurrentControlSet\Services" /s
 
-# --- Defender alerts ---
-Get-WinEvent -LogName "Microsoft-Windows-Windows Defender/Operational" -MaxEvents 20 |
-    Select TimeCreated, Id, Message
+# Image File Execution Options (IFEO) Hijacking — HIGH VALUE
+reg query "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options" /s
 
-# --- WMI persistence / abuse ---
-# 5861 = WMI event consumer
-Get-WinEvent -FilterHashtable @{Id=5861} -MaxEvents 20 |
-    Select TimeCreated, Message
+# Debugger hijack example:
+# notepad.exe ➜ launches malware.exe instead
+# HKLM\...\IFEO\notepad.exe /v debugger = "malware.exe"
 
-# --- DNS queries (payload C2 detection) ---
-Get-WinEvent -LogName "Microsoft-Windows-DNS-Client/Operational" -MaxEvents 30 |
-    Select TimeCreated, Message
 
-# --- Filter logs by keyword (quick IOC hunting) ---
-Get-WinEvent -LogName Security -MaxEvents 200 |
-    Where-Object { $_.Message -match "192\.168\.1\.50" }
+# --- PROGRAM EXECUTION HISTORY (EVEN IF LOGS ARE CLEARED) ---
+
+# UserAssist — shows apps launched via Explorer (ROT13 encoded keys)
+reg query "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\UserAssist" /s
+
+# AmCache — file execution metadata, timestamps, paths
+reg query "HKLM\Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Amcache" /s
+
+# ShimCache (AppCompatCache) — execution footprint
+reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\AppCompatCache" /s
+
+# BAM / DAM — Foreground App History (Windows 10+)
+reg query "HKLM\SYSTEM\CurrentControlSet\Services\bam\UserSettings" /s
+reg query "HKLM\SYSTEM\CurrentControlSet\Services\bam\State\UserSettings" /s
+
+
+# --- NETWORK & REMOTE ACTIVITY ARTIFACTS ---
+
+# RDP connection history (client side)
+reg query "HKCU\Software\Microsoft\Terminal Server Client\Servers" /s
+
+# RDP connection timestamps
+reg query "HKCU\Software\Microsoft\Terminal Server Client\Default" /s
+
+# Recent RDP usernames
+reg query "HKCU\Software\Microsoft\Terminal Server Client" /v UsernameHint
+
+
+# --- USB & HARDWARE ARTIFACTS (PHYSICAL ACCESS / EXFIL INDICATORS) ---
+
+# USB storage history
+reg query "HKLM\SYSTEM\CurrentControlSet\Enum\USBSTOR" /s
+
+# Mounted devices (drive letters given to USBs)
+reg query "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\MountPoints2"
+
+# Device Classes (timestamps for USB connections)
+reg query "HKLM\SYSTEM\CurrentControlSet\Control\DeviceClasses" /s
+
+
+# --- EXPLORER & SHELL FORENSICS (FILE ACCESS, USER ACTIVITY) ---
+
+# Recent files (MRU)
+reg query "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\RecentDocs" /s
+
+# Typed paths (like \\attacker-server)
+reg query "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\TypedPaths"
+
+# Last opened executables
+reg query "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\UserAssist" /s
+
+# Windows run dialog history (attackers love 'Win+R' abuse)
+reg query "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\RunMRU"
+
+# Open/save dialog history
+reg query "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\ComDlg32" /s
+
+
+# --- AUTORUN & LEGACY PERSISTENCE ---
+
+# Winlogon persistence
+reg query "HKLM\Software\Microsoft\Windows NT\CurrentVersion\Winlogon"
+
+# Important value:
+# HKLM\...\Winlogon\Userinit
+# Default: C:\Windows\system32\userinit.exe,
+# Malware adds: userinit.exe, C:\malware.exe
+
+# Active Setup — common stealth persistence technique
+reg query "HKLM\Software\Microsoft\Active Setup\Installed Components" /s
+
+# SSRP / LSA secrets (credential dumping targets)
+reg query "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /s
+
+
+# --- WMI, SCHEDULED TASKS, AND OTHER REGISTRY-BACKED PERSISTENCE ---
+
+# WMI persistence indicators
+reg query "HKLM\SOFTWARE\Microsoft\WBEM" /s
+
+# Scheduled tasks - registry-backed portion
+reg query "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\TaskCache\Tasks" /s
+
+# Services scheduled with delayed autostart
+reg query "HKLM\SYSTEM\CurrentControlSet\Services" /v Start
+
 </pre>
 
-<p><b>Why event logs matter:</b></p>
+<p><b>Why registry forensics matter:</b></p>
 <ul>
-    <li>90% of lateral movement shows up in Security + Sysmon first.</li>
-    <li>PowerShell logs = dead giveaway for most modern intrusions.</li>
-    <li>RDP events tell you instantly if someone brute-forced or logged in remotely.</li>
-    <li>Defender logs expose quarantined samples and partially blocked malware.</li>
-    <li>DNS logs reveal C2 callouts even when network tools miss them.</li>
+    <li>Registry persistence survives reboots, log clearing, and many AV removals.</li>
+    <li>UserAssist, ShimCache, and AmCache reveal execution **even if logs are wiped**.</li>
+    <li>IFEO hijacking and Active Setup account for many stealthy implants.</li>
+    <li>MRU, RunMRU, and TypedPaths show exactly what the attacker opened or accessed.</li>
+    <li>USBSTOR exposes physical exfiltration attempts.</li>
 </ul>
 
 <p>
-A Windows box never keeps quiet - once you know which events matter, you see the entire attack storyline without guessing.
+If Event Logs tell you *what happened*, registry artifacts tell you *what was touched, executed, connected, or persisted*. It fills all the gaps.
 </p>
 
     </div>

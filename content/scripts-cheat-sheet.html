@@ -12,7 +12,7 @@
 <p class="page-intro">
     Practical, field-ready scripts grouped by offensive security domains.  
     Each entry includes a clear purpose, usage notes, and the full script body.  
-    This is the master index — a living arsenal for pentesting, red-teaming, automation, IR, and OSINT.
+    This is the master index - a living arsenal for pentesting, red-teaming, automation, IR, and OSINT.
 </p>
 
 <!-- ======================================== -->
@@ -40,7 +40,7 @@
     <h3>Script</h3>
     <pre><code class="language-python">
 #!/usr/bin/env python3
-# Mass Host Scanner — ICMP ping sweep with TCP fallback
+# Mass Host Scanner - ICMP ping sweep with TCP fallback
 # Fast discovery of live hosts inside a CIDR range.
 # Ideal for internal recon after gaining a foothold.
 
@@ -141,7 +141,7 @@ print("\n[+] Scan complete.\n")
     <h3>Notes</h3>
     <ul>
       <li>Designed for internal networks, foothold situations.</li>
-      <li>Silent — suppresses ping output.</li>
+      <li>Silent - suppresses ping output.</li>
       <li>Automatically handles ICMP filtering.</li>
       <li>Easy to modify with more fallback ports.</li>
       <li>Massively faster thanks to threading.</li>
@@ -175,7 +175,7 @@ print("\n[+] Scan complete.\n")
     <h3>Script</h3>
 <pre><code class="language-python">
 #!/usr/bin/env python3
-# DNS Bulk Resolver — fast threaded resolver for large subdomain lists.
+# DNS Bulk Resolver - fast threaded resolver for large subdomain lists.
 # Features:
 #   - Resolves A, AAAA, and CNAME records
 #   - CNAME chain tracing
@@ -563,7 +563,7 @@ def inject_param(url, param, payload):
 def check_reflection(body, payload):
     """
     Check if the payload appears in body.
-    Uses plain string search — reliable for reflective tests.
+    Uses plain string search - reliable for reflective tests.
     """
     return payload.lower() in body.lower()
 
@@ -627,7 +627,7 @@ print("\n[+] XSS fuzzing complete.\n")
     <h3>Notes</h3>
     <ul>
       <li>Designed for reflective tests, not stored XSS.</li>
-      <li>Payloads are minimal and effective — tweak as needed.</li>
+      <li>Payloads are minimal and effective - tweak as needed.</li>
       <li>Detects exact vulnerable parameter and payload class.</li>
       <li>Multi-threaded for speed without noise.</li>
       <li>Extremely useful for unauthenticated public surface testing.</li>
@@ -898,7 +898,7 @@ if __name__ == "__main__":
 
     <h3>Notes</h3>
     <ul>
-      <li>Sprays **one password** across all users — NOT bruteforce.</li>
+      <li>Sprays **one password** across all users - NOT bruteforce.</li>
       <li>Always respect domain lockout policies (default locker timing ≈ 1–5 secs per attempt).</li>
       <li>Works well for enterprise apps with verbose login errors.</li>
       <li>Can expand to multi-password lists in *rounds*, not brute-force.</li>
@@ -1345,7 +1345,7 @@ if __name__ == "__main__":
     <ul>
       <li>AS-REP roastable = user has <code>DONT_REQUIRE_PREAUTH</code> flag in AD.</li>
       <li>Returned AS-REP contains encrypted material crackable with hashcat mode <b>18200</b>.</li>
-      <li>No authentication required — this is anonymous Kerberos enumeration.</li>
+      <li>No authentication required - this is anonymous Kerberos enumeration.</li>
       <li>Safer than KRB5 brute forcing and extremely effective for low-priv footholds.</li>
     </ul>
 
@@ -2366,7 +2366,7 @@ if __name__ == "__main__":
     <p>
       Tests Google Cloud Storage buckets for public or misconfigured access levels:
       listing, object read, object write, and delete permissions.  
-      Operates fully unauthenticated — ideal for external recon & misconfig hunting.
+      Operates fully unauthenticated - ideal for external recon & misconfig hunting.
     </p>
 
     <h3>Usage</h3>
@@ -2477,11 +2477,11 @@ if __name__ == "__main__":
 
     <h3>Notes</h3>
     <ul>
-      <li>LIST is the biggest red flag — often means full public read.</li>
+      <li>LIST is the biggest red flag - often means full public read.</li>
       <li>WRITE + no-auth is severe: attackers can plant malware or phishing pages.</li>
       <li>DELETE exposure leads to permanent data loss.</li>
       <li>Perfect for external cloud recon and bug bounty work.</li>
-      <li>Works without any GCloud setup — pure HTTP probing.</li>
+      <li>Works without any GCloud setup - pure HTTP probing.</li>
     </ul>
 
   </div>
@@ -2634,7 +2634,7 @@ if __name__ == "__main__":
     <h3>Notes</h3>
     <ul>
       <li>Gravatar hits are extremely strong OSINT signals.</li>
-      <li>SMTP soft checks are not brute-force — relatively safe during recon.</li>
+      <li>SMTP soft checks are not brute-force - relatively safe during recon.</li>
       <li>Permutations reflect real corporate naming conventions.</li>
       <li>Great for username harvesting before internal spray attempts.</li>
       <li>Easily extend to include LinkedIn & Hunter.io style patterns.</li>
@@ -3042,7 +3042,7 @@ Write-Host "[+] Done. Selected event IDs removed."
 
 <br><br>
 <footer>
-    <p>Scripts Megapack — PT-CheatSheet (2025)</p>
+    <p>Scripts Megapack - PT-CheatSheet (2025)</p>
 </footer>
 
 </body>

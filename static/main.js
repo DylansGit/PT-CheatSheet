@@ -569,6 +569,53 @@ function addInlineCopyButtons() {
     });
 }
 
+function addPreCopyButtons() {
+    document.querySelectorAll("pre").forEach(pre => {
+
+        // avoid double-wrapping
+        if (pre.parentElement.classList.contains("pre-copy-container")) return;
+
+        // create wrapper
+        const wrap = document.createElement("div");
+        wrap.className = "pre-copy-container";
+
+        pre.parentNode.insertBefore(wrap, pre);
+        wrap.appendChild(pre);
+
+        // create copy button
+        const btn = document.createElement("button");
+        btn.className = "pre-copy-btn";
+        btn.textContent = "Copy";
+
+        btn.onclick = () => {
+            navigator.clipboard.writeText(pre.innerText).then(() => {
+                btn.textContent = "✔";
+                setTimeout(() => btn.textContent = "Copy", 900);
+            });
+        };
+
+        wrap.appendChild(btn);
+    });
+}
+
+
+document.addEventListener("DOMContentLoaded", () => {
+    addInlineCopyButtons();
+    addPreCopyButtons();
+    stylePreComments();
+});
+
+const origShowTabX = window.showTab;
+window.showTab = function(id) {
+    origShowTabX(id);
+    setTimeout(() => {
+        addInlineCopyButtons();
+        addPreCopyButtons();
+        stylePreComments();
+    }, 50);
+};
+
+
 // First load
 document.addEventListener("DOMContentLoaded", addInlineCopyButtons);
 
