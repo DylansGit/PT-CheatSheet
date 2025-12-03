@@ -188,28 +188,12 @@
 
     // files to check in content and markdown
     const CONTENT_FILES = [
-      'home.html',
       'tools-cheat-sheet.html',
       'portswigger-cheat-sheet.html',
-      'images-cheat-sheet.html',
-
-      // Windows
       'windows-priv-esc.html',
-      'windows-hardening.html',
-      'windows-powershell.html',
-      'windows-forensics.html',
-
-      // Linux
       'linux-priv-esc.html',
-      'linux-forensics.html',
-      'linux-hardening.html',
-      'bashing.html',
-
-      // Misc
-      'ai-sec-cheat-sheet.html',
-      'scripts-cheat-sheet.html',
+      'images-cheat-sheet.html',
       'topics.html',
-      'resources-links.html',
       'notebook.html'
     ];
 
@@ -548,14 +532,94 @@ function stylePreComments() {
     });
 }
 
-const originalShowTabY = window.showTab;
+
+function addInlineCopyButtons() {
+    document.querySelectorAll("code").forEach(code => {
+
+        // Skip if already wrapped
+        if (code.parentElement.classList.contains("inline-copy-container")) return;
+
+        // Create container
+        const container = document.createElement("span");
+        container.className = "inline-copy-container";
+
+        // Insert wrapper before code
+        code.parentNode.insertBefore(container, code);
+        container.appendChild(code);
+
+        // Create button
+        const btn = document.createElement("button");
+        btn.className = "inline-copy-btn";
+        btn.textContent = "Copy";
+
+        btn.onclick = (e) => {
+            e.stopPropagation();
+            const text = code.innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                btn.textContent = "✔";
+                btn.classList.add("copied");
+                setTimeout(() => {
+                    btn.textContent = "Copy";
+                    btn.classList.remove("copied");
+                }, 1000);
+            });
+        };
+
+        container.appendChild(btn);
+    });
+}
+
+function addPreCopyButtons() {
+    document.querySelectorAll("pre").forEach(pre => {
+
+        // avoid double-wrapping
+        if (pre.parentElement.classList.contains("pre-copy-container")) return;
+
+        // create wrapper
+        const wrap = document.createElement("div");
+        wrap.className = "pre-copy-container";
+
+        pre.parentNode.insertBefore(wrap, pre);
+        wrap.appendChild(pre);
+
+        // create copy button
+        const btn = document.createElement("button");
+        btn.className = "pre-copy-btn";
+        btn.textContent = "Copy";
+
+        btn.onclick = () => {
+            navigator.clipboard.writeText(pre.innerText).then(() => {
+                btn.textContent = "✔";
+                setTimeout(() => btn.textContent = "Copy", 900);
+            });
+        };
+
+        wrap.appendChild(btn);
+    });
+}
+
+
+document.addEventListener("DOMContentLoaded", () => {
+    addInlineCopyButtons();
+    addPreCopyButtons();
+    stylePreComments();
+});
+
+const origShowTabX = window.showTab;
 window.showTab = function(id) {
-    originalShowTabY(id);
+    origShowTabX(id);
     setTimeout(() => {
+        addInlineCopyButtons();
+        addPreCopyButtons();
         stylePreComments();
-        applyGlobalCopyButtons();
-    }, 60);
+
+        if (id === "linuxprivesc") enhanceLinuxPrivEsc();
+    }, 50);
 };
+
+
+// First load
+document.addEventListener("DOMContentLoaded", addInlineCopyButtons);
 
 
 function scrollToSection(id) {
@@ -582,24 +646,67 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 
-function applyGlobalCopyButtons() {
-    // 1. Remove existing wrappers
+
+// Also run on first page load
+document.addEventListener("DOMContentLoaded", () => {
+    stylePreComments();
+    addInlineCopyButtons();
+});
+
+
+// --- SAFE showTab WRAPPER ---
+(function() {
+    const handle = setInterval(() => {
+        if (typeof window.showTab === "function") {
+            clearInterval(handle);
+
+            const orig = window.showTab;
+
+            window.showTab = function(id) {
+                orig(id);
+                setTimeout(() => {
+                    stylePreComments();
+                    addInlineCopyButtons();
+                }, 50);
+            };
+
+            // first load
+            stylePreComments();
+            addInlineCopyButtons();
+        }
+    }, 50);
+})();
+
+
+// --- SAFE INDEX BUILDER ---
+(function() {
+    const t = setInterval(() => {
+        if (typeof buildIndex === "function") {
+            clearInterval(t);
+            buildIndex();
+        }
+    }, 30);
+})();
+
+
+
+function enhanceLinuxPrivEsc() {
+
+    // 🔥 1. Remove global copy wrappers/buttons inside this tab
     document.querySelectorAll(".inline-copy-container").forEach(el => {
         const code = el.querySelector("code");
-        if (code) el.replaceWith(code);
+        if (code) el.replaceWith(code); // unwrap
     });
-    document.querySelectorAll(".inline-copy-btn").forEach(btn => btn.remove());
+    document.querySelectorAll(".inline-copy-btn").forEach(el => el.remove());
 
-    document.querySelectorAll(".pre-copy-container").forEach(el => {
-        const pre = el.querySelector("pre");
-        if (pre) el.replaceWith(pre);
-    });
-    document.querySelectorAll(".pre-copy-btn").forEach(btn => btn.remove());
+    // 🔥 2. Apply custom Linux-Priv-Esc copy system
+    document.querySelectorAll(".tool-command").forEach(cmd => {
 
+        if (cmd.classList.contains("copy-ready")) return;
+        cmd.classList.add("copy-ready");
 
-    // 2. Wrap ALL <code>
-    document.querySelectorAll("code").forEach(code => {
-        if (code.parentElement.classList.contains("inline-copy-container")) return;
+        const code = cmd.querySelector("code");
+        if (!code) return;
 
         const wrap = document.createElement("span");
         wrap.className = "inline-copy-container";
@@ -620,31 +727,6 @@ function applyGlobalCopyButtons() {
                     btn.textContent = "Copy";
                     btn.classList.remove("copied");
                 }, 900);
-            });
-        };
-
-        wrap.appendChild(btn);
-    });
-
-
-    // 3. Wrap ALL <pre>
-    document.querySelectorAll("pre").forEach(pre => {
-        if (pre.parentElement.classList.contains("pre-copy-container")) return;
-
-        const wrap = document.createElement("div");
-        wrap.className = "pre-copy-container";
-
-        pre.parentNode.insertBefore(wrap, pre);
-        wrap.appendChild(pre);
-
-        const btn = document.createElement("button");
-        btn.className = "pre-copy-btn";
-        btn.textContent = "Copy";
-
-        btn.onclick = () => {
-            navigator.clipboard.writeText(pre.innerText).then(() => {
-                btn.textContent = "✔";
-                setTimeout(() => btn.textContent = "Copy", 900);
             });
         };
 
