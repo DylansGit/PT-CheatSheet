@@ -8,6 +8,38 @@
   function qs(selector, root = document) { return root.querySelector(selector); }
   function qsa(selector, root = document) { return Array.from(root.querySelectorAll(selector)); }
   function escapeHtml(s) { return String(s).replace(/[&<>"'`]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;'}[c])); }
+  window.escapeHtml = escapeHtml;
+
+  function ensurePortSwiggerCSS() {
+    console.log("ensurePortSwiggerCSS() CALLED");
+
+    if (document.getElementById('portswigger-css')) {
+        console.log("CSS already loaded");
+        return;
+    }
+
+    console.log("Injecting PortSwigger CSS");
+
+    const link = document.createElement('link');
+    link.id = 'portswigger-css';
+    link.rel = 'stylesheet';
+    link.href = '/static/main.css?v=2';
+    document.head.appendChild(link);
+  }
+
+
+  const SPECIAL_COPY_PAGES = [
+  "linuxprivesc",
+  "windowsforensics",
+  "windowshardening",
+  "windowspowershell",
+  "windowsactivedir",
+  "bashing",
+  "linuxhardening"
+];
+
+window.SPECIAL_COPY_PAGES = SPECIAL_COPY_PAGES;
+
 
   // temporary highlight helper
   function flashHighlight(targetEl) {
@@ -37,7 +69,7 @@
   }
 
   // -------------------------
-  // Tab loader (unchanged behavior)
+  // Tab loader 
   // -------------------------
   const FILE_MAP = {
     'home': { filename: 'home.html', divId: 'home' },
@@ -68,48 +100,78 @@
     'aiseccheatsheet': { filename: 'ai-sec-cheat-sheet.html', divId: 'aiseccheatsheet' }
   };
 
-
   async function loadContentIntoTab(path, preserveTabActive = true) {
-    // path is either 'content/<file>' or 'markdown/<file>'
     try {
-      const res = await fetch('/' + path);
-      if (!res.ok) throw new Error('not-found');
-      const html = await res.text();
-      const contentDiv = document.getElementById('tab-content');
-      if (!contentDiv) return;
-      // if path starts with "markdown/" wrap in .markdown-body so CSS can style it like the ports. 
-      if (path && path.startsWith('markdown/')) {
-        contentDiv.innerHTML = `<div class="tab-content active"><div class="markdown-body">${html}</div></div>`;
-      } else {
-        contentDiv.innerHTML = `<div class="tab-content active">${html}</div>`;
+        const res = await fetch('/' + path);
+        if (!res.ok) throw new Error('not-found');
+        const html = await res.text();
+        const contentDiv = document.getElementById('tab-content');
+        if (!contentDiv) return;
 
-        applyGlobalCopyButtons();
-        ensurePortSwiggerCSS(); 
-
-      }
-      // optional: remove "active" from other tabs UI (not removing content)
-      if (preserveTabActive === false) return;
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      // try to find matching tab by comparing file names
-      const fname = path.split('/').pop();
-      for (const [tid, info] of Object.entries(FILE_MAP)) {
-        if (info.filename === fname) {
-          const tabEl = document.querySelector(`.tab[onclick="showTab('${tid}')"]`);
-          if (tabEl) tabEl.classList.add('active');
-          break;
+        // Inject content (normal or markdown)
+        if (path.startsWith('markdown/')) {
+            contentDiv.innerHTML = `
+                <div class="tab-content active"><div class="markdown-body">${html}</div></div>
+            `;
+        } else {
+            contentDiv.innerHTML = `
+                <div class="tab-content active">${html}</div>
+            `;
         }
-      }
+
+        if (path.startsWith('markdown/')) {
+            setTimeout(ensurePortSwiggerCSS, 10);
+        }
+
+        // PortSwigger styling (if needed)
+        setTimeout(ensurePortSwiggerCSS, 10);
+
+        // IMPORTANT: do NOT run copy logic here.
+        // It will run in showTab(), AFTER comments are styled.
+
+        if (preserveTabActive === false) return;
+
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+
+        const fname = path.split('/').pop();
+        for (const [tid, info] of Object.entries(FILE_MAP)) {
+            if (info.filename === fname) {
+                const tabEl = document.querySelector(`.tab[onclick="showTab('${tid}')"]`);
+                if (tabEl) tabEl.classList.add('active');
+                break;
+            }
+        }
     } catch (err) {
-      console.warn('loadContentIntoTab failed for', path, err);
+        console.warn('loadContentIntoTab failed for', path, err);
     }
   }
 
-  async function showTab(tabId) {
+
+async function showTab(tabId) {
     const tabInfo = FILE_MAP[tabId];
-    if (!tabInfo) { console.error('Invalid tab ID', tabId); return; }
+    if (!tabInfo) return;
+
     await loadContentIntoTab('content/' + tabInfo.filename);
+
+    // FIRST: update active highlighted tab
+    document.querySelectorAll('.dropdown-item, .tab').forEach(i => i.classList.remove('active'));
+
+    const clickedItem = document.querySelector(`.dropdown-item[onclick="showTab('${tabId}')"]`);
+    if (clickedItem) clickedItem.classList.add('active');
+
+    // also highlight the parent big tab (Linux/Windows/Web)
+    const parentMenu = clickedItem?.closest('.dropdown-panel');
+    if (parentMenu) {
+        const parentTab = document.querySelector(`[data-menu="${parentMenu.id}"]`);
+        if (parentTab) parentTab.classList.add('active');
+    }
+
     stylePreComments();
-  }
+    applyInlineCopyOnSpecialPages();   // ← special first!
+    applyGlobalCopyButtons();          // ← global second
+
+}
+
 
   async function showHomePage() { await showTab('home'); }
 
@@ -146,42 +208,6 @@
   window.collapseAllRows = collapseAllRows;
   window.scrollToTop = scrollToTop;
 
-  // -------------------------
-  // Notes CRUD (unchanged logic)
-  // -------------------------
-  function saveNote() {
-    const note = (qs('#note-input') || {}).value;
-    if (!note) return alert('Please write something in the note.');
-    fetch('/save-note', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ note })})
-      .then(r => r.json()).then(d => { if (d.success) { alert('Note saved!'); if (qs('#note-input')) qs('#note-input').value=''; loadNotes(); } else alert('Failed to save note'); });
-  }
-
-  function loadNotes() {
-    fetch('/get-notes').then(r => r.json()).then(d => {
-      const list = qs('#notes-list');
-      if (!list) return;
-      list.innerHTML = '';
-      d.notes.forEach((n, i) => list.insertAdjacentHTML('beforeend', `<li>${escapeHtml(n)} <button onclick="deleteNote(${i})">Delete</button> <button onclick="editNotePrompt(${i})">Edit</button></li>`));
-    });
-  }
-
-  function deleteNote(idx) {
-    fetch(`/delete-note/${idx}`, { method: 'DELETE' }).then(r => r.json()).then(d => { if (d.success) loadNotes(); });
-  }
-
-  function editNotePrompt(idx) {
-    const newNote = prompt('Edit your note:');
-    if (!newNote) return;
-    fetch(`/edit-note/${idx}`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ note: newNote })})
-      .then(r => r.json()).then(d => { if (d.success) loadNotes(); });
-  }
-
-  /* wire view-notes click if exists
-  document.addEventListener('DOMContentLoaded', () => {
-    const btn = document.querySelector('.sub-tab[onclick="showSubTab(event, \'view-notes\')"]');
-    if (btn) btn.addEventListener('click', loadNotes);
-  });
-  */
 
   // -------------------------
   // SEARCH — index internal elements (tool-row, portsWigger links, markdown)
@@ -201,6 +227,7 @@
       'windows-hardening.html',
       'windows-powershell.html',
       'windows-forensics.html',
+      'windows-active-directory.html',
 
       // Linux
       'linux-priv-esc.html',
@@ -472,67 +499,6 @@
 })();
 
 
-// ------------------------------------------------------
-// PortSwigger tab CSS loader + link handler (final version)
-// ------------------------------------------------------
-
-(function () {
-  function ensurePortSwiggerCSS() {
-    if (document.getElementById('portswigger-css')) return;
-    const link = document.createElement('link');
-    link.id = 'portswigger-css';
-    link.rel = 'stylesheet';
-    link.href = '/static/main.css?v=2';  // <-- add this line
-    document.head.appendChild(link);
-  }
-
-
-  const originalShowTab = window.showTab;
-  window.showTab = async function (tabId) {
-    await originalShowTab(tabId);
-
-    // When PortSwigger tab opens
-    if (tabId === 'portswiggercheatsheet' || tabId === 'portswigger') {
-      ensurePortSwiggerCSS();
-
-      // Intercept PortSwigger links for in-app display
-      setTimeout(() => {
-        const root = document.querySelector('#tab-content');
-        if (!root) return;
-        const links = root.querySelectorAll('a[target="_blank"], a[href^="/markdown/"]');
-        links.forEach(a => {
-          a.removeAttribute('target');
-          a.addEventListener('click', e => {
-            e.preventDefault();
-            const href = a.getAttribute('href');
-            if (!href) return;
-            fetch(href)
-              .then(res => res.text())
-              .then(html => {
-                root.innerHTML = `<div class="tab-content active">${html}</div>`;
-                ensurePortSwiggerCSS(); // keep style applied for markdown
-              })
-              .catch(() => alert('Failed to load: ' + href));
-          });
-        });
-      }, 400);
-    }
-  };
-})();
-
-document.addEventListener("DOMContentLoaded", () => {
-    document.querySelectorAll("pre").forEach(pre => {
-        const lines = pre.innerHTML.split("\n").map(line => {
-            if (line.trim().startsWith("#")) {
-                return `<span class="comment-line">${line}</span>`;
-            }
-            return line;
-        });
-        pre.innerHTML = lines.join("\n");
-    });
-});
-
-
 function stylePreComments() {
     document.querySelectorAll("pre").forEach(pre => {
         let html = pre.innerHTML;
@@ -551,14 +517,78 @@ function stylePreComments() {
     });
 }
 
-const originalShowTabY = window.showTab;
-window.showTab = function(id) {
-    originalShowTabY(id);
-    setTimeout(() => {
-        stylePreComments();
-        applyGlobalCopyButtons();
-    }, 60);
-};
+function applyInlineCopyOnSpecialPages() {
+    const escapeHtml = window.escapeHtml || function(s) { return s; };
+
+    console.log("applyInlineCopyOnSpecialPages() FIRED");
+
+    // 1) Find active tab (dropdown-item or main tab)
+    const active = document.querySelector('.dropdown-item.active, .tab.active');
+    console.log("active =", active);
+    if (!active) return;
+
+    // 2) Extract tabId correctly
+    let tabId = null;
+
+    // if the active element itself has onclick
+    const m1 = active.getAttribute('onclick')?.match(/showTab\('(.+)'\)/);
+    if (m1) tabId = m1[1];
+
+    // if it’s a parent tab (Linux ▾), get the active dropdown-item instead
+    if (!tabId) {
+        const sub = document.querySelector('.dropdown-item.active');
+        const m2 = sub?.getAttribute('onclick')?.match(/showTab\('(.+)'\)/);
+        if (m2) tabId = m2[1];
+    }
+
+    console.log("tabId =", tabId);
+    if (!tabId) return;
+
+    // 3) SPECIAL PAGE EXIT CHECK
+    if (!window.SPECIAL_COPY_PAGES.includes(tabId)) return;
+
+    console.log("🔵 SPECIAL PAGE DETECTED: Enabling per-line inline copy.");
+
+    // 4) TRANSFORM EACH <pre>
+    document.querySelectorAll("pre").forEach(pre => {
+
+        if (pre.classList.contains("special-pre-processed")) return;
+        pre.classList.add("special-pre-processed");
+
+        const raw = pre.innerHTML.replace(/\r/g, "").split(/\n|<br\s*\/?>/);
+        const lines = raw.map(line => line.replace(/<[^>]+>/g, ""));
+
+        const html = raw.map((htmlLine, i) => {
+            const text = lines[i].trim();
+            const isComment = htmlLine.includes('comment-line') || text.startsWith('#') || text === "";
+
+            if (isComment) {
+                return `<span class="comment-line">${htmlLine}</span>`;
+            }
+
+            return `
+              <span class="inline-copy-container">
+                  <code>${escapeHtml(text)}</code>
+                  <button class="inline-copy-btn">Copy</button>
+              </span>`;
+        }).join("\n");
+
+        pre.innerHTML = html;
+
+        // Bind copy events
+        pre.querySelectorAll(".inline-copy-btn").forEach(btn => {
+            btn.addEventListener("click", e => {
+                e.stopPropagation();
+                const text = btn.parentElement.querySelector("code").innerText;
+                navigator.clipboard.writeText(text).then(() => {
+                    btn.textContent = "✔";
+                    setTimeout(() => btn.textContent = "Copy", 900);
+                });
+            });
+        });
+    });
+}
+
 
 
 function scrollToSection(id) {
@@ -585,28 +615,37 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 
+
 function applyGlobalCopyButtons() {
-    // 1. Remove existing wrappers
+    // Skip global copy on special pages
+    const activeTab = document.querySelector('.tab.active');
+    if (activeTab) {
+        const id = activeTab.getAttribute('onclick')?.match(/showTab\('(.+)'\)/)?.[1];
+        if (SPECIAL_COPY_PAGES.includes(id)) return;
+    }
+
+    // Remove old wrappers
     document.querySelectorAll(".inline-copy-container").forEach(el => {
         const code = el.querySelector("code");
         if (code) el.replaceWith(code);
     });
     document.querySelectorAll(".inline-copy-btn").forEach(btn => btn.remove());
-
     document.querySelectorAll(".pre-copy-container").forEach(el => {
         const pre = el.querySelector("pre");
         if (pre) el.replaceWith(pre);
     });
     document.querySelectorAll(".pre-copy-btn").forEach(btn => btn.remove());
 
-
-    // 2. Wrap ALL <code>
+    // Wrap <code>
     document.querySelectorAll("code").forEach(code => {
+        // skip if already wrapped
         if (code.parentElement.classList.contains("inline-copy-container")) return;
+
+        // skip if inside a Pandoc <div class="sourceCode"> — handled separately
+        if (code.closest("div.sourceCode")) return;
 
         const wrap = document.createElement("span");
         wrap.className = "inline-copy-container";
-
         code.parentNode.insertBefore(wrap, code);
         wrap.appendChild(code);
 
@@ -618,11 +657,33 @@ function applyGlobalCopyButtons() {
             e.stopPropagation();
             navigator.clipboard.writeText(code.innerText).then(() => {
                 btn.textContent = "✔";
-                btn.classList.add("copied");
-                setTimeout(() => {
-                    btn.textContent = "Copy";
-                    btn.classList.remove("copied");
-                }, 900);
+                setTimeout(() => btn.textContent = "Copy", 900);
+            });
+        };
+
+        wrap.appendChild(btn);
+    });
+
+    // Wrap `.sourceCode` blocks (Pandoc / PortSwigger style)
+    document.querySelectorAll("div.sourceCode").forEach(block => {
+
+        // Already wrapped?
+        if (block.parentElement.classList.contains("pre-copy-container")) return;
+
+        const wrap = document.createElement("div");
+        wrap.className = "pre-copy-container";
+
+        block.parentNode.insertBefore(wrap, block);
+        wrap.appendChild(block);
+
+        const btn = document.createElement("button");
+        btn.className = "pre-copy-btn";
+        btn.textContent = "Copy";
+
+        btn.onclick = () => {
+            navigator.clipboard.writeText(block.innerText).then(() => {
+                btn.textContent = "✔";
+                setTimeout(() => btn.textContent = "Copy", 900);
             });
         };
 
@@ -630,8 +691,9 @@ function applyGlobalCopyButtons() {
     });
 
 
-    // 3. Wrap ALL <pre>
+    // Wrap <pre>
     document.querySelectorAll("pre").forEach(pre => {
+        pre.classList.remove("enhanced-pre");
         if (pre.parentElement.classList.contains("pre-copy-container")) return;
 
         const wrap = document.createElement("div");
@@ -665,4 +727,91 @@ document.addEventListener('click', (e) => {
 
   const panel = item.closest('.dropdown-panel');
   if (panel) panel.classList.remove('open');
+});
+
+
+function enhancePreWithLineCopy() {
+    document.querySelectorAll("pre").forEach(pre => {
+
+        // Skip already processed blocks
+        if (pre.classList.contains("enhanced-pre")) return;
+        pre.classList.add("enhanced-pre");
+
+        const lines = pre.innerHTML
+            .replace(/\r/g, "")
+            .split(/\n|<br\s*\/?>/);
+
+        const html = lines.map((lineHtml, i) => {
+            const txt = lineHtml.replace(/<[^>]+>/g, "").trim(); // remove HTML tags for plain text
+            const isComment = lineHtml.includes('comment-line') || txt.startsWith("#") || txt === "";
+
+            if (isComment) {
+                return `<div class="pre-line comment-line">${lineHtml}</div>`;
+            }
+
+            // plain code line → inline copy
+            return `
+              <span class="pre-line">
+                  <span class="inline-copy-container">
+                      <code>${escapeHtml(text)}</code>
+                      <button class="inline-copy-btn">Copy</button>
+                  </span>
+              </span>\n`;
+
+        }).join("\n");
+
+        pre.innerHTML = html;
+
+
+        // Bind copy buttons inside this PRE only
+        pre.querySelectorAll(".inline-copy-btn").forEach(btn => {
+            btn.addEventListener("click", e => {
+                e.stopPropagation();
+                const text = btn.parentElement.querySelector("code").innerText;
+                navigator.clipboard.writeText(text).then(() => {
+                    btn.textContent = "✔";
+                    setTimeout(() => btn.textContent = "Copy", 900);
+                });
+            });
+        });
+    });
+}
+
+
+// =======================================================
+//  MARKDOWN INTERCEPTOR
+// =======================================================
+document.addEventListener("click", function(e) {
+    const a = e.target.closest("a");
+    if (!a) return;
+
+    const href = a.getAttribute("href") || "";
+    if (!href.includes("/markdown/")) return;
+
+    e.preventDefault();
+    console.log("🔵 Intercepted markdown link:", href);
+
+    const root = document.querySelector('#tab-content');
+    if (!root) {
+        console.log("❌ No #tab-content");
+        return;
+    }
+
+    fetch(href)
+        .then(r => r.text())
+        .then(html => {
+            console.log("🟢 Loaded markdown:", href);
+
+            root.innerHTML = `
+                <div class="tab-content active">
+                    <div class="markdown-body">${html}</div>
+                </div>
+            `;
+
+            // 🔥 REQUIRED: apply copy buttons AFTER markdown is injected
+            setTimeout(() => {
+                applyGlobalCopyButtons();
+            }, 20);
+        })
+        .catch(err => console.error("❌ Markdown load failed:", err));
 });

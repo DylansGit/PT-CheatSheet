@@ -9,6 +9,18 @@
   function qsa(selector, root = document) { return Array.from(root.querySelectorAll(selector)); }
   function escapeHtml(s) { return String(s).replace(/[&<>"'`]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;'}[c])); }
 
+
+  const SPECIAL_COPY_PAGES = [
+  "linuxprivesc",
+  "windowsforensics",
+  "windowshardening",
+  "windowspowershell",
+  "windowsactivedir",
+  "bashing",
+  "linuxhardening"
+];
+
+
   // temporary highlight helper
   function flashHighlight(targetEl) {
     if (!targetEl) return;
@@ -37,7 +49,7 @@
   }
 
   // -------------------------
-  // Tab loader (unchanged behavior)
+  // Tab loader 
   // -------------------------
   const FILE_MAP = {
     'home': { filename: 'home.html', divId: 'home' },
@@ -70,43 +82,63 @@
 
 
   async function loadContentIntoTab(path, preserveTabActive = true) {
-    // path is either 'content/<file>' or 'markdown/<file>'
     try {
-      const res = await fetch('/' + path);
-      if (!res.ok) throw new Error('not-found');
-      const html = await res.text();
-      const contentDiv = document.getElementById('tab-content');
-      if (!contentDiv) return;
-      // if path starts with "markdown/" wrap in .markdown-body so CSS can style it like the ports. 
-      if (path && path.startsWith('markdown/')) {
-        contentDiv.innerHTML = `<div class="tab-content active"><div class="markdown-body">${html}</div></div>`;
-      } else {
-        contentDiv.innerHTML = `<div class="tab-content active">${html}</div>`;
-      }
-      // optional: remove "active" from other tabs UI (not removing content)
-      if (preserveTabActive === false) return;
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      // try to find matching tab by comparing file names
-      const fname = path.split('/').pop();
-      for (const [tid, info] of Object.entries(FILE_MAP)) {
-        if (info.filename === fname) {
-          const tabEl = document.querySelector(`.tab[onclick="showTab('${tid}')"]`);
-          if (tabEl) tabEl.classList.add('active');
-          break;
+        const res = await fetch('/' + path);
+        if (!res.ok) throw new Error('not-found');
+        const html = await res.text();
+        const contentDiv = document.getElementById('tab-content');
+        if (!contentDiv) return;
+
+        // Inject content (normal or markdown)
+        if (path.startsWith('markdown/')) {
+            contentDiv.innerHTML = `
+                <div class="tab-content active"><div class="markdown-body">${html}</div></div>
+            `;
+        } else {
+            contentDiv.innerHTML = `
+                <div class="tab-content active">${html}</div>
+            `;
         }
-      }
+
+        // PortSwigger styling (if needed)
+        ensurePortSwiggerCSS();
+
+        // IMPORTANT: do NOT run copy logic here.
+        // It will run in showTab(), AFTER comments are styled.
+
+        if (preserveTabActive === false) return;
+
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+
+        const fname = path.split('/').pop();
+        for (const [tid, info] of Object.entries(FILE_MAP)) {
+            if (info.filename === fname) {
+                const tabEl = document.querySelector(`.tab[onclick="showTab('${tid}')"]`);
+                if (tabEl) tabEl.classList.add('active');
+                break;
+            }
+        }
     } catch (err) {
-      console.warn('loadContentIntoTab failed for', path, err);
-      alert('Could not load content: ' + path);
+        console.warn('loadContentIntoTab failed for', path, err);
     }
   }
 
+
   async function showTab(tabId) {
     const tabInfo = FILE_MAP[tabId];
-    if (!tabInfo) { console.error('Invalid tab ID', tabId); return; }
+    if (!tabInfo) return;
+
     await loadContentIntoTab('content/' + tabInfo.filename);
+
+    // 1. style comments for EVERY page
     stylePreComments();
-  }
+
+    // 2. global copy system (except special pages)
+    applyGlobalCopyButtons();
+
+    // 3. per-line copy for SPECIAL pages ONLY
+    applyInlineCopyOnSpecialPages();
+}
 
   async function showHomePage() { await showTab('home'); }
 
@@ -143,42 +175,6 @@
   window.collapseAllRows = collapseAllRows;
   window.scrollToTop = scrollToTop;
 
-  // -------------------------
-  // Notes CRUD (unchanged logic)
-  // -------------------------
-  function saveNote() {
-    const note = (qs('#note-input') || {}).value;
-    if (!note) return alert('Please write something in the note.');
-    fetch('/save-note', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ note })})
-      .then(r => r.json()).then(d => { if (d.success) { alert('Note saved!'); if (qs('#note-input')) qs('#note-input').value=''; loadNotes(); } else alert('Failed to save note'); });
-  }
-
-  function loadNotes() {
-    fetch('/get-notes').then(r => r.json()).then(d => {
-      const list = qs('#notes-list');
-      if (!list) return;
-      list.innerHTML = '';
-      d.notes.forEach((n, i) => list.insertAdjacentHTML('beforeend', `<li>${escapeHtml(n)} <button onclick="deleteNote(${i})">Delete</button> <button onclick="editNotePrompt(${i})">Edit</button></li>`));
-    });
-  }
-
-  function deleteNote(idx) {
-    fetch(`/delete-note/${idx}`, { method: 'DELETE' }).then(r => r.json()).then(d => { if (d.success) loadNotes(); });
-  }
-
-  function editNotePrompt(idx) {
-    const newNote = prompt('Edit your note:');
-    if (!newNote) return;
-    fetch(`/edit-note/${idx}`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ note: newNote })})
-      .then(r => r.json()).then(d => { if (d.success) loadNotes(); });
-  }
-
-  /* wire view-notes click if exists
-  document.addEventListener('DOMContentLoaded', () => {
-    const btn = document.querySelector('.sub-tab[onclick="showSubTab(event, \'view-notes\')"]');
-    if (btn) btn.addEventListener('click', loadNotes);
-  });
-  */
 
   // -------------------------
   // SEARCH — index internal elements (tool-row, portsWigger links, markdown)
@@ -188,12 +184,29 @@
 
     // files to check in content and markdown
     const CONTENT_FILES = [
+      'home.html',
       'tools-cheat-sheet.html',
       'portswigger-cheat-sheet.html',
-      'windows-priv-esc.html',
-      'linux-priv-esc.html',
       'images-cheat-sheet.html',
+
+      // Windows
+      'windows-priv-esc.html',
+      'windows-hardening.html',
+      'windows-powershell.html',
+      'windows-forensics.html',
+      'windows-active-directory.html',
+
+      // Linux
+      'linux-priv-esc.html',
+      'linux-forensics.html',
+      'linux-hardening.html',
+      'bashing.html',
+
+      // Misc
+      'ai-sec-cheat-sheet.html',
+      'scripts-cheat-sheet.html',
       'topics.html',
+      'resources-links.html',
       'notebook.html'
     ];
 
@@ -498,20 +511,14 @@
         });
       }, 400);
     }
+
+    setTimeout(() => {
+        stylePreComments();                 // always style comments
+        applyInlineCopyOnSpecialPages();    // ONLY per-line copy on special pages
+    }, 60);
+
   };
 })();
-
-document.addEventListener("DOMContentLoaded", () => {
-    document.querySelectorAll("pre").forEach(pre => {
-        const lines = pre.innerHTML.split("\n").map(line => {
-            if (line.trim().startsWith("#")) {
-                return `<span class="comment-line">${line}</span>`;
-            }
-            return line;
-        });
-        pre.innerHTML = lines.join("\n");
-    });
-});
 
 
 function stylePreComments() {
@@ -532,94 +539,56 @@ function stylePreComments() {
     });
 }
 
+function applyInlineCopyOnSpecialPages() {
+    // detect active tab ID
+    const active = document.querySelector('.tab.active');
+    if (!active) return;
 
-function addInlineCopyButtons() {
-    document.querySelectorAll("code").forEach(code => {
+    const tabId = active.getAttribute('onclick')?.match(/showTab\('(.+)'\)/)?.[1];
+    if (!SPECIAL_COPY_PAGES.includes(tabId)) return;
 
-        // Skip if already wrapped
-        if (code.parentElement.classList.contains("inline-copy-container")) return;
-
-        // Create container
-        const container = document.createElement("span");
-        container.className = "inline-copy-container";
-
-        // Insert wrapper before code
-        code.parentNode.insertBefore(container, code);
-        container.appendChild(code);
-
-        // Create button
-        const btn = document.createElement("button");
-        btn.className = "inline-copy-btn";
-        btn.textContent = "Copy";
-
-        btn.onclick = (e) => {
-            e.stopPropagation();
-            const text = code.innerText;
-            navigator.clipboard.writeText(text).then(() => {
-                btn.textContent = "✔";
-                btn.classList.add("copied");
-                setTimeout(() => {
-                    btn.textContent = "Copy";
-                    btn.classList.remove("copied");
-                }, 1000);
-            });
-        };
-
-        container.appendChild(btn);
-    });
-}
-
-function addPreCopyButtons() {
+    // apply extra processing ONLY on the special pages
     document.querySelectorAll("pre").forEach(pre => {
 
-        // avoid double-wrapping
-        if (pre.parentElement.classList.contains("pre-copy-container")) return;
+        // prevent double work
+        if (pre.classList.contains("special-pre-processed")) return;
+        pre.classList.add("special-pre-processed");
 
-        // create wrapper
-        const wrap = document.createElement("div");
-        wrap.className = "pre-copy-container";
+        const lines = pre.innerText.split("\n");
 
-        pre.parentNode.insertBefore(wrap, pre);
-        wrap.appendChild(pre);
+        const html = lines.map(line => {
+            const trimmed = line.trim();
 
-        // create copy button
-        const btn = document.createElement("button");
-        btn.className = "pre-copy-btn";
-        btn.textContent = "Copy";
+            // COMMENT → keep your styled comment system
+            if (trimmed.startsWith("#") || trimmed === "") {
+                return `<div class="pre-line comment-line">${escapeHtml(line)}</div>`;
+            }
 
-        btn.onclick = () => {
-            navigator.clipboard.writeText(pre.innerText).then(() => {
-                btn.textContent = "✔";
-                setTimeout(() => btn.textContent = "Copy", 900);
+            // NON-COMMENT → add inline copy button
+            return `
+                <div class="pre-line">
+                    <span class="inline-copy-container">
+                        <code>${escapeHtml(line)}</code>
+                        <button class="inline-copy-btn">Copy</button>
+                    </span>
+                </div>`;
+        }).join("\n");
+
+        pre.innerHTML = html;
+
+        // activate copy buttons for this PRE only
+        pre.querySelectorAll(".inline-copy-btn").forEach(btn => {
+            btn.addEventListener("click", e => {
+                e.stopPropagation();
+                const text = btn.parentElement.querySelector("code").innerText;
+                navigator.clipboard.writeText(text).then(() => {
+                    btn.textContent = "✔";
+                    setTimeout(() => btn.textContent = "Copy", 900);
+                });
             });
-        };
-
-        wrap.appendChild(btn);
+        });
     });
 }
-
-
-document.addEventListener("DOMContentLoaded", () => {
-    addInlineCopyButtons();
-    addPreCopyButtons();
-    stylePreComments();
-});
-
-const origShowTabX = window.showTab;
-window.showTab = function(id) {
-    origShowTabX(id);
-    setTimeout(() => {
-        addInlineCopyButtons();
-        addPreCopyButtons();
-        stylePreComments();
-
-        if (id === "linuxprivesc") enhanceLinuxPrivEsc();
-    }, 50);
-};
-
-
-// First load
-document.addEventListener("DOMContentLoaded", addInlineCopyButtons);
 
 
 function scrollToSection(id) {
@@ -647,70 +616,32 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 
-// Also run on first page load
-document.addEventListener("DOMContentLoaded", () => {
-    stylePreComments();
-    addInlineCopyButtons();
-});
+function applyGlobalCopyButtons() {
+    // Skip global copy on special pages
+    const activeTab = document.querySelector('.tab.active');
+    if (activeTab) {
+        const id = activeTab.getAttribute('onclick')?.match(/showTab\('(.+)'\)/)?.[1];
+        if (SPECIAL_COPY_PAGES.includes(id)) return;
+    }
 
-
-// --- SAFE showTab WRAPPER ---
-(function() {
-    const handle = setInterval(() => {
-        if (typeof window.showTab === "function") {
-            clearInterval(handle);
-
-            const orig = window.showTab;
-
-            window.showTab = function(id) {
-                orig(id);
-                setTimeout(() => {
-                    stylePreComments();
-                    addInlineCopyButtons();
-                }, 50);
-            };
-
-            // first load
-            stylePreComments();
-            addInlineCopyButtons();
-        }
-    }, 50);
-})();
-
-
-// --- SAFE INDEX BUILDER ---
-(function() {
-    const t = setInterval(() => {
-        if (typeof buildIndex === "function") {
-            clearInterval(t);
-            buildIndex();
-        }
-    }, 30);
-})();
-
-
-
-function enhanceLinuxPrivEsc() {
-
-    // 🔥 1. Remove global copy wrappers/buttons inside this tab
+    // Remove old wrappers
     document.querySelectorAll(".inline-copy-container").forEach(el => {
         const code = el.querySelector("code");
-        if (code) el.replaceWith(code); // unwrap
+        if (code) el.replaceWith(code);
     });
-    document.querySelectorAll(".inline-copy-btn").forEach(el => el.remove());
+    document.querySelectorAll(".inline-copy-btn").forEach(btn => btn.remove());
+    document.querySelectorAll(".pre-copy-container").forEach(el => {
+        const pre = el.querySelector("pre");
+        if (pre) el.replaceWith(pre);
+    });
+    document.querySelectorAll(".pre-copy-btn").forEach(btn => btn.remove());
 
-    // 🔥 2. Apply custom Linux-Priv-Esc copy system
-    document.querySelectorAll(".tool-command").forEach(cmd => {
-
-        if (cmd.classList.contains("copy-ready")) return;
-        cmd.classList.add("copy-ready");
-
-        const code = cmd.querySelector("code");
-        if (!code) return;
+    // Wrap <code>
+    document.querySelectorAll("code").forEach(code => {
+        if (code.parentElement.classList.contains("inline-copy-container")) return;
 
         const wrap = document.createElement("span");
         wrap.className = "inline-copy-container";
-
         code.parentNode.insertBefore(wrap, code);
         wrap.appendChild(code);
 
@@ -722,14 +653,88 @@ function enhanceLinuxPrivEsc() {
             e.stopPropagation();
             navigator.clipboard.writeText(code.innerText).then(() => {
                 btn.textContent = "✔";
-                btn.classList.add("copied");
-                setTimeout(() => {
-                    btn.textContent = "Copy";
-                    btn.classList.remove("copied");
-                }, 900);
+                setTimeout(() => btn.textContent = "Copy", 900);
             });
         };
 
         wrap.appendChild(btn);
+    });
+
+    // Wrap <pre>
+    document.querySelectorAll("pre").forEach(pre => {
+        if (pre.parentElement.classList.contains("pre-copy-container")) return;
+
+        const wrap = document.createElement("div");
+        wrap.className = "pre-copy-container";
+
+        pre.parentNode.insertBefore(wrap, pre);
+        wrap.appendChild(pre);
+
+        const btn = document.createElement("button");
+        btn.className = "pre-copy-btn";
+        btn.textContent = "Copy";
+
+        btn.onclick = () => {
+            navigator.clipboard.writeText(pre.innerText).then(() => {
+                btn.textContent = "✔";
+                setTimeout(() => btn.textContent = "Copy", 900);
+            });
+        };
+
+        wrap.appendChild(btn);
+    });
+}
+
+
+// --- Mobile: auto-close dropdown panels after tapping an item ---
+document.addEventListener('click', (e) => {
+  if (window.innerWidth > 900) return; // only mobile
+
+  const item = e.target.closest('.dropdown-item');
+  if (!item) return;
+
+  const panel = item.closest('.dropdown-panel');
+  if (panel) panel.classList.remove('open');
+});
+
+
+function enhancePreWithLineCopy() {
+    document.querySelectorAll("pre").forEach(pre => {
+
+        // Skip already processed blocks
+        if (pre.classList.contains("enhanced-pre")) return;
+        pre.classList.add("enhanced-pre");
+
+        const lines = pre.innerText.split("\n");
+
+        const newHtml = lines.map(line => {
+            const trimmed = line.trim();
+
+            if (trimmed.startsWith("#") || trimmed === "") {
+                return `<div class="pre-line comment-line">${escapeHtml(line)}</div>`;
+            }
+
+            return `
+                <div class="pre-line">
+                    <span class="inline-copy-container">
+                        <code>${escapeHtml(line)}</code>
+                        <button class="inline-copy-btn">Copy</button>
+                    </span>
+                </div>`;
+        }).join("\n");
+
+        pre.innerHTML = newHtml;
+
+        // Bind copy buttons inside this PRE only
+        pre.querySelectorAll(".inline-copy-btn").forEach(btn => {
+            btn.addEventListener("click", e => {
+                e.stopPropagation();
+                const text = btn.parentElement.querySelector("code").innerText;
+                navigator.clipboard.writeText(text).then(() => {
+                    btn.textContent = "✔";
+                    setTimeout(() => btn.textContent = "Copy", 900);
+                });
+            });
+        });
     });
 }

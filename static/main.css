@@ -617,6 +617,10 @@ pre, code {
   border-radius: 6px;
 }
 
+pre {
+    text-align: left !important;
+}
+
 /* <strong> behaves like inline text but we allow wraps for long content */
 strong {
   display: inline;
@@ -725,37 +729,6 @@ li {
     color: #d8e2ff;          /* soft bright color */
 }
 
-/* Inline code wrapper (non-intrusive) */
-.inline-copy-container {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;                  /* tiny spacing */
-}
-
-/* Inline Copy Button */
-.inline-copy-btn {
-    font-size: 10px;
-    padding: 1px 4px;
-    background: #2c2f40;
-    border: 1px solid #3a3f55;
-    border-radius: 3px;
-    color: #cfd9ff;
-    cursor: pointer;
-    opacity: 0;               /* hidden until hover */
-    transition: 0.15s;
-}
-
-/* Only show button when hovering wrapper */
-.inline-copy-container:hover .inline-copy-btn {
-    opacity: 0.8;
-}
-
-.inline-copy-btn.copied {
-    color: #6aff89;
-    border-color: #6aff89;
-    opacity: 1;
-}
-
 
 /* unify width */
 #tab-content > * {
@@ -832,6 +805,39 @@ li {
     opacity: 0.45;
 }
 
+
+/* Copy  */
+
+/* Inline code wrapper (non-intrusive) */
+.inline-copy-container {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;                  /* tiny spacing */
+}
+
+/* Inline Copy Button */
+.inline-copy-btn {
+    font-size: 10px;
+    padding: 1px 4px;
+    background: #2c2f40;
+    border: 1px solid #3a3f55;
+    border-radius: 3px;
+    color: #cfd9ff;
+    cursor: pointer;
+    opacity: 0;               /* hidden until hover */
+    transition: 0.15s;
+}
+
+/* Only show button when hovering wrapper */
+.inline-copy-container:hover .inline-copy-btn {
+    opacity: 0.8;
+}
+
+.inline-copy-btn.copied {
+    color: #6aff89;
+    border-color: #6aff89;
+    opacity: 1;
+}
 
 .pre-copy-container {
     position: relative;

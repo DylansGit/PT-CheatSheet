@@ -42,56 +42,6 @@ def index():
     response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     return response
 
-# -----------------------------------------
-# NOTES SYSTEM
-# -----------------------------------------
-NOTES_FILE = os.path.join('content', 'notes.txt')
-
-def read_notes():
-    if os.path.exists(NOTES_FILE):
-        with open(NOTES_FILE, 'r') as f:
-            return [line.strip() for line in f.readlines()]
-    return []
-
-def write_notes(notes):
-    with open(NOTES_FILE, 'w') as f:
-        f.write('\n'.join(notes))
-
-@app.route('/save-note', methods=['POST'])
-def save_note():
-    data = request.json
-    note = data.get('note')
-    if note:
-        notes = read_notes()
-        notes.append(note)
-        write_notes(notes)
-        return jsonify(success=True)
-    return jsonify(success=False), 400
-
-@app.route('/get-notes', methods=['GET'])
-def get_notes():
-    notes = read_notes()
-    return jsonify(notes=notes)
-
-@app.route('/delete-note/<int:index>', methods=['DELETE'])
-def delete_note(index):
-    notes = read_notes()
-    if 0 <= index < len(notes):
-        notes.pop(index)
-        write_notes(notes)
-        return jsonify(success=True)
-    return jsonify(success=False), 400
-
-@app.route('/edit-note/<int:index>', methods=['POST'])
-def edit_note(index):
-    data = request.json
-    new_note = data.get('note')
-    notes = read_notes()
-    if 0 <= index < len(notes):
-        notes[index] = new_note
-        write_notes(notes)
-        return jsonify(success=True)
-    return jsonify(success=False), 400
 
 # -----------------------------------------
 # GLOBAL HEADERS (clipboard permissions)
