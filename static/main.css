@@ -862,3 +862,43 @@ li {
 .pre-copy-container:hover .pre-copy-btn {
     opacity: 1;
 }
+
+
+
+/* --- MOBILE FIX FOR OVERFLOW --- */
+@media (max-width: 600px) {
+
+  #tab-content > * {
+    padding: 16px 14px !important;   /* smaller side padding */
+    max-width: 100% !important;
+    box-sizing: border-box;
+  }
+
+  .container {
+    padding: 20px 12px !important;   /* prevent right overflow */
+    max-width: 100% !important;
+    box-sizing: border-box;
+  }
+
+  ul, ol {
+    padding-left: 18px !important;   /* reduce left indent */
+    margin-left: 0 !important;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+
+  h3, h2, h1, p {
+    max-width: 100% !important;
+    overflow-wrap: break-word;
+  }
+
+  pre, code, .sourceCode {
+    max-width: 100% !important;
+    white-space: pre-wrap !important; /* prevent horizontal scroll */
+    word-break: break-word;
+  }
+
+  body {
+    overflow-x: hidden !important;
+  }
+}
